@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Star, Wallet, Bell, Menu, X } from 'lucide-react';
+import { BarChart3, Star, Wallet, Bell, BookOpen, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { SearchCoin } from '@/components/search/search-coin';
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/watchlist', label: 'Watchlist', icon: Star },
   { href: '/portfolio', label: 'Portfolio', icon: Wallet },
   { href: '/alerts', label: 'Alerts', icon: Bell },
+  { href: '/journal', label: 'Journal', icon: BookOpen },
 ] as const;
 
 /**

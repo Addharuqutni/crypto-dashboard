@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAiStore } from '@/stores/use-ai-store';
 import { testConnection } from '@/lib/ai/ai-client';
 import { cn } from '@/lib/utils';
-import { X, Loader2, CheckCircle2, XCircle, Settings2, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, CheckCircle2, XCircle, Settings2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 interface AiSettingsModalProps {
   isOpen: boolean;
@@ -19,11 +19,14 @@ interface AiSettingsModalProps {
 export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
   const config = useAiStore((s) => s.config);
   const updateConfig = useAiStore((s) => s.updateConfig);
+  const rememberKey = useAiStore((s) => s.rememberKey);
+  const setRememberKey = useAiStore((s) => s.setRememberKey);
 
   const [baseUrl, setBaseUrl] = useState(config.baseUrl);
   const [apiKey, setApiKey] = useState(config.apiKey);
   const [model, setModel] = useState(config.model);
   const [showKey, setShowKey] = useState(false);
+  const [remember, setRemember] = useState(rememberKey);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
@@ -33,10 +36,11 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
       setBaseUrl(config.baseUrl);
       setApiKey(config.apiKey);
       setModel(config.model);
+      setRemember(rememberKey);
       setTestResult(null);
       setShowKey(false);
     }
-  }, [isOpen, config.baseUrl, config.apiKey, config.model]);
+  }, [isOpen, config.baseUrl, config.apiKey, config.model, rememberKey]);
 
   // Close on Escape key
   useEffect(() => {
@@ -63,6 +67,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
   };
 
   const handleSave = () => {
+    setRememberKey(remember);
     updateConfig({
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
@@ -133,6 +138,8 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="sk-..."
+                autoComplete="off"
+                spellCheck={false}
                 className="w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 pr-10 text-sm text-text-primary placeholder:text-text-muted/50 transition-colors focus:border-accent-secondary focus:outline-none focus:ring-2 focus:ring-accent-secondary/20"
               />
               <button
@@ -144,6 +151,30 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
                 {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+
+            {/* Remember key toggle */}
+            <label
+              htmlFor="ai-remember-key"
+              className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg border border-border-subtle/60 bg-bg-surface-raised/40 px-2.5 py-2"
+            >
+              <input
+                id="ai-remember-key"
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="mt-0.5 h-3.5 w-3.5 cursor-pointer accent-accent-secondary"
+              />
+              <span className="flex-1 text-[11px] leading-relaxed text-text-secondary">
+                <span className="font-medium text-text-primary">Remember key on this device</span>
+                <span className="mt-0.5 flex items-start gap-1 text-text-muted">
+                  <ShieldAlert className="mt-0.5 h-3 w-3 shrink-0 text-warning" aria-hidden />
+                  <span>
+                    Stored unencrypted in localStorage. Any script on this origin
+                    can read it. Leave off on shared computers.
+                  </span>
+                </span>
+              </span>
+            </label>
           </div>
 
           {/* Model */}

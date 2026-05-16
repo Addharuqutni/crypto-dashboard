@@ -148,3 +148,15 @@ export function getDefaultCoins(): CoinRegistryItem[] {
 export function getAllActiveCoins(): CoinRegistryItem[] {
   return COIN_REGISTRY.filter((c) => c.isActive);
 }
+
+/**
+ * Resolve the Binance trading pair for a UI symbol.
+ *
+ * Prefers the registry entry so non-USDT quote pairs (e.g. USDC perpetuals)
+ * stay correct as they're added; falls back to `<symbol>USDT` for off-registry
+ * coins so dynamic symbols still work without breaking the API surface.
+ */
+export function resolveBinanceSymbol(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  return getCoinBySymbol(upper)?.binanceSymbol ?? `${upper}USDT`;
+}

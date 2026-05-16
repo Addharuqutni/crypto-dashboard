@@ -8,6 +8,7 @@ import { CandlestickChart } from '@/components/chart/candlestick-chart';
 import { VisibilityGate } from '@/components/ui/visibility-gate';
 import { TechnicalPanel } from '@/components/technical-analysis/technical-panel';
 import { IndicatorToggles } from '@/components/technical-analysis/indicator-toggles';
+import { FuturesSignalPanel } from '@/components/technical-analysis/futures-signal-panel';
 import { AiChatPanel } from '@/components/ai-agent/ai-chat-panel';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
@@ -15,6 +16,11 @@ import { useCoinMetadata } from '@/lib/api/hooks';
 import { getCoinBySymbol } from '@/lib/registry/coin-registry';
 import { fetchKlineData } from '@/lib/api/binance-kline';
 import { fetchSingleTicker24hr } from '@/lib/binance/binance-futures-client';
+import { fetchFundingRate } from '@/lib/api/binance-funding-rate';
+import { fetchOpenInterestSnapshot } from '@/lib/api/binance-open-interest';
+import { useBinanceKlineWebSocket } from '@/lib/websocket/use-binance-kline-websocket';
+import { resolveBinanceSymbol } from '@/lib/registry/coin-registry';
+import { MTF_CASCADE } from '@/lib/analysis/mtf-cascade';
 import { getRsiStatus, calculateMACD, calculateSupportResistance, calculateTrendLabel, calculateFibonacci, calculateOrderBlocks } from '@/lib/indicators';
 import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
@@ -30,7 +36,7 @@ type ChartMode = 'clean' | 'technical';
  * MA/RSI/MACD output, so bounding the input keeps the main thread fast
  * regardless of how much history Binance returns.
  */
-const MAX_INDICATOR_CANDLES = 500;
+const MAX_INDICATOR_CANDLES = 1000;
 
 /**
  * Coin detail page — shows chart, market stats, watchlist action, and technical analysis.
@@ -76,11 +82,75 @@ export default function CoinDetailPage() {
     enabled: hasCoin,
   });
 
+  // Subscribe to live kline ticks for the active timeframe.
+  // The hook patches the same TanStack Query cache key in place, so the
+  // candlestick chart's effect 2 detects only-last-bar mutation and calls
+  // series.update() — no full redraw, no blink.
+  useBinanceKlineWebSocket({
+    symbol: symbolParam,
+    timeframe,
+    enabled: hasCoin,
+  });
+
+  // --- Multi-timeframe candle fetches for the futures signal engine. ---
+  // Macro and trigger TFs are pulled lazily and only when in technical mode
+  // so the clean/non-technical experience stays cheap.
+  const macroTf = MTF_CASCADE[timeframe]?.macro;
+  const triggerTf = MTF_CASCADE[timeframe]?.trigger;
+
+  const { data: macroCandles } = useQuery({
+    queryKey: ['candles-raw', symbolParam, macroTf ?? 'none', 'macro'],
+    queryFn: () => (macroTf ? fetchKlineData(symbolParam, macroTf) : Promise.resolve([])),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: hasCoin && chartMode === 'technical' && !!macroTf,
+  });
+
+  const { data: triggerCandles } = useQuery({
+    queryKey: ['candles-raw', symbolParam, triggerTf ?? 'none', 'trigger'],
+    queryFn: () => (triggerTf ? fetchKlineData(symbolParam, triggerTf) : Promise.resolve([])),
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+    enabled: hasCoin && chartMode === 'technical' && !!triggerTf,
+  });
+
+  // --- Futures positioning: funding rate + open interest. ---
+  // Resolve the trading pair via the registry so non-USDT quote pairs (e.g.
+  // future USDC perpetuals) stay correct without changing call sites.
+  const binanceSymbol = resolveBinanceSymbol(coinSymbol);
+  const { data: funding } = useQuery({
+    queryKey: ['funding-rate', binanceSymbol],
+    queryFn: () => fetchFundingRate(binanceSymbol),
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: hasCoin && chartMode === 'technical',
+  });
+  const { data: oiSnapshot } = useQuery({
+    queryKey: ['open-interest', binanceSymbol],
+    queryFn: () => fetchOpenInterestSnapshot(binanceSymbol, '1h'),
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: hasCoin && chartMode === 'technical',
+  });
+
   // Fetch metadata from CoinGecko (only if registry coin has coingeckoId)
   const { data: metadata } = useCoinMetadata(coingeckoId);
 
-  // Live price from WebSocket. Subscribe only to the active symbol.
-  const price = livePrice?.price;
+  // --- Live price wiring (Binance USDⓈ-M Futures WebSocket). ---
+  //
+  // Two complementary Futures WS sources cooperate here:
+  //   1. Per-symbol kline stream (`<sym>@kline_<interval>`) — patches the
+  //      candles cache in place every ~250ms; the latest candle's close is
+  //      the freshest live price for the active timeframe.
+  //   2. Global all-market mini ticker (`!miniTicker@arr`) — populates the
+  //      market store with 24h change % for every Futures USDT pair.
+  //
+  // Header prefers the kline-derived close for tightest update cadence and
+  // falls back to the global stream while the kline cache warms up. 24h % is
+  // sourced from the global stream because kline does not carry it directly.
+  const klineLivePrice =
+    candles && candles.length > 0 ? candles[candles.length - 1]!.close : null;
+  const price = klineLivePrice ?? livePrice?.price;
   const change = livePrice?.priceChangePercent24h;
   const isUp = (change ?? 0) > 0;
   const isDown = (change ?? 0) < 0;
@@ -187,7 +257,11 @@ export default function CoinDetailPage() {
             </div>
             <div className="mt-1 flex items-center gap-3">
               {price != null ? (
-                <span className="numeric text-3xl font-bold text-text-primary">
+                <span
+                  className="numeric inline-flex items-baseline gap-2 text-3xl font-bold text-text-primary"
+                  aria-live="polite"
+                  aria-label={`Current price ${formatCurrency(price)}`}
+                >
                   {formatCurrency(price)}
                 </span>
               ) : (
@@ -344,6 +418,23 @@ export default function CoinDetailPage() {
           />
         )}
 
+        {/* Futures Setup — disciplined LONG/SHORT/WAIT decision engine */}
+        {chartMode === 'technical' && candles && candles.length > 0 && (
+          <FuturesSignalPanel
+            candles={candles}
+            symbol={coinSymbol}
+            timeframe={timeframe}
+            livePrice={price}
+            rsi={analysis?.rsi}
+            macd={analysis?.macd ?? null}
+            supportResistance={analysis?.sr}
+            macroCandles={macroCandles && macroCandles.length > 0 ? macroCandles : undefined}
+            triggerCandles={triggerCandles && triggerCandles.length > 0 ? triggerCandles : undefined}
+            fundingRate={funding?.lastFundingRate ?? null}
+            openInterestChangePercent={oiSnapshot?.changePercent ?? null}
+          />
+        )}
+
         {/* AI Technical Advisor — only in Technical Mode */}
         {chartMode === 'technical' && (
           <AiChatPanel
@@ -405,7 +496,8 @@ function StatCard({ label, value }: { label: string; value: string }) {
  * Displays: Market Cap, 24h Volume, 24h High, 24h Low.
  */
 function MarketStats({ symbol, metadata }: { symbol: string; metadata?: { marketCap?: number; volume24h?: number; high24h?: number; low24h?: number } }) {
-  const binanceSymbol = `${symbol}USDT`;
+  // Use registry resolver so non-USDT pairs stay correct.
+  const binanceSymbol = resolveBinanceSymbol(symbol);
 
   // Fetch Futures 24hr ticker as fallback for non-registry coins
   const { data: ticker24hr } = useQuery({

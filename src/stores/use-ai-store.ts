@@ -1,6 +1,12 @@
 /**
  * AI Agent Zustand store — manages configuration, conversation history, and streaming state.
  * Config is persisted to localStorage so users don't need to re-enter credentials.
+ *
+ * Security note: when `rememberKey` is true the API key is written to
+ * localStorage. localStorage is readable by any script running on the same
+ * origin, so an XSS bug (e.g. a compromised dependency rendering untrusted
+ * HTML) could exfiltrate the key. The default is therefore `false` — users
+ * must opt in explicitly to persist the key across sessions.
  */
 
 import { create } from 'zustand';
@@ -20,6 +26,14 @@ interface AiState {
   config: AiConfig;
   isConfigured: boolean;
   hydrated: boolean;
+  /**
+   * Whether to persist the API key to localStorage.
+   *
+   * Defaults to `false` for new users so the key only lives in memory
+   * (safer default, follows "principle of least privilege"). When `true`,
+   * the key is written to localStorage and survives reloads.
+   */
+  rememberKey: boolean;
 
   // Conversation
   messages: AiMessage[];
@@ -31,6 +45,7 @@ interface AiState {
 
   // Actions
   updateConfig: (config: Partial<AiConfig>) => void;
+  setRememberKey: (remember: boolean) => void;
   setTechnicalContext: (context: TechnicalContext | null) => void;
   sendMessage: (content: string) => void;
   stopStreaming: () => void;
@@ -49,6 +64,7 @@ export const useAiStore = create<AiState>()(
       config: { baseUrl: '', apiKey: '', model: '' },
       isConfigured: false,
       hydrated: false,
+      rememberKey: false,
       messages: [],
       isStreaming: false,
       error: null,
@@ -59,6 +75,10 @@ export const useAiStore = create<AiState>()(
         const updated = { ...current, ...partial };
         const isConfigured = Boolean(updated.baseUrl && updated.apiKey && updated.model);
         set({ config: updated, isConfigured });
+      },
+
+      setRememberKey: (remember) => {
+        set({ rememberKey: remember });
       },
 
       setTechnicalContext: (context) => {
@@ -173,17 +193,31 @@ export const useAiStore = create<AiState>()(
     }),
     {
       name: 'crypto-ai-config',
-      // Only persist config and messages, not runtime state
+      // Persist baseUrl, model, message history, and remember-key preference.
+      // The API key is only included when the user has opted in via
+      // `rememberKey`. Otherwise it stays in-memory and disappears on reload,
+      // which is the safer default for credentials in localStorage.
       partialize: (state) => ({
-        config: state.config,
-        isConfigured: state.isConfigured,
+        config: state.rememberKey
+          ? state.config
+          : { ...state.config, apiKey: '' },
+        isConfigured: state.rememberKey ? state.isConfigured : false,
+        rememberKey: state.rememberKey,
         messages: state.messages.slice(-50), // Keep last 50 messages
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
           state.hydrated = true;
+          // Backwards compatibility: pre-rememberKey storage shapes had a
+          // populated apiKey but no flag. If we find a non-empty key on
+          // rehydrate, treat it as if the user had previously opted in so
+          // their session is not unexpectedly broken.
+          if (state.config.apiKey && !state.rememberKey) {
+            state.rememberKey = true;
+          }
         }
       },
     }
   )
 );
+

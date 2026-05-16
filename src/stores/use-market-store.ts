@@ -52,20 +52,26 @@ export const useMarketStore = create<MarketState>((set, get) => ({
   trackedSymbolCount: 0,
 
   updatePrice: (price) =>
-    set((state) => ({
-      prices: { ...state.prices, [price.symbol]: price },
-      pricesByBinanceSymbol: { ...state.pricesByBinanceSymbol, [price.binanceSymbol]: price },
-      lastUpdateAt: price.receivedAt,
-      trackedSymbolCount: Object.keys({ ...state.prices, [price.symbol]: price }).length,
-    })),
+    set((state) => {
+      const isNewSymbol = !(price.symbol in state.prices);
+      return {
+        prices: { ...state.prices, [price.symbol]: price },
+        pricesByBinanceSymbol: { ...state.pricesByBinanceSymbol, [price.binanceSymbol]: price },
+        lastUpdateAt: price.receivedAt,
+        // Increment only when seeing a new symbol — avoids O(n) Object.keys per tick.
+        trackedSymbolCount: state.trackedSymbolCount + (isNewSymbol ? 1 : 0),
+      };
+    }),
 
   updatePrices: (prices) =>
     set((state) => {
       const updatedPrices = { ...state.prices };
       const updatedByBinance = { ...state.pricesByBinanceSymbol };
       let latestTime = state.lastUpdateAt ?? 0;
+      let added = 0;
 
       for (const price of prices) {
+        if (!(price.symbol in updatedPrices)) added++;
         updatedPrices[price.symbol] = price;
         updatedByBinance[price.binanceSymbol] = price;
         if (price.receivedAt > latestTime) {
@@ -77,7 +83,9 @@ export const useMarketStore = create<MarketState>((set, get) => ({
         prices: updatedPrices,
         pricesByBinanceSymbol: updatedByBinance,
         lastUpdateAt: latestTime,
-        trackedSymbolCount: Object.keys(updatedPrices).length,
+        // Track new symbols incrementally; avoids O(n) Object.keys per batch
+        // (a hot path with ~400 perpetuals updating ~4 ×/sec).
+        trackedSymbolCount: state.trackedSymbolCount + added,
       };
     }),
 
