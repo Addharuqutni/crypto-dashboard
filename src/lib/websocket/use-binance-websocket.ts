@@ -41,6 +41,13 @@ const STALE_WATCHDOG_TIMEOUT = 60_000;
  */
 const BATCH_FLUSH_INTERVAL = 300;
 
+/**
+ * REST snapshot fallback interval.
+ * Keeps production UI fresh when a browser/hosting network path leaves the
+ * WebSocket open but stops delivering frames until a manual refresh.
+ */
+const SNAPSHOT_REFRESH_INTERVAL = 1_000;
+
 /** Max retries for exchangeInfo before entering degraded mode. */
 const EXCHANGE_INFO_MAX_RETRIES = 3;
 
@@ -71,6 +78,7 @@ export function useBinanceWebSocket() {
   const connectionAgeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const staleWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const batchFlushIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const snapshotRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
 
@@ -347,6 +355,21 @@ export function useBinanceWebSocket() {
     }
   }, [updatePrices, isValidSymbol]);
 
+  /**
+   * Refreshes REST snapshot and nudges the WebSocket after browser resume.
+   * Production browsers can suspend timers/sockets in background tabs; this
+   * prevents the dashboard from looking frozen until the user refreshes.
+   */
+  const refreshAfterResume = useCallback(() => {
+    if (!mountedRef.current || document.visibilityState === 'hidden') return;
+
+    void seedInitialPrices();
+
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      reconnectRef.current();
+    }
+  }, [seedInitialPrices]);
+
   /** Initialize: load valid symbols, seed prices, connect WebSocket */
   useEffect(() => {
     mountedRef.current = true;
@@ -356,11 +379,25 @@ export function useBinanceWebSocket() {
       if (mountedRef.current) {
         void seedInitialPrices();
         connectRef.current();
+
+        if (snapshotRefreshIntervalRef.current) {
+          clearInterval(snapshotRefreshIntervalRef.current);
+        }
+        snapshotRefreshIntervalRef.current = setInterval(() => {
+          if (mountedRef.current && document.visibilityState === 'visible') {
+            void seedInitialPrices();
+          }
+        }, SNAPSHOT_REFRESH_INTERVAL);
       }
     });
 
+    window.addEventListener('online', refreshAfterResume);
+    document.addEventListener('visibilitychange', refreshAfterResume);
+
     return () => {
       mountedRef.current = false;
+      window.removeEventListener('online', refreshAfterResume);
+      document.removeEventListener('visibilitychange', refreshAfterResume);
 
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -373,6 +410,9 @@ export function useBinanceWebSocket() {
       }
       if (batchFlushIntervalRef.current) {
         clearInterval(batchFlushIntervalRef.current);
+      }
+      if (snapshotRefreshIntervalRef.current) {
+        clearInterval(snapshotRefreshIntervalRef.current);
       }
       if (wsRef.current) {
         wsRef.current.close();
