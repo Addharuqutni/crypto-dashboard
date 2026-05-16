@@ -37,10 +37,26 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
   entries: [],
   hydrated: false,
 
+  /**
+
+   * Memuat ulang state hydrate dari penyimpanan lokal.
+
+   * Dipakai agar data browser tetap tersedia setelah halaman direfresh.
+
+   */
+
   hydrate: () => {
     const stored = safeGetItem<SignalJournalEntry[]>(STORAGE_KEY, []);
     set({ entries: Array.isArray(stored) ? stored : [], hydrated: true });
   },
+
+  /**
+
+   * Menambahkan data add ke state aplikasi.
+
+   * Mengembalikan status atau data baru agar UI bisa memberi feedback yang tepat.
+
+   */
 
   add: (entry) => {
     const state = get();
@@ -63,6 +79,14 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
     set({ entries: next });
     return newEntry;
   },
+
+  /**
+
+   * Memperbarui data status yang sudah tersimpan.
+
+   * Dipakai agar mutation state tetap konsisten dan tidak tersebar di komponen.
+
+   */
 
   updateStatus: (id, status) => {
     const state = get();
@@ -143,12 +167,28 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
     }
   },
 
+  /**
+
+   * Menghapus data remove dari state aplikasi.
+
+   * Dipakai agar aturan penghapusan dan persistensi tetap berada di store terkait.
+
+   */
+
   remove: (id) => {
     const state = get();
     const next = state.entries.filter((e) => e.id !== id);
     safeSetItem(STORAGE_KEY, next);
     set({ entries: next });
   },
+
+  /**
+
+   * Membersihkan data older than dari state aplikasi.
+
+   * Dipakai untuk reset data lokal secara eksplisit sesuai aksi pengguna.
+
+   */
 
   clearOlderThan: (epochMs) => {
     const state = get();
@@ -157,10 +197,26 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
     set({ entries: next });
   },
 
+  /**
+
+   * Membersihkan data all dari state aplikasi.
+
+   * Dipakai untuk reset data lokal secara eksplisit sesuai aksi pengguna.
+
+   */
+
   clearAll: () => {
     safeSetItem(STORAGE_KEY, []);
     set({ entries: [] });
   },
+
+  /**
+
+   * Menjalankan logic metrics.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
 
   metrics: () => {
     const entries = get().entries;
@@ -236,9 +292,25 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
   },
 }));
 
+/**
+
+ * Mengecek apakah kondisi has reached tp terpenuhi.
+
+ * Mengembalikan boolean agar aturan validasi tetap eksplisit dan mudah dibaca.
+
+ */
+
 function hasReachedTp(isLong: boolean, latest: number, tp: number): boolean {
   return isLong ? latest >= tp : latest <= tp;
 }
+
+/**
+
+ * Membuat id berdasarkan input saat ini.
+
+ * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+
+ */
 
 function generateId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {

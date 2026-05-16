@@ -185,6 +185,10 @@ export default function CoinDetailPage() {
   }, [chartMode, candles]);
 
   // Toggle indicator
+  /**
+   * Menjalankan logic handle toggle indicator.
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+   */
   const handleToggleIndicator = (key: string) => {
     setActiveIndicators((prev) => {
       const next = new Set(prev);
@@ -468,6 +472,14 @@ export default function CoinDetailPage() {
   );
 }
 
+/**
+
+ * Komponen ChartDeferredSkeleton untuk merender bagian UI terkait chart deferred skeleton.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function ChartDeferredSkeleton() {
   return (
     <div className="flex h-[420px] items-center justify-center rounded-xl border border-border-subtle/60 bg-bg-surface-soft/40">
@@ -480,6 +492,14 @@ function ChartDeferredSkeleton() {
     </div>
   );
 }
+
+/**
+
+ * Komponen StatCard untuk merender bagian UI terkait stat card.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (

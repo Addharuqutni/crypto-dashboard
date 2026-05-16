@@ -18,6 +18,14 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue>({ toast: () => {} });
 
+/**
+
+ * Hook untuk mengelola toast.
+
+ * Dipakai agar state, side effect, dan integrasi data tidak tersebar di komponen UI.
+
+ */
+
 export function useToast() {
   return useContext(ToastContext);
 }

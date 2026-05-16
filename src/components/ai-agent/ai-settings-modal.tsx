@@ -45,6 +45,10 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
+    /**
+     * Menjalankan logic handle esc.
+     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+     */
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -56,6 +60,14 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
 
   const canSave = baseUrl.trim() && apiKey.trim() && model.trim();
 
+  /**
+
+   * Menjalankan logic handle test.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
+
   const handleTest = async () => {
     if (!canSave) return;
     setTesting(true);
@@ -65,6 +77,14 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
     setTestResult(result);
     setTesting(false);
   };
+
+  /**
+
+   * Menjalankan logic handle save.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
 
   const handleSave = () => {
     setRememberKey(remember);

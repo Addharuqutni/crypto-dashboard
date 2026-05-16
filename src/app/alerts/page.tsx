@@ -36,6 +36,14 @@ export default function AlertsPage() {
     setNotificationPermission(Notification.permission);
   }, []);
 
+  /**
+
+   * Menjalankan logic request permission.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
+
   const requestPermission = async () => {
     if (!('Notification' in window)) return;
     const result = await Notification.requestPermission();
@@ -151,6 +159,14 @@ export default function AlertsPage() {
 
 // --- Sub-components ---
 
+/**
+
+ * Komponen NotificationBanner untuk merender bagian UI terkait notification banner.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function NotificationBanner({
   permission,
   onRequest,
@@ -200,6 +216,14 @@ function NotificationBanner({
     </div>
   );
 }
+
+/**
+
+ * Komponen AlertCard untuk merender bagian UI terkait alert card.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function AlertCard({
   alert,
@@ -252,6 +276,14 @@ function AlertCard({
   );
 }
 
+/**
+
+ * Komponen AlertForm untuk merender bagian UI terkait alert form.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function AlertForm({
   onSubmit,
   onCancel,
@@ -263,6 +295,14 @@ function AlertForm({
   const [condition, setCondition] = useState<'greater_than' | 'less_than'>('greater_than');
   const [targetPrice, setTargetPrice] = useState('');
   const [error, setError] = useState('');
+
+  /**
+
+   * Menjalankan logic handle submit.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

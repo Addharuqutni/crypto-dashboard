@@ -162,10 +162,26 @@ export async function testConnection(config: AiConfig): Promise<{ success: boole
 
 // --- Helpers ---
 
+/**
+
+ * Membuat url berdasarkan input saat ini.
+
+ * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+
+ */
+
 function buildUrl(baseUrl: string, path: string): string {
   const base = baseUrl.replace(/\/+$/, '');
   return base.includes('/v1') ? `${base}${path}` : `${base}/v1${path}`;
 }
+
+/**
+
+ * Membuat headers berdasarkan input saat ini.
+
+ * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+
+ */
 
 function buildHeaders(apiKey: string): Record<string, string> {
   return {
@@ -173,6 +189,14 @@ function buildHeaders(apiKey: string): Record<string, string> {
     Authorization: `Bearer ${apiKey}`,
   };
 }
+
+/**
+
+ * Menjalankan logic parse error.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
 
 async function parseError(response: Response): Promise<AiClientError> {
   let message = `API error: ${response.status} ${response.statusText}`;

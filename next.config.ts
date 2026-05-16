@@ -2,12 +2,12 @@ import type { NextConfig } from 'next';
 
 /**
  * Next.js configuration.
- * Turbopack-specific settings are intentionally omitted because this project
- * runs development and production builds with Webpack for lower laptop load.
+ * Standalone output packages only production files needed by cPanel Node.js hosting.
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: __dirname,
+  output: 'standalone',
 };
 
 export default nextConfig;

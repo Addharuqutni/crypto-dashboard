@@ -38,6 +38,10 @@ export function useCoinMetadata(coingeckoId: string | undefined) {
 export function useChartData(symbol: string, timeframe: ChartTimeframe) {
   return useQuery({
     queryKey: ['chart-data', symbol, timeframe],
+    /**
+     * Menjalankan logic query fn.
+     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+     */
     queryFn: async () => {
       const candles = await fetchKlineData(symbol, timeframe);
       // Convert raw Binance candles into Lightweight Charts line points.

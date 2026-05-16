@@ -242,6 +242,14 @@ export default function PortfolioPage() {
 
 // --- Sub-components ---
 
+/**
+
+ * Komponen SummaryCard untuk merender bagian UI terkait summary card.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function SummaryCard({ label, value, change }: { label: string; value: string; change?: number | null }) {
   const isUp = (change ?? 0) > 0;
   const isDown = (change ?? 0) < 0;
@@ -262,6 +270,14 @@ function SummaryCard({ label, value, change }: { label: string; value: string; c
   );
 }
 
+/**
+
+ * Komponen PnlDisplay untuk merender bagian UI terkait pnl display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function PnlDisplay({ pnl, pnlPercent, compact }: { pnl: number | null; pnlPercent: number | null; compact?: boolean }) {
   if (pnl == null) return <span className={cn('text-text-muted', compact ? 'text-xs' : 'text-sm')}>—</span>;
 
@@ -277,6 +293,14 @@ function PnlDisplay({ pnl, pnlPercent, compact }: { pnl: number | null; pnlPerce
   );
 }
 
+/**
+
+ * Komponen HoldingForm untuk merender bagian UI terkait holding form.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function HoldingForm({
   editingHolding,
   onSubmit,
@@ -290,6 +314,14 @@ function HoldingForm({
   const [quantity, setQuantity] = useState(editingHolding?.quantity?.toString() ?? '');
   const [buyPrice, setBuyPrice] = useState(editingHolding?.averageBuyPrice?.toString() ?? '');
   const [error, setError] = useState('');
+
+  /**
+
+   * Menjalankan logic handle submit.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

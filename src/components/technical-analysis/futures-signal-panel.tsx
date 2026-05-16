@@ -163,6 +163,14 @@ export function FuturesSignalPanel({
     );
   }
 
+  /**
+
+   * Menjalankan logic handle save signal.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
+
   const handleSaveSignal = () => {
     if (!signal || signal.action === 'WAIT') return;
     journalAdd({
@@ -360,6 +368,14 @@ export function FuturesSignalPanel({
 // Sub-components
 // --------------------------------------------------------------------------
 
+/**
+
+ * Komponen ActionBadge untuk merender bagian UI terkait action badge.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function ActionBadge({ action }: { action: FuturesSignalAction }) {
   const map: Record<FuturesSignalAction, { className: string; icon: React.ReactNode; label: string }> = {
     LONG: {
@@ -393,6 +409,14 @@ function ActionBadge({ action }: { action: FuturesSignalAction }) {
   );
 }
 
+/**
+
+ * Komponen GradeBadge untuk merender bagian UI terkait grade badge.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function GradeBadge({ grade }: { grade: FuturesSignalGrade }) {
   const map: Record<FuturesSignalGrade, string> = {
     'A+': 'border-market-up/50 bg-market-up/10 text-market-up',
@@ -414,6 +438,14 @@ function GradeBadge({ grade }: { grade: FuturesSignalGrade }) {
   );
 }
 
+/**
+
+ * Komponen RiskPill untuk merender bagian UI terkait risk pill.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function RiskPill({ level }: { level: FuturesRiskLevel }) {
   const map: Record<FuturesRiskLevel, { label: string; className: string }> = {
     LOW: { label: 'Low Risk', className: 'border-market-up/30 bg-market-up/5 text-market-up' },
@@ -434,6 +466,14 @@ function RiskPill({ level }: { level: FuturesRiskLevel }) {
   );
 }
 
+/**
+
+ * Komponen TriggerPill untuk merender bagian UI terkait trigger pill.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function TriggerPill({ trigger }: { trigger: FuturesEntryTrigger }) {
   if (trigger === 'NO_TRIGGER') return null;
   const label = trigger.toLowerCase().replace(/_/g, ' ');
@@ -444,6 +484,14 @@ function TriggerPill({ trigger }: { trigger: FuturesEntryTrigger }) {
     </span>
   );
 }
+
+/**
+
+ * Komponen ConfidenceMeter untuk merender bagian UI terkait confidence meter.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function ConfidenceMeter({ score }: { score: number }) {
   const clamped = Math.max(0, Math.min(100, score));
@@ -465,6 +513,14 @@ function ConfidenceMeter({ score }: { score: number }) {
     </div>
   );
 }
+
+/**
+
+ * Komponen PlanStat untuk merender bagian UI terkait plan stat.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function PlanStat({
   icon,
@@ -496,6 +552,14 @@ function PlanStat({
     </div>
   );
 }
+
+/**
+
+ * Komponen MtfBlock untuk merender bagian UI terkait mtf block.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function MtfBlock({ signal }: { signal: FuturesSignal }) {
   const mtf = signal.mtfConfirmation;
@@ -529,6 +593,14 @@ function MtfBlock({ signal }: { signal: FuturesSignal }) {
   );
 }
 
+/**
+
+ * Komponen BiasCell untuk merender bagian UI terkait bias cell.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function BiasCell({ label, value }: { label: string; value: FuturesSignal['mtfConfirmation']['macroBias'] }) {
   const map: Record<typeof value, string> = {
     BULLISH: 'text-market-up',
@@ -545,6 +617,14 @@ function BiasCell({ label, value }: { label: string; value: FuturesSignal['mtfCo
     </div>
   );
 }
+
+/**
+
+ * Komponen PositioningBlock untuk merender bagian UI terkait positioning block.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function PositioningBlock({ signal }: { signal: FuturesSignal }) {
   const fundingPct =
@@ -593,6 +673,14 @@ function PositioningBlock({ signal }: { signal: FuturesSignal }) {
   );
 }
 
+/**
+
+ * Komponen Row untuk merender bagian UI terkait row.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function Row({
   label,
   value,
@@ -615,6 +703,14 @@ function Row({
   );
 }
 
+/**
+
+ * Menjalankan logic funding bias label.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
+
 function fundingBiasLabel(b: FuturesFundingBias): string {
   switch (b) {
     case 'CROWDED_LONG':
@@ -631,6 +727,14 @@ function fundingBiasLabel(b: FuturesFundingBias): string {
       return '—';
   }
 }
+
+/**
+
+ * Menjalankan logic oi bias label.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
 
 function oiBiasLabel(b: FuturesOpenInterestBias): string {
   switch (b) {

@@ -53,6 +53,14 @@ interface AiState {
   clearError: () => void;
 }
 
+/**
+
+ * Membuat id berdasarkan input saat ini.
+
+ * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+
+ */
+
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -70,6 +78,14 @@ export const useAiStore = create<AiState>()(
       error: null,
       technicalContext: null,
 
+      /**
+
+       * Memperbarui data config yang sudah tersimpan.
+
+       * Dipakai agar mutation state tetap konsisten dan tidak tersebar di komponen.
+
+       */
+
       updateConfig: (partial) => {
         const current = get().config;
         const updated = { ...current, ...partial };
@@ -77,13 +93,37 @@ export const useAiStore = create<AiState>()(
         set({ config: updated, isConfigured });
       },
 
+      /**
+
+       * Mengubah nilai remember key pada state aplikasi.
+
+       * Dipakai agar perubahan state tetap melalui satu jalur yang mudah dilacak.
+
+       */
+
       setRememberKey: (remember) => {
         set({ rememberKey: remember });
       },
 
+      /**
+
+       * Mengubah nilai technical context pada state aplikasi.
+
+       * Dipakai agar perubahan state tetap melalui satu jalur yang mudah dilacak.
+
+       */
+
       setTechnicalContext: (context) => {
         set({ technicalContext: context });
       },
+
+      /**
+
+       * Menjalankan logic send message.
+
+       * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+       */
 
       sendMessage: (content) => {
         const state = get();
@@ -135,6 +175,10 @@ export const useAiStore = create<AiState>()(
           state.config,
           apiMessages,
           {
+            /**
+             * Menangani event chunk dari interaksi pengguna atau browser.
+             * Dipakai agar side effect dari event tetap jelas dan terlokalisasi.
+             */
             onChunk: (chunk) => {
               set((s) => {
                 const msgs = [...s.messages];
@@ -145,10 +189,18 @@ export const useAiStore = create<AiState>()(
                 return { messages: msgs };
               });
             },
+            /**
+             * Menangani event done dari interaksi pengguna atau browser.
+             * Dipakai agar side effect dari event tetap jelas dan terlokalisasi.
+             */
             onDone: () => {
               activeController = null;
               set({ isStreaming: false });
             },
+            /**
+             * Menangani event error dari interaksi pengguna atau browser.
+             * Dipakai agar side effect dari event tetap jelas dan terlokalisasi.
+             */
             onError: (error: AiClientError) => {
               activeController = null;
               set((s) => {
@@ -171,6 +223,14 @@ export const useAiStore = create<AiState>()(
         activeController = controller;
       },
 
+      /**
+
+       * Menjalankan logic stop streaming.
+
+       * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+       */
+
       stopStreaming: () => {
         if (activeController) {
           activeController.abort();
@@ -179,6 +239,14 @@ export const useAiStore = create<AiState>()(
         }
       },
 
+      /**
+
+       * Membersihkan data history dari state aplikasi.
+
+       * Dipakai untuk reset data lokal secara eksplisit sesuai aksi pengguna.
+
+       */
+
       clearHistory: () => {
         if (activeController) {
           activeController.abort();
@@ -186,6 +254,14 @@ export const useAiStore = create<AiState>()(
         }
         set({ messages: [], isStreaming: false, error: null });
       },
+
+      /**
+
+       * Membersihkan data error dari state aplikasi.
+
+       * Dipakai untuk reset data lokal secara eksplisit sesuai aksi pengguna.
+
+       */
 
       clearError: () => {
         set({ error: null });

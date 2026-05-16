@@ -320,11 +320,23 @@ function splitBlocks(text: string): Block[] {
   let paragraph: string[] = [];
   let list: string[] = [];
 
+  /**
+
+   * Menjalankan logic flush paragraph.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
+
   const flushParagraph = () => {
     if (paragraph.length === 0) return;
     blocks.push({ type: 'paragraph', text: paragraph.join(' ').trim() });
     paragraph = [];
   };
+  /**
+   * Menjalankan logic flush list.
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+   */
   const flushList = () => {
     if (list.length === 0) return;
     blocks.push({ type: 'list', items: list });

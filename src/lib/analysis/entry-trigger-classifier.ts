@@ -37,6 +37,14 @@ export interface ClassifyTriggerInput {
   recentAvgVolume: number | null;
 }
 
+/**
+
+ * Menjalankan logic classify entry trigger.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
+
 export function classifyEntryTrigger(input: ClassifyTriggerInput): FuturesEntryTrigger {
   if (input.side === 'WAIT') return 'NO_TRIGGER';
   if (input.candles.length < 2) return 'NO_TRIGGER';

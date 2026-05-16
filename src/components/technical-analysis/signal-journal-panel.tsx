@@ -105,6 +105,14 @@ export function SignalJournalPanel() {
   );
 }
 
+/**
+
+ * Komponen Metric untuk merender bagian UI terkait metric.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function Metric({ label, value, tone }: { label: string; value: string; tone?: 'bullish' | 'bearish' }) {
   return (
     <div className="rounded-md border border-border-subtle bg-bg-surface-soft px-2 py-1.5">
@@ -326,6 +334,14 @@ function PriceCell({ label, value, tone }: { label: string; value: number | null
     </div>
   );
 }
+
+/**
+
+ * Komponen StatusPill untuk merender bagian UI terkait status pill.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function StatusPill({ status }: { status: SignalJournalStatus }) {
   const map: Record<SignalJournalStatus, { label: string; className: string }> = {

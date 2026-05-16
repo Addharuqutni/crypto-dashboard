@@ -41,6 +41,14 @@ export function PriceChart({ data, symbol, timeframe }: PriceChartProps) {
     let mounted = true;
     let resizeObserver: ResizeObserver | null = null;
 
+    /**
+
+     * Menjalankan logic init chart.
+
+     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+     */
+
     const initChart = async () => {
       try {
         const { createChart, ColorType, LineStyle, AreaSeries } = await import(

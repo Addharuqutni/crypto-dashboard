@@ -63,6 +63,14 @@ interface SubScores {
   riskScore: number;
 }
 
+/**
+
+ * Membuat futures signal berdasarkan input saat ini.
+
+ * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+
+ */
+
 export function generateFuturesSignal(
   input: FuturesSignalInput,
   config: FuturesSignalConfig = DEFAULT_FUTURES_SIGNAL_CONFIG
@@ -451,6 +459,14 @@ export function generateFuturesSignal(
 // Sub-score computation
 // --------------------------------------------------------------------------
 
+/**
+
+ * Menghitung sub scores dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
+
 function computeSubScores(
   side: 'LONG' | 'SHORT',
   candles: Candle[],
@@ -466,6 +482,14 @@ function computeSubScores(
     riskScore: computeRiskScore(regime),
   };
 }
+
+/**
+
+ * Menghitung trend score dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
 
 function computeTrendScore(
   side: 'LONG' | 'SHORT',
@@ -499,6 +523,14 @@ function computeTrendScore(
 
   return clamp(score, 0, 100);
 }
+
+/**
+
+ * Menghitung momentum score dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
 
 function computeMomentumScore(
   side: 'LONG' | 'SHORT',
@@ -545,6 +577,14 @@ function computeMomentumScore(
   return clamp(score, 0, 100);
 }
 
+/**
+
+ * Menghitung volume score dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
+
 function computeVolumeScore(candles: Candle[]): number {
   const sample = candles.slice(-21);
   if (sample.length < 5) return 50;
@@ -566,6 +606,14 @@ function computeVolumeScore(candles: Candle[]): number {
   if (ratio >= 0.6) return 40;
   return 25;
 }
+
+/**
+
+ * Menghitung structure score dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
 
 function computeStructureScore(
   side: 'LONG' | 'SHORT',
@@ -598,6 +646,14 @@ function computeStructureScore(
   return clamp(score, 0, 100);
 }
 
+/**
+
+ * Menghitung risk score dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
+
 function computeRiskScore(regime: RegimeContext): number {
   if (regime.atrPctOfPrice == null) return 40;
 
@@ -615,6 +671,14 @@ function computeRiskScore(regime: RegimeContext): number {
   return clamp(score, 0, 100);
 }
 
+/**
+
+ * Menjalankan logic weighted score.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
+
 function weightedScore(s: SubScores): number {
   const v =
     s.trendScore * SCORE_WEIGHTS.trend +
@@ -624,6 +688,14 @@ function weightedScore(s: SubScores): number {
     s.riskScore * SCORE_WEIGHTS.risk;
   return clamp(v, 0, 100);
 }
+
+/**
+
+ * Menghitung avg volume dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
 
 function computeAvgVolume(candles: Candle[]): number | null {
   const sample = candles.slice(-21).slice(0, -1);
@@ -635,6 +707,14 @@ function computeAvgVolume(candles: Candle[]): number | null {
 // --------------------------------------------------------------------------
 // Helpers
 // --------------------------------------------------------------------------
+
+/**
+
+ * Menjalankan logic collect reasons.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
 
 function collectReasons(
   side: 'LONG' | 'SHORT',
@@ -674,6 +754,14 @@ function collectReasons(
   reasons.push(`Bias: ${side}.`);
   return reasons;
 }
+
+/**
+
+ * Membuat summary berdasarkan input saat ini.
+
+ * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+
+ */
 
 function buildSummary(
   action: FuturesSignalAction,
@@ -716,6 +804,14 @@ interface FinalizeWaitArgs {
   regimeCtx: RegimeContext;
   ranked: NoTradeReason[];
 }
+
+/**
+
+ * Menjalankan logic finalize wait.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
 
 function finalizeWait(args: FinalizeWaitArgs): FuturesSignal {
   const { reasons: rankedMessages, primary } = rankNoTradeReasons(args.ranked);
@@ -800,6 +896,14 @@ function waitSignal(args: WaitArgs): FuturesSignal {
     },
   };
 }
+
+/**
+
+ * Menjalankan logic clamp.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
 
 function clamp(v: number, min: number, max: number): number {
   if (!Number.isFinite(v)) return min;

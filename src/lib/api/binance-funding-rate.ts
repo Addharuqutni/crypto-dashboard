@@ -57,6 +57,14 @@ export async function fetchFundingRate(
   }
 }
 
+/**
+
+ * Mengambil with timeout dari sumber data terkait.
+
+ * Dipakai untuk memisahkan akses data dari komponen dan logic domain.
+
+ */
+
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), timeoutMs);

@@ -20,10 +20,26 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
   holdings: [],
   hydrated: false,
 
+  /**
+
+   * Memuat ulang state hydrate dari penyimpanan lokal.
+
+   * Dipakai agar data browser tetap tersedia setelah halaman direfresh.
+
+   */
+
   hydrate: () => {
     const stored = safeGetItem<PortfolioHolding[]>(STORAGE_KEYS.portfolio, []);
     set({ holdings: stored, hydrated: true });
   },
+
+  /**
+
+   * Menambahkan data holding ke state aplikasi.
+
+   * Mengembalikan status atau data baru agar UI bisa memberi feedback yang tepat.
+
+   */
 
   addHolding: (holding) => {
     // Validate inputs before persisting
@@ -63,6 +79,14 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     set({ holdings: updated });
   },
 
+  /**
+
+   * Memperbarui data holding yang sudah tersimpan.
+
+   * Dipakai agar mutation state tetap konsisten dan tidak tersebar di komponen.
+
+   */
+
   updateHolding: (id, updates) => {
     // Validate numeric updates if provided
     if (updates.quantity !== undefined && !isValidPositiveNumber(updates.quantity)) {
@@ -83,6 +107,14 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     safeSetItem(STORAGE_KEYS.portfolio, updated);
     set({ holdings: updated });
   },
+
+  /**
+
+   * Menghapus data holding dari state aplikasi.
+
+   * Dipakai agar aturan penghapusan dan persistensi tetap berada di store terkait.
+
+   */
 
   removeHolding: (id) => {
     const state = get();

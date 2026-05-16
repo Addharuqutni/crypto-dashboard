@@ -68,6 +68,14 @@ export function useSignalAlertEvaluator({
     const now = Date.now();
     const cooldown = config.cooldownMs ?? DEFAULT_COOLDOWN_MS;
 
+    /**
+
+     * Menjalankan logic try fire.
+
+     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+     */
+
     const tryFire = (key: string, title: string, body: string) => {
       const last = lastFiredRef.current.get(key);
       if (last != null && now - last < cooldown) return;

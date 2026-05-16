@@ -29,6 +29,14 @@ export interface OiFilterResult {
 /** Smallest absolute % change to be considered a real movement. */
 const MIN_MAGNITUDE = 0.05; // 0.05% — anything tinier is noise.
 
+/**
+
+ * Menjalankan logic apply open interest filter.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
+
 export function applyOpenInterestFilter(
   action: FuturesSignalAction,
   inputs: OiInputs

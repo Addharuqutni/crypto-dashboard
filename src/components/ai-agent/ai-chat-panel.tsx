@@ -79,6 +79,14 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  /**
+
+   * Menjalankan logic handle send.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
+
   const handleSend = () => {
     const trimmed = input.trim();
     if (!trimmed || isStreaming) return;
@@ -86,6 +94,14 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
     setInput('');
     inputRef.current?.focus();
   };
+
+  /**
+
+   * Menjalankan logic handle key down.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {

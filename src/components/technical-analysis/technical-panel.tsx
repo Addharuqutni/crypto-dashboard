@@ -125,6 +125,14 @@ export function TechnicalPanel({ candles, symbol, timeframe, currentPrice, activ
 
 // --- Sub-components ---
 
+/**
+
+ * Komponen TrendBadge untuk merender bagian UI terkait trend badge.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function TrendBadge({ trend, symbol }: { trend: TrendLabel; symbol: string }) {
   const colorMap = {
     bullish: 'border-market-up/30 bg-market-up/5 text-market-up',
@@ -155,6 +163,14 @@ function TrendBadge({ trend, symbol }: { trend: TrendLabel; symbol: string }) {
   );
 }
 
+/**
+
+ * Komponen IndicatorCard untuk merender bagian UI terkait indicator card.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function IndicatorCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="card px-4 py-3">
@@ -163,6 +179,14 @@ function IndicatorCard({ title, children }: { title: string; children: React.Rea
     </div>
   );
 }
+
+/**
+
+ * Komponen RsiDisplay untuk merender bagian UI terkait rsi display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function RsiDisplay({ rsi }: { rsi: RsiResult }) {
   if (!rsi.value) {
@@ -202,6 +226,14 @@ function RsiDisplay({ rsi }: { rsi: RsiResult }) {
   );
 }
 
+/**
+
+ * Komponen MacdDisplay untuk merender bagian UI terkait macd display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function MacdDisplay({ macd }: { macd: MacdPoint }) {
   const isPositive = macd.histogram > 0;
 
@@ -224,6 +256,14 @@ function MacdDisplay({ macd }: { macd: MacdPoint }) {
     </div>
   );
 }
+
+/**
+
+ * Komponen SrDisplay untuk merender bagian UI terkait sr display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function SrDisplay({ sr }: { sr: SupportResistance }) {
   return (
@@ -255,6 +295,14 @@ function SrDisplay({ sr }: { sr: SupportResistance }) {
   );
 }
 
+/**
+
+ * Komponen VolumeDisplay untuk merender bagian UI terkait volume display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function VolumeDisplay({ candles }: { candles: Candle[] }) {
   const recent = candles.slice(-24);
   const totalVolume = recent.reduce((sum, c) => sum + c.volume, 0);
@@ -285,6 +333,14 @@ function VolumeDisplay({ candles }: { candles: Candle[] }) {
     </div>
   );
 }
+
+/**
+
+ * Komponen FibonacciDisplay untuk merender bagian UI terkait fibonacci display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function FibonacciDisplay({ fib }: { fib: FibonacciResult }) {
   return (
@@ -320,6 +376,14 @@ function FibonacciDisplay({ fib }: { fib: FibonacciResult }) {
     </div>
   );
 }
+
+/**
+
+ * Komponen OrderBlockDisplay untuk merender bagian UI terkait order block display.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function OrderBlockDisplay({ blocks }: { blocks: OrderBlock[] }) {
   return (

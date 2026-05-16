@@ -95,6 +95,14 @@ export function buildMtfConfirmation(
   };
 }
 
+/**
+
+ * Menghitung alignment score dari data input yang tersedia.
+
+ * Dipakai untuk menjaga logika perhitungan tetap terpusat dan mudah diuji.
+
+ */
+
 function computeAlignmentScore(
   macro: FuturesBias,
   setup: FuturesBias,

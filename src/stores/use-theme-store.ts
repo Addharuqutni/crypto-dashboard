@@ -22,10 +22,26 @@ export const useThemeStore = create<ThemeState>((set) => ({
   theme: 'dark',
   hydrated: false,
 
+  /**
+
+   * Memuat ulang state hydrate dari penyimpanan lokal.
+
+   * Dipakai agar data browser tetap tersedia setelah halaman direfresh.
+
+   */
+
   hydrate: () => {
     const stored = safeGetItem<ThemePreference>(STORAGE_KEYS.theme, 'dark');
     set({ theme: stored, hydrated: true });
   },
+
+  /**
+
+   * Mengubah nilai theme pada state aplikasi.
+
+   * Dipakai agar perubahan state tetap melalui satu jalur yang mudah dilacak.
+
+   */
 
   setTheme: (theme) => {
     safeSetItem(STORAGE_KEYS.theme, theme);

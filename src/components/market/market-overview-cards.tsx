@@ -92,6 +92,14 @@ export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
   );
 }
 
+/**
+
+ * Komponen SummaryCard untuk merender bagian UI terkait summary card.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function SummaryCard({
   label,
   icon,

@@ -26,10 +26,26 @@ export const useAlertStore = create<AlertState>((set, get) => ({
   alerts: [],
   hydrated: false,
 
+  /**
+
+   * Memuat ulang state hydrate dari penyimpanan lokal.
+
+   * Dipakai agar data browser tetap tersedia setelah halaman direfresh.
+
+   */
+
   hydrate: () => {
     const stored = safeGetItem<PriceAlert[]>(STORAGE_KEYS.alerts, []);
     set({ alerts: stored, hydrated: true });
   },
+
+  /**
+
+   * Menambahkan data alert ke state aplikasi.
+
+   * Mengembalikan status atau data baru agar UI bisa memberi feedback yang tepat.
+
+   */
 
   addAlert: (alert) => {
     // Validate target price
@@ -86,12 +102,28 @@ export const useAlertStore = create<AlertState>((set, get) => ({
     set({ alerts: updated });
   },
 
+  /**
+
+   * Menghapus data alert dari state aplikasi.
+
+   * Dipakai agar aturan penghapusan dan persistensi tetap berada di store terkait.
+
+   */
+
   removeAlert: (id) => {
     const state = get();
     const updated = state.alerts.filter((a) => a.id !== id);
     safeSetItem(STORAGE_KEYS.alerts, updated);
     set({ alerts: updated });
   },
+
+  /**
+
+   * Menjalankan logic trigger alert.
+
+   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+   */
 
   triggerAlert: (id) => {
     const state = get();

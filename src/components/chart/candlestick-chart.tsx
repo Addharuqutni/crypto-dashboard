@@ -145,6 +145,14 @@ export function CandlestickChart({
     // sure cleanup uses the SAME map instance the effect captured at mount.
     const maSeries = maSeriesRef.current;
 
+    /**
+
+     * Menjalankan logic init chart.
+
+     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+     */
+
     const initChart = async () => {
       try {
         const {
@@ -342,6 +350,10 @@ export function CandlestickChart({
     if (!chart) return;
 
     let cancelled = false;
+    /**
+     * Menjalankan logic ensure series.
+     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+     */
     const ensureSeries = async () => {
       const lc = await import('lightweight-charts');
       if (cancelled || !chartRef.current) return;
@@ -496,6 +508,14 @@ export function CandlestickChart({
 
 // --- Inline atoms ---
 
+/**
+
+ * Komponen OhlcItem untuk merender bagian UI terkait ohlc item.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function OhlcItem({ label, value, prev }: { label: string; value: number; prev: number }) {
   const isUp = value >= prev;
   return (
@@ -507,6 +527,14 @@ function OhlcItem({ label, value, prev }: { label: string; value: number; prev: 
     </span>
   );
 }
+
+/**
+
+ * Komponen LegendDot untuk merender bagian UI terkait legend dot.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (

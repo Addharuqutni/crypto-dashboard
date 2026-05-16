@@ -158,6 +158,14 @@ function DashboardSkeleton() {
   );
 }
 
+/**
+
+ * Komponen TableSkeleton untuk merender bagian UI terkait table skeleton.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function TableSkeleton() {
   return (
     <div className="card animate-pulse p-4">
@@ -172,6 +180,14 @@ function TableSkeleton() {
   );
 }
 
+/**
+
+ * Komponen SidebarSkeleton untuk merender bagian UI terkait sidebar skeleton.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function SidebarSkeleton() {
   return (
     <div className="card animate-pulse px-4 py-5">
@@ -184,6 +200,14 @@ function SidebarSkeleton() {
     </div>
   );
 }
+
+/**
+
+ * Komponen WidgetSkeleton untuk merender bagian UI terkait widget skeleton.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
 
 function WidgetSkeleton() {
   return (

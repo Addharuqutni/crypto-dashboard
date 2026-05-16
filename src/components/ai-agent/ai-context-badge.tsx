@@ -121,6 +121,14 @@ export function AiContextBadge({ context }: AiContextBadgeProps) {
   );
 }
 
+/**
+
+ * Komponen ContextRow untuk merender bagian UI terkait context row.
+
+ * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
+
+ */
+
 function ContextRow({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div className="flex items-center justify-between">

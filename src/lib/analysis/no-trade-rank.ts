@@ -68,6 +68,14 @@ export function rankNoTradeReasons(reasons: NoTradeReason[]): RankedNoTradeReaso
   };
 }
 
+/**
+
+ * Menjalankan logic severity index.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
+
 function severityIndex(s: NoTradeSeverity): number {
   const idx = SEVERITY_ORDER.indexOf(s);
   return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;

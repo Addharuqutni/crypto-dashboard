@@ -175,6 +175,14 @@ function formatInline(text: string): React.ReactNode {
   });
 }
 
+/**
+
+ * Memformat nilai menjadi bentuk time yang siap ditampilkan.
+
+ * Dipakai agar aturan tampilan angka/teks konsisten di seluruh UI.
+
+ */
+
 function formatTime(timestamp: number): string {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }

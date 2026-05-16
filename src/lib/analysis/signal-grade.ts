@@ -27,6 +27,14 @@ export interface GradeInputs {
   warningsCount: number;
 }
 
+/**
+
+ * Menjalankan logic grade signal.
+
+ * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
+
+ */
+
 export function gradeSignal(inputs: GradeInputs): FuturesSignalGrade {
   // Hard floor: any NO_TRADE risk is a D.
   if (inputs.riskLevel === 'NO_TRADE') return 'D';
