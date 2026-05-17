@@ -80,6 +80,11 @@ export function CandlestickChart({
     [processedCandles, data]
   );
 
+  const latestProcessedCandlesRef = useRef<ChartCandle[]>([]);
+  const latestVolumeDataRef = useRef<ReturnType<typeof toVolumeData>>([]);
+  latestProcessedCandlesRef.current = processedCandles;
+  latestVolumeDataRef.current = volumeData;
+
   /**
    * Memoize MA overlays (MA7 / MA25 / MA99).
    * Only computed when raw candles are provided AND the toggle is on,
@@ -258,7 +263,21 @@ export function CandlestickChart({
         candleSeriesRef.current = candleSeries;
         volumeSeriesRef.current = volSeries;
 
-        if (mounted) setStatus('ready');
+        const latestCandles = latestProcessedCandlesRef.current;
+        if (latestCandles.length > 0) {
+          const latestVolume = latestVolumeDataRef.current;
+          const latest = latestCandles[latestCandles.length - 1]!;
+          const fmt = getPriceFormat(latest.close);
+          candleSeries.applyOptions({
+            priceFormat: { type: 'price', precision: fmt.precision, minMove: fmt.minMove },
+          });
+          candleSeries.setData(latestCandles);
+          volSeries.setData(latestVolume);
+          lastCandlesRef.current = latestCandles;
+          chart.timeScale().fitContent();
+        }
+
+        if (mounted) setStatus(latestCandles.length > 0 ? 'ready' : 'empty');
       } catch (error) {
         console.error('[CandlestickChart] Failed to initialize:', error);
         if (mounted) setStatus('error');

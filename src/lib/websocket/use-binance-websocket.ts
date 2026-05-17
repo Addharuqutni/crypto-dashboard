@@ -39,14 +39,20 @@ const STALE_WATCHDOG_TIMEOUT = 60_000;
  * Collects incoming tickers and flushes to store periodically
  * to reduce re-renders when receiving hundreds of updates per second.
  */
-const BATCH_FLUSH_INTERVAL = 300;
+const BATCH_FLUSH_INTERVAL = 100;
 
 /**
- * REST snapshot fallback interval.
- * Keeps production UI fresh when a browser/hosting network path leaves the
- * WebSocket open but stops delivering frames until a manual refresh.
+ * REST snapshot resync interval.
+ * WebSocket remains the primary realtime source; REST only fills gaps after
+ * network/browser stalls without creating Binance REST rate-limit pressure.
  */
-const SNAPSHOT_REFRESH_INTERVAL = 1_000;
+const SNAPSHOT_REFRESH_INTERVAL = 30_000;
+
+/** Interval for checking whether an open socket has silently stopped delivering frames. */
+const HEARTBEAT_CHECK_INTERVAL = 5_000;
+
+/** Maximum age of the last received all-market frame before forcing reconnect. */
+const MAX_SILENT_SOCKET_AGE_MS = 15_000;
 
 /** Max retries for exchangeInfo before entering degraded mode. */
 const EXCHANGE_INFO_MAX_RETRIES = 3;
@@ -77,10 +83,12 @@ export function useBinanceWebSocket() {
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionAgeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const staleWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const batchFlushIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const snapshotRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
+  const lastMessageAtRef = useRef(0);
 
   // Batch buffer for incoming ticker updates
   const batchBufferRef = useRef<Map<string, LivePrice>>(new Map());
@@ -204,6 +212,7 @@ export function useBinanceWebSocket() {
       ws.onopen = () => {
         if (!mountedRef.current) return;
         retryCountRef.current = 0;
+        lastMessageAtRef.current = Date.now();
         setConnectionStatus('connected');
 
         // Schedule proactive reconnect before 24h limit
@@ -230,7 +239,8 @@ export function useBinanceWebSocket() {
       ws.onmessage = (event) => {
         if (!mountedRef.current) return;
 
-        // Reset stale watchdog on every message
+        // Reset stale watchdog on every message and remember active delivery.
+        lastMessageAtRef.current = Date.now();
         resetStaleWatchdog();
 
         try {
@@ -284,12 +294,13 @@ export function useBinanceWebSocket() {
    * Force reconnect — closes existing connection and opens a new one.
    */
   const reconnect = useCallback(() => {
+    flushBatch();
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
     connectRef.current();
-  }, []);
+  }, [flushBatch]);
 
   // Keep refs in sync with latest callback instances
   connectRef.current = connect;
@@ -361,11 +372,15 @@ export function useBinanceWebSocket() {
    * prevents the dashboard from looking frozen until the user refreshes.
    */
   const refreshAfterResume = useCallback(() => {
-    if (!mountedRef.current || document.visibilityState === 'hidden') return;
+    if (!mountedRef.current || isDocumentHidden()) return;
 
     void seedInitialPrices();
 
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    const socket = wsRef.current;
+    const isSocketOpen = socket?.readyState === WebSocket.OPEN;
+    const silentFor = Date.now() - lastMessageAtRef.current;
+
+    if (!isSocketOpen || silentFor > MAX_SILENT_SOCKET_AGE_MS) {
       reconnectRef.current();
     }
   }, [seedInitialPrices]);
@@ -380,11 +395,24 @@ export function useBinanceWebSocket() {
         void seedInitialPrices();
         connectRef.current();
 
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+        }
+        heartbeatIntervalRef.current = setInterval(() => {
+          if (!mountedRef.current || !isDocumentVisible()) return;
+          const socket = wsRef.current;
+          const silentFor = Date.now() - lastMessageAtRef.current;
+          if (socket?.readyState === WebSocket.OPEN && silentFor > MAX_SILENT_SOCKET_AGE_MS) {
+            console.warn('[binance-ws] Open socket is silent. Reconnecting...');
+            reconnectRef.current();
+          }
+        }, HEARTBEAT_CHECK_INTERVAL);
+
         if (snapshotRefreshIntervalRef.current) {
           clearInterval(snapshotRefreshIntervalRef.current);
         }
         snapshotRefreshIntervalRef.current = setInterval(() => {
-          if (mountedRef.current && document.visibilityState === 'visible') {
+          if (mountedRef.current && isDocumentVisible()) {
             void seedInitialPrices();
           }
         }, SNAPSHOT_REFRESH_INTERVAL);
@@ -411,14 +439,22 @@ export function useBinanceWebSocket() {
       if (batchFlushIntervalRef.current) {
         clearInterval(batchFlushIntervalRef.current);
       }
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
       if (snapshotRefreshIntervalRef.current) {
         clearInterval(snapshotRefreshIntervalRef.current);
       }
+      flushBatch();
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
     };
+  // The market socket is intentionally mounted once. Mutable refs keep the
+  // latest callbacks/configuration available without recreating the connection
+  // on every store or callback identity change, which would cause reconnect
+  // storms under React StrictMode and high-frequency ticker updates.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -429,6 +465,16 @@ export function useBinanceWebSocket() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchlistItems]);
+}
+
+/** Returns true when the browser tab is visible, and defaults to true outside the DOM. */
+function isDocumentVisible(): boolean {
+  return typeof document === 'undefined' || document.visibilityState === 'visible';
+}
+
+/** Returns true only when the browser explicitly reports a hidden tab. */
+function isDocumentHidden(): boolean {
+  return typeof document !== 'undefined' && document.visibilityState === 'hidden';
 }
 
 /** Simple sleep utility for backoff delays. */

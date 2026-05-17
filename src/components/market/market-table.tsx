@@ -7,6 +7,8 @@ import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/for
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { TrendingUp, TrendingDown, Minus, Star, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
+import { getPriceFreshness } from '@/lib/market/freshness';
 import type { MarketRow } from '@/types/market';
 
 type DisplayMarketRow = MarketRow;
@@ -258,7 +260,7 @@ const PaginationControls = memo(function PaginationControls({
  * The selector subscribes to a single coin, so unrelated price ticks do not
  * invalidate this row/card.
  */
-function useLiveMarketRow(row: MarketRow): DisplayMarketRow {
+function useLiveMarketRow(row: MarketRow, now: number): DisplayMarketRow {
   const livePrice = useMarketStore((state) => state.prices[row.symbol]);
 
   return useMemo(() => {
@@ -266,20 +268,23 @@ function useLiveMarketRow(row: MarketRow): DisplayMarketRow {
       return row;
     }
 
+    const freshness = getPriceFreshness(livePrice.receivedAt, now);
+
     return {
       ...row,
       price: livePrice.price,
       priceChangePercent24h: livePrice.priceChangePercent24h ?? row.priceChangePercent24h,
-      isLive: true,
-      isStale: false,
+      isLive: freshness !== 'stale',
+      isStale: freshness === 'stale',
       lastUpdatedAt: livePrice.receivedAt,
     };
-  }, [livePrice, row]);
+  }, [livePrice, now, row]);
 }
 
 /** Card view row, memoized because formatting/icons are repeated for every coin. */
 const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
-  const displayRow = useLiveMarketRow(row);
+  const now = useFreshnessClock();
+  const displayRow = useLiveMarketRow(row, now);
   const isUp = (displayRow.priceChangePercent24h ?? 0) > 0;
   const isDown = (displayRow.priceChangePercent24h ?? 0) < 0;
 
@@ -297,10 +302,11 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
         <WatchlistToggle symbol={displayRow.symbol} name={displayRow.name} />
       </div>
 
-      <div className="mt-3">
-        <p className="numeric text-xl font-bold text-text-primary">
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <p className={cn('numeric text-xl font-bold text-text-primary', displayRow.isStale && 'text-text-muted')}>
           {formatCurrency(displayRow.price)}
         </p>
+        <PriceFreshnessBadge receivedAt={displayRow.lastUpdatedAt} now={now} compact />
       </div>
 
       <div className="mt-2 flex items-center justify-between">
@@ -324,7 +330,8 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
 
 /** Table row, memoized to reduce expensive table re-render work. */
 const MarketTableRow = memo(function MarketTableRow({ row }: { row: MarketRow }) {
-  const displayRow = useLiveMarketRow(row);
+  const now = useFreshnessClock();
+  const displayRow = useLiveMarketRow(row, now);
 
   return (
     <tr className="border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50">
@@ -340,8 +347,11 @@ const MarketTableRow = memo(function MarketTableRow({ row }: { row: MarketRow })
           </div>
         </Link>
       </td>
-      <td className="numeric px-4 py-3 font-medium text-text-primary">
-        {formatCurrency(displayRow.price)}
+      <td className="numeric px-4 py-3 font-medium">
+        <div className="flex items-center gap-2 text-text-primary">
+          <span className={cn(displayRow.isStale && 'text-text-muted')}>{formatCurrency(displayRow.price)}</span>
+          <PriceFreshnessBadge receivedAt={displayRow.lastUpdatedAt} now={now} compact />
+        </div>
       </td>
       <td className="px-4 py-3">
         <PriceChange value={displayRow.priceChangePercent24h} symbol={displayRow.symbol} />
@@ -361,7 +371,8 @@ const MarketTableRow = memo(function MarketTableRow({ row }: { row: MarketRow })
 
 /** Mobile row uses the same per-symbol subscription strategy as desktop rows. */
 const MobileMarketCard = memo(function MobileMarketCard({ row }: { row: MarketRow }) {
-  const displayRow = useLiveMarketRow(row);
+  const now = useFreshnessClock();
+  const displayRow = useLiveMarketRow(row, now);
 
   return (
     <Link
@@ -370,10 +381,12 @@ const MobileMarketCard = memo(function MobileMarketCard({ row }: { row: MarketRo
     >
       <CoinAvatar row={displayRow} size="lg" />
       <div className="flex-1">
-        <div className="flex items-center justify-between">
-          <p className="font-medium text-text-primary">{displayRow.symbol}</p>
-          <p className="numeric font-medium text-text-primary">{formatCurrency(displayRow.price)}</p>
-        </div>
+          <div className="flex items-center gap-2">
+            <PriceFreshnessBadge receivedAt={displayRow.lastUpdatedAt} now={now} compact />
+            <p className={cn('numeric font-medium text-text-primary', displayRow.isStale && 'text-text-muted')}>
+              {formatCurrency(displayRow.price)}
+            </p>
+          </div>
         <div className="flex items-center justify-between">
           <p className="text-xs text-text-muted">{displayRow.name}</p>
           <PriceChange value={displayRow.priceChangePercent24h} symbol={displayRow.symbol} compact />

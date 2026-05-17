@@ -8,8 +8,8 @@ import { useMarketStore } from '@/stores/use-market-store';
 import { formatCurrency, formatPercentage } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 import { Star, TrendingUp, TrendingDown, Minus, Trash2, Search } from 'lucide-react';
-import { generateMockMarketData } from '@/lib/mock-data';
-import { getDefaultCoins } from '@/lib/registry/coin-registry';
+import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
+import { getPriceFreshness } from '@/lib/market/freshness';
 
 /**
  * Watchlist page — full view of user's saved coins with live data.
@@ -20,13 +20,12 @@ export default function WatchlistPage() {
   const hydrate = useWatchlistStore((s) => s.hydrate);
   const removeCoin = useWatchlistStore((s) => s.removeCoin);
   const prices = useMarketStore((s) => s.prices);
+  const now = useFreshnessClock();
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
-  // Get mock data for price fallback
-  const mockData = generateMockMarketData(getDefaultCoins());
 
   if (!hydrated) {
     return (
@@ -94,11 +93,12 @@ export default function WatchlistPage() {
                   <tbody>
                     {items.map((item) => {
                       const livePrice = prices[item.symbol];
-                      const mock = mockData.find((m) => m.symbol === item.symbol);
-                      const price = livePrice?.price ?? mock?.price;
-                      const change = livePrice?.priceChangePercent24h ?? mock?.priceChangePercent24h;
+                      const price = livePrice?.price;
+                      const change = livePrice?.priceChangePercent24h;
                       const isUp = (change ?? 0) > 0;
                       const isDown = (change ?? 0) < 0;
+                      const freshness = getPriceFreshness(livePrice?.receivedAt, now);
+                      const isStale = freshness === 'stale';
 
                       return (
                         <tr
@@ -119,8 +119,11 @@ export default function WatchlistPage() {
                               </div>
                             </Link>
                           </td>
-                          <td className="numeric px-4 py-3 font-medium text-text-primary">
-                            {formatCurrency(price)}
+                          <td className="numeric px-4 py-3 font-medium">
+                            <div className="flex items-center gap-2 text-text-primary">
+                              <span className={cn(isStale && 'text-text-muted')}>{formatCurrency(price)}</span>
+                              <PriceFreshnessBadge receivedAt={livePrice?.receivedAt} now={now} compact />
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <span
@@ -161,11 +164,12 @@ export default function WatchlistPage() {
             <div className="flex flex-col gap-2 md:hidden">
               {items.map((item) => {
                 const livePrice = prices[item.symbol];
-                const mock = mockData.find((m) => m.symbol === item.symbol);
-                const price = livePrice?.price ?? mock?.price;
-                const change = livePrice?.priceChangePercent24h ?? mock?.priceChangePercent24h;
+                const price = livePrice?.price;
+                const change = livePrice?.priceChangePercent24h;
                 const isUp = (change ?? 0) > 0;
                 const isDown = (change ?? 0) < 0;
+                const freshness = getPriceFreshness(livePrice?.receivedAt, now);
+                const isStale = freshness === 'stale';
 
                 return (
                   <div key={item.symbol} className="card flex items-center gap-3 px-4 py-3">
@@ -179,9 +183,12 @@ export default function WatchlistPage() {
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
                           <p className="font-medium text-text-primary">{item.symbol}</p>
-                          <p className="numeric font-medium text-text-primary">
-                            {formatCurrency(price)}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <PriceFreshnessBadge receivedAt={livePrice?.receivedAt} now={now} compact />
+                            <p className={cn('numeric font-medium text-text-primary', isStale && 'text-text-muted')}>
+                              {formatCurrency(price)}
+                            </p>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-text-muted">{item.name}</p>

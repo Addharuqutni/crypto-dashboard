@@ -25,15 +25,17 @@ import { getCoinBySymbol } from '@/lib/registry/coin-registry';
  *   - `visibilitychange` and `online` events trigger an immediate resync.
  *   - On every (re)connect, the React Query cache is invalidated so REST
  *     refills the gap if WS dropped any ticks.
- *   - Cache writes are throttled to ~250ms; closed bars flush immediately.
+ *   - Cache writes are throttled to ~100ms; closed bars flush immediately.
  *   - Hook degrades silently — if WS fails entirely, the existing 60s REST
  *     polling still keeps the chart correct.
  */
 
 const BINANCE_WS_BASE = 'wss://fstream.binance.com/ws';
 
-const WRITE_THROTTLE_MS = 250;
+const WRITE_THROTTLE_MS = 100;
 const STALE_WATCHDOG_MS = 15_000;
+const HEARTBEAT_CHECK_INTERVAL = 5_000;
+const MAX_SILENT_SOCKET_AGE_MS = 12_000;
 const INITIAL_RECONNECT_DELAY = 1000;
 const MAX_RECONNECT_DELAY = 10_000;
 const RECONNECT_JITTER_MAX = 400;
@@ -136,9 +138,11 @@ export function useBinanceKlineWebSocket({
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let staleTimer: ReturnType<typeof setTimeout> | null = null;
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     const stableTimers: ReturnType<typeof setTimeout>[] = [];
     let pending: Candle | null = null;
     let lastWriteAt = 0;
+    let lastMessageAt = 0;
     let retryCount = 0;
     let openedAtLeastOnce = false;
 
@@ -163,7 +167,9 @@ export function useBinanceKlineWebSocket({
       lastWriteAt = Date.now();
 
       queryClient.setQueryData<Candle[] | undefined>(queryKey, (existing) => {
-        if (!existing || existing.length === 0) return existing;
+        if (!existing || existing.length === 0) {
+          return [next];
+        }
 
         const lastIdx = existing.length - 1;
         const last = existing[lastIdx]!;
@@ -275,6 +281,7 @@ export function useBinanceKlineWebSocket({
       myWs.onopen = () => {
         if (isStale() || ws !== myWs) return;
         armWatchdog();
+        lastMessageAt = Date.now();
         // Only reset retry counter once we've stayed open for the grace
         // period; protects against flapping providers that briefly accept
         // a connection then drop it.
@@ -295,6 +302,7 @@ export function useBinanceKlineWebSocket({
       myWs.onmessage = (event) => {
         if (isStale() || ws !== myWs) return;
         armWatchdog();
+        lastMessageAt = Date.now();
 
         let raw: BinanceKlineEvent;
         try {
@@ -370,6 +378,14 @@ export function useBinanceKlineWebSocket({
       window.addEventListener('online', handleOnline);
     }
 
+    heartbeatTimer = setInterval(() => {
+      if (isStale()) return;
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      if (ws?.readyState === WebSocket.OPEN && Date.now() - lastMessageAt > MAX_SILENT_SOCKET_AGE_MS) {
+        forceReconnect();
+      }
+    }, HEARTBEAT_CHECK_INTERVAL);
+
     connect();
 
     return () => {
@@ -378,6 +394,7 @@ export function useBinanceKlineWebSocket({
       clearTimer(reconnectTimer);
       clearTimer(staleTimer);
       clearTimer(flushTimer);
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
       // Cancel any pending stability timers so they can't reset retryCount
       // after teardown.
       for (const t of stableTimers) clearTimeout(t);

@@ -8,8 +8,6 @@ import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { useMarketData } from '@/lib/api/hooks';
 import { getCoinBySymbol } from '@/lib/registry/coin-registry';
-import { generateMockMarketData } from '@/lib/mock-data';
-import { getDefaultCoins } from '@/lib/registry/coin-registry';
 import type { MarketRow, CoinMetadata, LivePrice } from '@/types/market';
 
 /**
@@ -86,17 +84,10 @@ export function DashboardClient() {
 
     const priceEntries = Object.values(prices);
 
-    // If store has live prices, build rows from all of them
-    if (priceEntries.length > 0) {
-      return priceEntries
-        .filter((p) => p.binanceSymbol.endsWith('USDT'))
-        .map((price) => livePriceToMarketRow(price, metadataMap))
-        .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0) || (b.price ?? 0) - (a.price ?? 0));
-    }
-
-    // Fallback: use registry coins with mock data while waiting for WebSocket
-    const coins = getDefaultCoins();
-    return generateMockMarketData(coins);
+    return priceEntries
+      .filter((p) => p.binanceSymbol.endsWith('USDT'))
+      .map((price) => livePriceToMarketRow(price, metadataMap))
+      .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0) || (b.price ?? 0) - (a.price ?? 0));
   }, [prices, coinGeckoData]);
 
   if (!watchlistHydrated) {
@@ -108,7 +99,7 @@ export function DashboardClient() {
       {/* API Error Banner */}
       {isError && (
         <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
-          Market data may be outdated. Using cached or fallback data.
+          Market metadata may be outdated. Live Binance prices remain active when the WebSocket is connected.
         </div>
       )}
 
