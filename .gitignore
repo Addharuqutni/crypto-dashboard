@@ -42,3 +42,6 @@ Thumbs.db
 *.pem
 *.key
 *.crt
+
+# Worker runtime data (signals.jsonl, state.json)
+data/

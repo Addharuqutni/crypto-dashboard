@@ -17,9 +17,22 @@ interface SignalJournalState {
   hydrated: boolean;
 
   hydrate: () => void;
-  add: (entry: Omit<SignalJournalEntry, 'id' | 'createdAt' | 'status' | 'maxFavorableExcursion' | 'maxAdverseExcursion'>) => SignalJournalEntry | null;
+  add: (
+    entry: Omit<
+      SignalJournalEntry,
+      'id' | 'createdAt' | 'status' | 'maxFavorableExcursion' | 'maxAdverseExcursion'
+    > & {
+      /** Optional override for createdAt; defaults to Date.now(). */
+      createdAt?: number;
+    }
+  ) => SignalJournalEntry | null;
   updateStatus: (id: string, status: SignalJournalStatus) => void;
   updateExcursions: (id: string, latestPrice: number) => void;
+  /**
+   * Run expiry + finalR maintenance across every entry. Safe to call on a
+   * timer; no-op when nothing changes.
+   */
+  tickAll: (nowMs?: number) => void;
   remove: (id: string) => void;
   clearOlderThan: (epochMs: number) => void;
   clearAll: () => void;
@@ -68,10 +81,12 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
     const newEntry: SignalJournalEntry = {
       ...entry,
       id: generateId(),
-      createdAt: Date.now(),
+      createdAt: entry.createdAt ?? Date.now(),
       status: 'PENDING',
       maxFavorableExcursion: null,
       maxAdverseExcursion: null,
+      source: entry.source ?? 'manual',
+      finalR: entry.finalR ?? null,
     };
 
     const next = [newEntry, ...state.entries];
@@ -153,14 +168,41 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
       }
 
       mutated = true;
+      const closing = nextStatus !== 'PENDING';
+      const finalR =
+        closing && entry.entryPrice != null && entry.stopLoss != null
+          ? computeFinalR(entry, nextStatus)
+          : entry.finalR ?? null;
       return {
         ...entry,
         maxFavorableExcursion: newMfe,
         maxAdverseExcursion: newMae,
         status: nextStatus,
+        finalR,
       };
     });
 
+    if (mutated) {
+      safeSetItem(STORAGE_KEY, next);
+      set({ entries: next });
+    }
+  },
+
+  /**
+   * Force-expire any PENDING entry past its `expiresAt` deadline. Run on a
+   * cadence (or on every tick) by callers that want max-hold enforcement.
+   */
+  tickAll: (nowMs?: number) => {
+    const now = nowMs ?? Date.now();
+    const state = get();
+    let mutated = false;
+    const next = state.entries.map((entry) => {
+      if (entry.status !== 'PENDING') return entry;
+      if (entry.expiresAt == null) return entry;
+      if (now < entry.expiresAt) return entry;
+      mutated = true;
+      return { ...entry, status: 'EXPIRED' as SignalJournalStatus, finalR: 0 };
+    });
     if (mutated) {
       safeSetItem(STORAGE_KEY, next);
       set({ entries: next });
@@ -302,6 +344,32 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
 
 function hasReachedTp(isLong: boolean, latest: number, tp: number): boolean {
   return isLong ? latest >= tp : latest <= tp;
+}
+
+/**
+ * Compute the realised R-multiple for a closed journal entry. Returns null if
+ * any of entryPrice / stopLoss is missing. Costs (fees/slippage) are not
+ * applied here — the journal records gross R; the backtest module owns the
+ * net-of-cost number.
+ */
+function computeFinalR(
+  entry: SignalJournalEntry,
+  status: SignalJournalStatus
+): number | null {
+  if (entry.entryPrice == null || entry.stopLoss == null) return null;
+  const rDist = Math.abs(entry.entryPrice - entry.stopLoss);
+  if (rDist <= 0) return null;
+  const isLong = entry.action === 'LONG';
+
+  let exit: number | null = null;
+  if (status === 'SL') exit = entry.stopLoss;
+  else if (status === 'TP1' && entry.tp1 != null) exit = entry.tp1;
+  else if (status === 'TP2' && entry.tp2 != null) exit = entry.tp2;
+  else if (status === 'TP3' && entry.tp3 != null) exit = entry.tp3;
+  if (exit == null) return null;
+
+  const pnl = isLong ? exit - entry.entryPrice : entry.entryPrice - exit;
+  return Math.round((pnl / rDist) * 10000) / 10000;
 }
 
 /**

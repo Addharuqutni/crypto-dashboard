@@ -31,6 +31,51 @@ export type FuturesRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'NO_TRADE';
 
 export type FuturesSignalGrade = 'A+' | 'A' | 'B' | 'C' | 'D';
 
+/**
+ * Phase 1 hardening — coarse letter grade exposed by the strict pipeline.
+ * Maps the existing `signalGrade` (A+/A/B/C/D) onto the spec's A/B/C/D space.
+ */
+export type FuturesGrade = 'A' | 'B' | 'C' | 'D';
+
+/**
+ * Canonical, lowercase market-regime identifier exposed by the strict pipeline.
+ * Distinct from `FuturesMarketRegime` (legacy, uppercase) so existing callers
+ * keep working while new consumers can rely on the spec's vocabulary.
+ */
+export type FuturesMarketRegimeId =
+  | 'bullish_trend'
+  | 'bearish_trend'
+  | 'range'
+  | 'choppy'
+  | 'volatile'
+  | 'unknown';
+
+/**
+ * Trade permission derived from the 4H (macro) market regime.
+ * The engine refuses any side that contradicts this permission.
+ */
+export type FuturesTradePermission =
+  | 'long_only'
+  | 'short_only'
+  | 'both'
+  | 'no_trade';
+
+/**
+ * Entry trigger lifecycle for the strict pipeline:
+ *   - triggered:     a valid entry mechanic fired (breakout, retest, sweep, etc.)
+ *   - not_triggered: bias may exist but no clean trigger present
+ *   - invalid:       the engine could not even evaluate triggers (data health fail / unknown regime)
+ */
+export type FuturesEntryStatus = 'triggered' | 'not_triggered' | 'invalid';
+
+/**
+ * Risk approval status from the dedicated risk gate.
+ *   - pass:           plan satisfies RR, ATR, leverage, overextension constraints
+ *   - fail:           plan was rejected by the risk engine
+ *   - not_applicable: pipeline did not reach the risk gate (earlier gate already failed)
+ */
+export type FuturesRiskApproval = 'pass' | 'fail' | 'not_applicable';
+
 export type FuturesEntryTrigger =
   | 'BREAKOUT'
   | 'PULLBACK_RETEST'
@@ -113,6 +158,43 @@ export interface FuturesLiquiditySweep {
   confidence: number;
 }
 
+/**
+ * Data health status for a single timeframe.
+ *
+ * `lastCandleAgeSec` is `null` when there are no candles to measure against.
+ * `ok` is true only when count >= required AND age <= maxAgeSec.
+ */
+export interface FuturesTimeframeHealth {
+  required: boolean;
+  candleCount: number;
+  minCandlesRequired: number;
+  /** Seconds since the latest candle's close time. `null` when unknown. */
+  lastCandleAgeSec: number | null;
+  /** Maximum acceptable age before the timeframe is considered stale. */
+  maxAgeSec: number;
+  ok: boolean;
+  reason: string | null;
+}
+
+/**
+ * Result of the Data Health Gate.
+ *
+ * `ok` aggregates: symbol valid AND every required timeframe ok.
+ * `confidenceCap` (0..100) is the maximum confidence the engine is allowed to
+ * report once secondary data is missing/stale (e.g. funding or OI unavailable).
+ */
+export interface FuturesDataHealth {
+  ok: boolean;
+  symbol: { provided: boolean; valid: boolean; reason: string | null };
+  setup: FuturesTimeframeHealth;
+  macro: FuturesTimeframeHealth;
+  trigger: FuturesTimeframeHealth;
+  funding: { available: boolean; ageSec: number | null; maxAgeSec: number; ok: boolean };
+  openInterest: { available: boolean; ageSec: number | null; maxAgeSec: number; ok: boolean };
+  reasons: string[];
+  confidenceCap: number;
+}
+
 export interface FuturesSignal {
   action: FuturesSignalAction;
   confidenceScore: number;
@@ -139,6 +221,41 @@ export interface FuturesSignal {
   positioning: FuturesPositioning;
   liquiditySweep: FuturesLiquiditySweep;
   scoreBreakdown: FuturesSignalScoreBreakdown;
+
+  // ----- Phase 1 strict pipeline outputs (additive, never replace existing fields) -----
+
+  /**
+   * Mirror of `confidenceScore` exposed under the spec's name. Always in 0..100.
+   * Capped by `dataHealth.confidenceCap` when secondary data is missing/stale.
+   */
+  confidence: number;
+
+  /** Coarse A/B/C/D grade derived from `signalGrade` for the strict pipeline. */
+  grade: FuturesGrade;
+
+  /** Canonical lowercase market regime id (spec vocabulary). */
+  marketRegime: FuturesMarketRegimeId;
+
+  /** 4H-driven trade permission. The engine refuses any conflicting side. */
+  tradePermission: FuturesTradePermission;
+
+  /** Strict pre-flight data health snapshot. */
+  dataHealth: FuturesDataHealth;
+
+  /** Entry trigger lifecycle for the current bar. */
+  entryStatus: FuturesEntryStatus;
+
+  /** Authoritative risk-gate verdict. */
+  riskApproval: FuturesRiskApproval;
+
+  /**
+   * Invalidation level (e.g. SL price) for actionable signals. `null` when WAIT
+   * because no concrete level is committed.
+   */
+  invalidation: string | null;
+
+  /** Spec alias for `reasons`. Same content; both kept for stability. */
+  reason: string[];
 }
 
 /**
@@ -166,6 +283,15 @@ export interface FuturesSignalInput {
   fundingRate?: number | null;
   /** % change in open interest over a recent window (e.g. last hour). */
   openInterestChangePercent?: number | null;
+  /**
+   * Reference "now" timestamp in milliseconds for freshness checks.
+   * Defaults to `Date.now()`. Allows deterministic testing.
+   */
+  nowMs?: number;
+  /** Timestamp (ms) of the latest funding-rate update. Optional. */
+  fundingRateUpdatedAtMs?: number | null;
+  /** Timestamp (ms) of the latest open-interest sample. Optional. */
+  openInterestUpdatedAtMs?: number | null;
 }
 
 /**
@@ -192,6 +318,17 @@ export interface FuturesSignalConfig {
   mtfMinAlignmentScore: number;
   /** Funding rate threshold for "crowded" positioning detection. */
   fundingCrowdedThreshold: number;
+  /**
+   * Multiplier applied to inferred candle interval to set the staleness
+   * threshold. Example: 30m candles with multiplier 2 → max age 60min.
+   */
+  freshnessMultiplier: number;
+  /** Maximum age (s) for a funding-rate sample to be considered fresh. */
+  fundingMaxAgeSec: number;
+  /** Maximum age (s) for an open-interest sample to be considered fresh. */
+  oiMaxAgeSec: number;
+  /** Minimum candles required on the trigger TF (15m). */
+  minTriggerCandles: number;
 }
 
 export const DEFAULT_FUTURES_SIGNAL_CONFIG: FuturesSignalConfig = {
@@ -212,4 +349,8 @@ export const DEFAULT_FUTURES_SIGNAL_CONFIG: FuturesSignalConfig = {
   swingLookback: 20,
   mtfMinAlignmentScore: 60,
   fundingCrowdedThreshold: 0.0005,
+  freshnessMultiplier: 2.5,
+  fundingMaxAgeSec: 9 * 3600,
+  oiMaxAgeSec: 15 * 60,
+  minTriggerCandles: 50,
 };

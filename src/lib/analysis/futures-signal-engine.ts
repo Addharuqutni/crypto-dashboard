@@ -1,15 +1,20 @@
 import type { Candle } from '@/types/chart';
 import type {
+  FuturesDataHealth,
+  FuturesEntryStatus,
   FuturesEntryTrigger,
   FuturesLiquiditySweep,
+  FuturesMarketRegimeId,
   FuturesMtfConfirmation,
   FuturesPositioning,
+  FuturesRiskApproval,
   FuturesSignal,
   FuturesSignalAction,
   FuturesSignalConfig,
   FuturesSignalGrade,
   FuturesSignalInput,
   FuturesSignalScoreBreakdown,
+  FuturesTradePermission,
 } from '@/types/futures-signal';
 import { DEFAULT_FUTURES_SIGNAL_CONFIG } from '@/types/futures-signal';
 import { detectRegime, type RegimeContext } from './regime-detector';
@@ -24,6 +29,13 @@ import {
   rankNoTradeReasons,
   type NoTradeReason,
 } from './no-trade-rank';
+import { evaluateDataHealth } from './data-health-gate';
+import {
+  checkPermission,
+  deriveTradePermission,
+  toCoarseGrade,
+  toMarketRegimeId,
+} from './regime-permission';
 import { getRsiStatus } from '@/lib/indicators/rsi';
 import { calculateMACD } from '@/lib/indicators/macd';
 import { calculateSupportResistance } from '@/lib/indicators/support-resistance';
@@ -77,15 +89,76 @@ export function generateFuturesSignal(
 ): FuturesSignal {
   const { candles } = input;
 
-  // --- 1. Regime detection. ---
+  // --- 0. Data Health Gate. ---
+  // The strictest gate. Symbol/candle-count/candle-freshness/required-TF
+  // failures cannot be papered over by the rest of the pipeline.
+  const dataHealth = evaluateDataHealth(
+    {
+      symbol: input.symbol,
+      setupTimeframe: input.timeframe,
+      setupCandles: candles,
+      ...(input.macroCandles ? { macroCandles: input.macroCandles } : {}),
+      ...(input.triggerCandles ? { triggerCandles: input.triggerCandles } : {}),
+      fundingRate: input.fundingRate ?? null,
+      fundingRateUpdatedAtMs: input.fundingRateUpdatedAtMs ?? null,
+      openInterestChangePercent: input.openInterestChangePercent ?? null,
+      openInterestUpdatedAtMs: input.openInterestUpdatedAtMs ?? null,
+      ...(input.nowMs != null ? { nowMs: input.nowMs } : {}),
+    },
+    config
+  );
+
+  // --- 4H macro regime + trade permission. ---
+  // Computed up-front so the Data-Health WAIT path can still report a regime
+  // and permission to the UI/journal. Falls back to `unknown`/`no_trade` when
+  // 4H candles are missing.
+  const macroRegimeCtx = input.macroCandles && input.macroCandles.length > 0
+    ? detectRegime(input.macroCandles, config)
+    : null;
+  const macroRegimeId: FuturesMarketRegimeId = macroRegimeCtx
+    ? toMarketRegimeId(macroRegimeCtx.regime, {
+        isVolatile:
+          macroRegimeCtx.atrPctOfPrice != null &&
+          macroRegimeCtx.atrPctOfPrice >= config.extremeVolatilityRatio,
+      })
+    : 'unknown';
+  const tradePermission = deriveTradePermission(macroRegimeId);
+
+  if (!dataHealth.ok) {
+    const reasons: NoTradeReason[] = dataHealth.reasons.map((message) => ({
+      severity: 'INSUFFICIENT_DATA' as const,
+      message,
+    }));
+    if (reasons.length === 0) {
+      reasons.push({
+        severity: 'INSUFFICIENT_DATA',
+        message: 'Data health checks failed.',
+      });
+    }
+    return waitSignal({
+      regime: 'INSUFFICIENT_DATA',
+      reason: reasons[0]?.message ?? 'Data health checks failed.',
+      summary: 'Data health checks failed. Stand aside until inputs recover.',
+      mtf: emptyMtf(),
+      liquiditySweep: emptySweep(),
+      noTradeReasons: reasons,
+      dataHealth,
+      marketRegime: macroRegimeId,
+      tradePermission,
+      entryStatus: 'invalid',
+      riskApproval: 'not_applicable',
+    });
+  }
+
+  // --- 1. Regime detection (setup TF). ---
   const regimeCtx = detectRegime(candles, config);
 
   // --- 2. MTF confirmation (cheap when extra TFs are missing). ---
   const mtf = buildMtfConfirmation(
     {
       setupCandles: candles,
-      macroCandles: input.macroCandles,
-      triggerCandles: input.triggerCandles,
+      ...(input.macroCandles ? { macroCandles: input.macroCandles } : {}),
+      ...(input.triggerCandles ? { triggerCandles: input.triggerCandles } : {}),
     },
     config
   );
@@ -102,6 +175,11 @@ export function generateFuturesSignal(
       mtf,
       liquiditySweep,
       noTradeReasons: [{ severity: 'INSUFFICIENT_DATA', message: regimeCtx.reason }],
+      dataHealth,
+      marketRegime: macroRegimeId,
+      tradePermission,
+      entryStatus: 'invalid',
+      riskApproval: 'not_applicable',
     });
   }
 
@@ -114,6 +192,11 @@ export function generateFuturesSignal(
       mtf,
       liquiditySweep,
       noTradeReasons: [{ severity: 'INSUFFICIENT_DATA', message: 'No candles available.' }],
+      dataHealth,
+      marketRegime: macroRegimeId,
+      tradePermission,
+      entryStatus: 'invalid',
+      riskApproval: 'not_applicable',
     });
   }
 
@@ -165,6 +248,46 @@ export function generateFuturesSignal(
   const warnings: string[] = [...fundingFilter.warnings, ...oiFilter.warnings];
   const noTradeReasons: NoTradeReason[] = [];
 
+  // Closure that fills in the strict-pipeline context every gate needs to
+  // emit. Call sites supply only the gate-specific fields (regime/summary/
+  // breakdown/...) plus an optional `entryStatus`/`riskApproval` override.
+  const wait = (args: GateWaitArgs): FuturesSignal =>
+    finalizeWait({
+      ...args,
+      dataHealth,
+      marketRegime: macroRegimeId,
+      tradePermission,
+    });
+
+  // --- 5b. 4H Trade Permission Gate. ---
+  // The 4H macro regime is the directional authority. If it disallows the
+  // candidate side (bullish_trend blocks SHORT, bearish_trend blocks LONG,
+  // choppy/volatile/unknown block both) the engine WAITs. This gate runs
+  // before the score-floor checks, so even score-passing setups are blocked
+  // when they fight the 4H trend.
+  const permissionDenial = checkPermission(candidateSide, tradePermission);
+  if (permissionDenial) {
+    noTradeReasons.push({
+      severity: 'MTF_CONFLICT',
+      message: permissionDenial,
+    });
+    return wait({
+      regime: regimeCtx.regime,
+      summary: permissionDenial,
+      breakdown,
+      reasons,
+      warnings,
+      confidence: candidateFinal,
+      mtf,
+      liquiditySweep,
+      positioning,
+      candidateSide,
+      candles,
+      regimeCtx,
+      ranked: noTradeReasons,
+    });
+  }
+
   // --- 6. Hard guard: overextension. ---
   if (regimeCtx.ema20 != null && regimeCtx.ema20 > 0) {
     const distancePct = Math.abs(price - regimeCtx.ema20) / regimeCtx.ema20;
@@ -174,7 +297,7 @@ export function generateFuturesSignal(
         severity: 'OVEREXTENDED',
         message: `Entry is ${(distancePct * 100).toFixed(2)}% away from EMA20 — overextended.`,
       });
-      return finalizeWait({
+      return wait({
         regime: regimeCtx.regime,
         summary: 'Price is overextended. Wait for a pullback toward EMA20 before considering entry.',
         breakdown,
@@ -188,6 +311,7 @@ export function generateFuturesSignal(
         candles,
         regimeCtx,
         ranked: noTradeReasons,
+        riskApproval: 'fail',
       });
     }
   }
@@ -201,7 +325,7 @@ export function generateFuturesSignal(
       severity: 'MTF_CONFLICT',
       message: `Macro bias is ${mtf.macroBias} but setup bias is ${mtf.setupBias}.`,
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary: 'Higher and lower timeframes disagree. Wait for alignment.',
       breakdown,
@@ -224,7 +348,7 @@ export function generateFuturesSignal(
       severity: 'MTF_CONFLICT',
       message: `Multi-timeframe alignment ${mtf.alignmentScore.toFixed(0)} is below ${config.mtfMinAlignmentScore}.`,
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary: 'Multi-timeframe alignment is too low. Wait for confirmation.',
       breakdown,
@@ -247,7 +371,7 @@ export function generateFuturesSignal(
       severity: 'WEAK_SCORE',
       message: `Score ${candidateFinal.toFixed(0)} is below the no-trade threshold.`,
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary: 'Signals are too weak. Wait for a clearer setup.',
       breakdown,
@@ -275,7 +399,7 @@ export function generateFuturesSignal(
           ? 'Setup forming but unconfirmed. Wait for a strong follow-through candle.'
           : 'Score is in the neutral zone. Hold off until conditions improve.',
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary:
         candidateSide === 'LONG'
@@ -306,7 +430,7 @@ export function generateFuturesSignal(
       severity: 'CHOP_RANGE',
       message: `Regime ${regimeCtx.regime} does not support a ${candidateSide} setup.`,
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary:
         regimeCtx.regime === 'CHOP_HIGH_RISK'
@@ -332,7 +456,7 @@ export function generateFuturesSignal(
       severity: 'INSUFFICIENT_DATA',
       message: 'ATR is unavailable, cannot size risk.',
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary: 'Risk cannot be quantified. Stand aside.',
       breakdown,
@@ -346,6 +470,7 @@ export function generateFuturesSignal(
       candles,
       regimeCtx,
       ranked: noTradeReasons,
+      riskApproval: 'fail',
     });
   }
 
@@ -364,7 +489,7 @@ export function generateFuturesSignal(
   if (plan.action === 'WAIT') {
     const sev = inferRiskWaitSeverity(plan.invalidationReason);
     noTradeReasons.push({ severity: sev, message: plan.invalidationReason });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary: 'Risk filter rejected the setup. Wait for better conditions.',
       breakdown,
@@ -378,6 +503,7 @@ export function generateFuturesSignal(
       candles,
       regimeCtx,
       ranked: noTradeReasons,
+      riskApproval: 'fail',
     });
   }
 
@@ -401,7 +527,7 @@ export function generateFuturesSignal(
       severity: 'NO_TRIGGER',
       message: 'No clean entry trigger detected. Wait for breakout, retest, or sweep reversal.',
     });
-    return finalizeWait({
+    return wait({
       regime: regimeCtx.regime,
       summary: 'Bias is fine but there is no clean entry trigger. Wait for confirmation.',
       breakdown,
@@ -415,6 +541,7 @@ export function generateFuturesSignal(
       candles,
       regimeCtx,
       ranked: noTradeReasons,
+      riskApproval: 'pass',
     });
   }
 
@@ -430,9 +557,14 @@ export function generateFuturesSignal(
     warningsCount: finalWarnings.length,
   });
 
+  // Apply the data-health confidence cap so secondary-data gaps cannot let
+  // a top-tier confidence value leak through to the UI/journal.
+  const cappedConfidence = Math.min(candidateFinal, dataHealth.confidenceCap);
+  const confidenceOut = clamp(Math.round(cappedConfidence), 0, 100);
+
   return {
     action,
-    confidenceScore: clamp(Math.round(candidateFinal), 0, 100),
+    confidenceScore: confidenceOut,
     signalGrade: grade,
     entryTrigger,
     regime: regimeCtx.regime,
@@ -452,6 +584,17 @@ export function generateFuturesSignal(
     positioning,
     liquiditySweep,
     scoreBreakdown: { ...breakdown, finalScore: candidateFinal },
+
+    // Strict pipeline outputs.
+    confidence: confidenceOut,
+    grade: toCoarseGrade(grade),
+    marketRegime: macroRegimeId,
+    tradePermission,
+    dataHealth,
+    entryStatus: 'triggered',
+    riskApproval: 'pass',
+    invalidation: plan.invalidationReason,
+    reason: reasons,
   };
 }
 
@@ -789,7 +932,8 @@ function inferRiskWaitSeverity(reason: string): NoTradeReason['severity'] {
   return 'RISK_NO_TRADE';
 }
 
-interface FinalizeWaitArgs {
+/** Args common to every gate-emitted WAIT before strict-context is mixed in. */
+interface GateWaitArgs {
   regime: FuturesSignal['regime'];
   summary: string;
   breakdown: FuturesSignalScoreBreakdown;
@@ -803,6 +947,16 @@ interface FinalizeWaitArgs {
   candles: Candle[];
   regimeCtx: RegimeContext;
   ranked: NoTradeReason[];
+  /** Defaults to 'not_triggered' inside `finalizeWait`. */
+  entryStatus?: FuturesEntryStatus;
+  /** Defaults to 'not_applicable' inside `finalizeWait`. */
+  riskApproval?: FuturesRiskApproval;
+}
+
+interface FinalizeWaitArgs extends GateWaitArgs {
+  dataHealth: FuturesDataHealth;
+  marketRegime: FuturesMarketRegimeId;
+  tradePermission: FuturesTradePermission;
 }
 
 /**
@@ -823,9 +977,12 @@ function finalizeWait(args: FinalizeWaitArgs): FuturesSignal {
     warningsCount: args.warnings.length,
   });
 
+  const cappedConfidence = Math.min(args.confidence, args.dataHealth.confidenceCap);
+  const confidenceOut = clamp(Math.round(cappedConfidence), 0, 100);
+
   return {
     action: 'WAIT',
-    confidenceScore: clamp(Math.round(args.confidence), 0, 100),
+    confidenceScore: confidenceOut,
     signalGrade: grade,
     entryTrigger: 'NO_TRIGGER',
     regime: args.regime,
@@ -845,6 +1002,17 @@ function finalizeWait(args: FinalizeWaitArgs): FuturesSignal {
     positioning: args.positioning,
     liquiditySweep: args.liquiditySweep,
     scoreBreakdown: { ...args.breakdown, finalScore: args.confidence },
+
+    // Strict pipeline outputs.
+    confidence: confidenceOut,
+    grade: toCoarseGrade(grade),
+    marketRegime: args.marketRegime,
+    tradePermission: args.tradePermission,
+    dataHealth: args.dataHealth,
+    entryStatus: args.entryStatus ?? 'not_triggered',
+    riskApproval: args.riskApproval ?? 'not_applicable',
+    invalidation: null,
+    reason: args.reasons,
   };
 }
 
@@ -855,14 +1023,21 @@ interface WaitArgs {
   mtf: FuturesMtfConfirmation;
   liquiditySweep: FuturesLiquiditySweep;
   noTradeReasons: NoTradeReason[];
+  dataHealth: FuturesDataHealth;
+  marketRegime: FuturesMarketRegimeId;
+  tradePermission: FuturesTradePermission;
+  entryStatus: FuturesEntryStatus;
+  riskApproval: FuturesRiskApproval;
 }
 
 /** Lightweight WAIT path used before any score has been computed. */
 function waitSignal(args: WaitArgs): FuturesSignal {
   const ranked = rankNoTradeReasons(args.noTradeReasons);
+  const cap = args.dataHealth.confidenceCap;
+  const confidenceOut = clamp(Math.round(Math.min(0, cap)), 0, 100);
   return {
     action: 'WAIT',
-    confidenceScore: 0,
+    confidenceScore: confidenceOut,
     signalGrade: 'D',
     entryTrigger: 'NO_TRIGGER',
     regime: args.regime,
@@ -894,7 +1069,34 @@ function waitSignal(args: WaitArgs): FuturesSignal {
       riskScore: 0,
       finalScore: 0,
     },
+
+    // Strict pipeline outputs.
+    confidence: confidenceOut,
+    grade: 'D',
+    marketRegime: args.marketRegime,
+    tradePermission: args.tradePermission,
+    dataHealth: args.dataHealth,
+    entryStatus: args.entryStatus,
+    riskApproval: args.riskApproval,
+    invalidation: null,
+    reason: [],
   };
+}
+
+/** Empty MTF confirmation used by the data-health WAIT path. */
+function emptyMtf(): FuturesMtfConfirmation {
+  return {
+    macroBias: 'INSUFFICIENT_DATA',
+    setupBias: 'INSUFFICIENT_DATA',
+    triggerBias: 'INSUFFICIENT_DATA',
+    alignmentScore: 0,
+    conflicts: [],
+  };
+}
+
+/** Empty liquidity-sweep result used by the data-health WAIT path. */
+function emptySweep(): FuturesLiquiditySweep {
+  return { type: 'NONE', sweptLevel: null, confidence: 0 };
 }
 
 /**

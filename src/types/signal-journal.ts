@@ -1,4 +1,10 @@
-import type { FuturesSignalAction, FuturesSignalGrade } from './futures-signal';
+import type {
+  FuturesEntryTrigger,
+  FuturesMarketRegimeId,
+  FuturesSignalAction,
+  FuturesSignalGrade,
+  FuturesTradePermission,
+} from './futures-signal';
 
 /**
  * Outcome status for a saved journal entry.
@@ -19,8 +25,18 @@ export type SignalJournalStatus =
   | 'CANCELLED';
 
 /**
+ * Where a journal entry came from. Used to filter "real" paper-traded
+ * signals from manually saved or imported entries when computing edge.
+ */
+export type SignalJournalSource = 'manual' | 'paper' | 'backtest';
+
+/**
  * One saved futures signal. Only fields actually verifiable from price data
  * are tracked — outcomes are never fabricated.
+ *
+ * Phase 2: extended with optional fields needed for honest performance
+ * measurement (R-multiple, regime, trigger, max-hold, snapshot hash). All
+ * additions are optional so older serialized entries still load.
  */
 export interface SignalJournalEntry {
   id: string;
@@ -43,6 +59,30 @@ export interface SignalJournalEntry {
   maxAdverseExcursion: number | null;
   reasons: string[];
   warnings: string[];
+
+  // ----- Phase 2 additive fields (all optional). -----
+
+  /** Canonical 4H regime id snapshot when the signal was generated. */
+  marketRegime?: FuturesMarketRegimeId;
+  /** 4H trade permission snapshot. */
+  tradePermission?: FuturesTradePermission;
+  /** Entry trigger that fired. */
+  setupType?: FuturesEntryTrigger;
+  /** Risk:reward to TP2 reported by the engine. */
+  riskRewardRatio?: number | null;
+  /** Short, deterministic fingerprint of the data context used to decide. */
+  dataSnapshot?: string;
+  /** Where this entry came from. Defaults to 'manual' for legacy rows. */
+  source?: SignalJournalSource;
+  /** Final R-multiple realised after the trade closed. Null for open/expired. */
+  finalR?: number | null;
+  /** Maximum candles allowed before the entry is force-expired. */
+  maxHoldCandles?: number;
+  /**
+   * Epoch ms after which a PENDING paper trade should be marked EXPIRED if no
+   * outcome has been observed.
+   */
+  expiresAt?: number | null;
 }
 
 /** Aggregate metrics surfaced in the journal panel. */

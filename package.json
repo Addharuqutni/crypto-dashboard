@@ -12,7 +12,8 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "worker": "tsx scripts/worker/start.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",
@@ -42,6 +43,7 @@
     "postcss": "^8.5.14",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
+    "tsx": "^4.20.0",
     "vitest": "^3.2.4"
   }
 }
