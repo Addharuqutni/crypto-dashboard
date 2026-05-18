@@ -47,11 +47,24 @@
   --font-display: 'Space Grotesk', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
+  /*
+   * Easing tokens — pulled from the interaction-design playbook so motion
+   * across the app communicates the same vocabulary:
+   *   - ease-out:    decelerate, used when content enters
+   *   - ease-in:     accelerate, used when content leaves
+   *   - ease-in-out: balanced, used when something travels between states
+   *   - spring:      slight overshoot, used for press/tap micro-feedback
+   */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
   /* Animation */
-  --animate-in: enter 0.2s ease-out;
-  --animate-fade-in: fade-in 0.15s ease-out;
-  --animate-slide-up: slide-up 0.2s ease-out;
-  --animate-price-flash: price-flash 0.6s ease-out;
+  --animate-in: enter 0.2s var(--ease-out);
+  --animate-fade-in: fade-in 0.18s var(--ease-out);
+  --animate-slide-up: slide-up 0.22s var(--ease-out);
+  --animate-price-flash: price-flash 0.6s var(--ease-out);
 }
 
 /* ============================================
@@ -88,7 +101,61 @@ body {
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+/* ============================================
+   INTERACTION PRIMITIVES
+   Reusable, opt-in classes that the components compose with Tailwind.
+   Each primitive is intentionally narrow so it can layer on existing
+   styling without fighting it.
+   ============================================ */
+
+/*
+ * Lift on hover — for surfaces that should feel actionable.
+ * Avoids animating layout-affecting properties (top/left/width/height).
+ * Works gracefully on touch where :hover never fires.
+ */
+.interactive {
+  transition:
+    transform 0.2s var(--ease-out),
+    border-color 0.2s var(--ease-out),
+    box-shadow 0.25s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+
+.interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(56, 189, 248, 0.08);
+  border-color: var(--color-border-strong);
+}
+
+/*
+ * Tap feedback — gentle scale-down on click. Used on primary buttons,
+ * quick prompts, send buttons, and pill toggles. Pairs with `interactive`
+ * cleanly because both touch transform.
+ */
+.pressable {
+  transition: transform 0.15s var(--ease-spring);
+  will-change: transform;
+}
+
+.pressable:active {
+  transform: scale(0.96);
+}
+
+/*
+ * Soft glow ring for focused inputs. Mirrors `:focus` on textual inputs
+ * so the AI chat input and settings modal share a consistent feel.
+ */
+.glow-on-focus:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in oklab, var(--color-accent-secondary) 35%, transparent),
+    0 0 18px color-mix(in oklab, var(--color-accent-secondary) 25%, transparent);
 }
 
 /* ============================================
@@ -139,25 +206,156 @@ body {
   }
 }
 
+/*
+ * Bubble-in for chat messages. User messages slide from the right,
+ * assistant from the left. Tiny scale gives the spring feel without
+ * an actual physics engine.
+ */
+@keyframes bubble-in-right {
+  from { opacity: 0; transform: translate(8px, 4px) scale(0.96); }
+  to   { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+@keyframes bubble-in-left {
+  from { opacity: 0; transform: translate(-8px, 4px) scale(0.96); }
+  to   { opacity: 1; transform: translate(0, 0) scale(1); }
+}
+
+/*
+ * Wave-style typing indicator. Uses translateY rather than scale so the
+ * dots ride a subtle sine instead of pulsing in place.
+ */
+@keyframes typing-wave {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+  40%           { transform: translateY(-3px); opacity: 1; }
+}
+
+/*
+ * Skeleton shimmer — replaces the flat `animate-pulse` look with a
+ * directional sheen. Cheap to render: only the background-position moves.
+ */
+@keyframes shimmer {
+  0%   { background-position: -150% 0; }
+  100% { background-position: 150% 0; }
+}
+
+/*
+ * Auto-dismiss progress bar for toasts. Linear timing matches the
+ * 3-second timeout so what the user sees == what the timer does.
+ */
+@keyframes toast-progress {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
+
+/*
+ * Spring entrance for toasts and modals. Slight overshoot from spring
+ * easing makes them feel material instead of mechanical.
+ */
+@keyframes spring-in {
+  0%   { opacity: 0; transform: translateY(12px) scale(0.92); }
+  60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/*
+ * Soft pulse — used on idle empty-state icons so the surface still
+ * breathes without screaming for attention.
+ */
+@keyframes soft-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+
+/*
+ * Smooth height-based reveal for collapsibles. Uses the grid-rows trick
+ * so we can transition from 0fr -> 1fr without measuring the inner
+ * element. Avoid animating height directly to keep frame budget low.
+ */
+@keyframes collapsible-in {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to   { grid-template-rows: 1fr; opacity: 1; }
+}
+
 .animate-in {
-  animation: enter 0.2s ease-out;
+  animation: enter 0.2s var(--ease-out);
 }
 
 .animate-fade-in {
-  animation: fade-in 0.15s ease-out;
+  animation: fade-in 0.18s var(--ease-out);
 }
 
 .animate-slide-up {
-  animation: slide-up 0.2s ease-out;
+  animation: slide-up 0.22s var(--ease-out);
 }
 
 .slide-in-from-right-5 {
-  animation: slide-in-from-right 0.2s ease-out;
+  animation: slide-in-from-right 0.2s var(--ease-out);
+}
+
+.animate-bubble-in-right {
+  animation: bubble-in-right 0.22s var(--ease-spring) backwards;
+}
+
+.animate-bubble-in-left {
+  animation: bubble-in-left 0.22s var(--ease-spring) backwards;
+}
+
+.animate-spring-in {
+  animation: spring-in 0.32s var(--ease-spring) backwards;
+}
+
+.animate-soft-pulse {
+  animation: soft-pulse 2.4s var(--ease-in-out) infinite;
+}
+
+/*
+ * Skeleton class — apply to a block-level element to get a moving sheen.
+ * Drop the `animate-pulse` opacity dance for a more premium feel.
+ */
+.skeleton {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.02) 0%,
+      rgba(255, 255, 255, 0.06) 45%,
+      rgba(255, 255, 255, 0.10) 50%,
+      rgba(255, 255, 255, 0.06) 55%,
+      rgba(255, 255, 255, 0.02) 100%
+    ),
+    var(--color-bg-surface-raised);
+  background-size: 200% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  background-position: -150% 0, 0 0;
+  animation: shimmer 1.6s var(--ease-in-out) infinite;
+  border-radius: var(--radius-sm);
+}
+
+/*
+ * Smooth collapsible — wrapper uses display:grid with grid-template-rows
+ * driven by the [data-open] attribute. The inner `min-h-0 overflow-hidden`
+ * child lets the children animate clipping cleanly.
+ */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s var(--ease-out), opacity 0.2s var(--ease-out);
+  opacity: 0;
+}
+
+.collapsible[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapsible > * {
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Staggered card entrance */
 .card {
-  animation: enter 0.25s ease-out backwards;
+  animation: enter 0.25s var(--ease-out) backwards;
 }
 
 .card:nth-child(1) { animation-delay: 0ms; }
@@ -186,6 +384,19 @@ body {
   .card {
     animation: none;
   }
+
+  .skeleton {
+    animation: none;
+    background: var(--color-bg-surface-raised);
+  }
+
+  .interactive:hover {
+    transform: none;
+  }
+
+  .pressable:active {
+    transform: none;
+  }
 }
 
 /* ============================================
@@ -204,6 +415,7 @@ body {
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-strong);
   border-radius: var(--radius-pill);
+  transition: background 0.2s var(--ease-out);
 }
 
 ::-webkit-scrollbar-thumb:hover {

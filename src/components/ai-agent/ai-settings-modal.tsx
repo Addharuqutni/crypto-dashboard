@@ -106,7 +106,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md animate-in rounded-xl border border-border-subtle bg-bg-surface shadow-2xl">
+      <div className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
           <div className="flex items-center gap-2.5">
@@ -115,7 +115,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="pressable rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Close settings"
           >
             <X className="h-4 w-4" />
@@ -139,7 +139,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.openai.com/v1"
-              className="w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-colors focus:border-accent-secondary focus:outline-none focus:ring-2 focus:ring-accent-secondary/20"
+              className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none"
             />
             <p className="text-[10px] text-text-muted">
               Include /v1 if your provider requires it
@@ -160,12 +160,12 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
                 placeholder="sk-..."
                 autoComplete="off"
                 spellCheck={false}
-                className="w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 pr-10 text-sm text-text-primary placeholder:text-text-muted/50 transition-colors focus:border-accent-secondary focus:outline-none focus:ring-2 focus:ring-accent-secondary/20"
+                className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 pr-10 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted hover:text-text-secondary"
+                className="pressable absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
                 aria-label={showKey ? 'Hide API key' : 'Show API key'}
               >
                 {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -208,7 +208,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="gpt-4o"
-              className="w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-colors focus:border-accent-secondary focus:outline-none focus:ring-2 focus:ring-accent-secondary/20"
+              className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none"
             />
             <p className="text-[10px] text-text-muted">
               e.g. gpt-4o, gpt-3.5-turbo, llama-3.1-70b, mixtral-8x7b
@@ -241,7 +241,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
             onClick={handleTest}
             disabled={!canSave || testing}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
+              'pressable inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               canSave && !testing
                 ? 'bg-bg-surface-raised text-text-secondary hover:bg-bg-surface-soft hover:text-text-primary'
@@ -255,7 +255,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="rounded-lg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="pressable rounded-lg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               Cancel
             </button>
@@ -263,10 +263,10 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
               onClick={handleSave}
               disabled={!canSave}
               className={cn(
-                'rounded-lg px-4 py-2 text-xs font-semibold transition-colors',
+                'pressable rounded-lg px-4 py-2 text-xs font-semibold transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                 canSave
-                  ? 'bg-accent-secondary text-white hover:bg-accent-secondary/90'
+                  ? 'bg-accent-secondary text-white shadow-[0_8px_24px_-8px_rgba(139,92,246,0.6)] hover:bg-accent-secondary/90 hover:shadow-[0_10px_28px_-6px_rgba(139,92,246,0.7)]'
                   : 'cursor-not-allowed bg-accent-secondary/30 text-white/50'
               )}
             >

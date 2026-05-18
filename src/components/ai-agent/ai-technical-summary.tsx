@@ -205,12 +205,12 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
             <button
               type="button"
               onClick={handleCopy}
-              className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-bg-surface-raised hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="pressable rounded-md p-1.5 text-text-muted transition-colors hover:bg-bg-surface-raised hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               aria-label={copied ? 'Copied to clipboard' : 'Copy summary'}
               title={copied ? 'Copied!' : 'Copy'}
             >
               {copied ? (
-                <Check className="h-3 w-3 text-market-up" aria-hidden />
+                <Check className="h-3 w-3 text-market-up animate-in" aria-hidden />
               ) : (
                 <Copy className="h-3 w-3" aria-hidden />
               )}
@@ -221,7 +221,7 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
             onClick={() => void fetchSummary()}
             disabled={loading}
             className={cn(
-              'rounded-md p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              'pressable rounded-md p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               loading
                 ? 'cursor-not-allowed text-text-muted/30'
                 : 'text-text-muted hover:bg-bg-surface-raised hover:text-text-secondary'
@@ -229,7 +229,7 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
             aria-label="Refresh AI summary"
             title="Refresh"
           >
-            <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} aria-hidden />
+            <RefreshCw className={cn('h-3 w-3 transition-transform', loading && 'animate-spin')} aria-hidden />
           </button>
         </div>
       </header>
@@ -320,13 +320,16 @@ function SummaryBody({ text, className }: { text: string; className?: string }) 
   );
 }
 
-/** Animated skeleton shown during the initial summary fetch. */
+/** Animated skeleton shown during the initial summary fetch.
+ *  Uses the shared `.skeleton` shimmer primitive so loading state matches
+ *  every other surface in the app.
+ */
 function SummarySkeleton() {
   return (
-    <div className="space-y-2" aria-hidden>
-      <div className="h-3 w-11/12 animate-pulse rounded bg-bg-surface-raised" />
-      <div className="h-3 w-10/12 animate-pulse rounded bg-bg-surface-raised" />
-      <div className="h-3 w-7/12 animate-pulse rounded bg-bg-surface-raised" />
+    <div className="space-y-2 animate-fade-in" aria-hidden>
+      <div className="skeleton h-3 w-11/12" />
+      <div className="skeleton h-3 w-10/12" />
+      <div className="skeleton h-3 w-7/12" />
       <p className="sr-only">Generating AI analysis…</p>
     </div>
   );

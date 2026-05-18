@@ -2,17 +2,22 @@
 
 import { AppShell } from '@/components/layout/app-shell';
 import { BacktestPanel } from '@/components/backtest/backtest-panel';
+import { HistoricalBacktestPanel } from '@/components/backtest/historical-backtest-panel';
 import { PaperTradingPanel } from '@/components/backtest/paper-trading-panel';
 
 /**
  * Backtest validation page.
  * Route: /backtest
  *
- * Two stacked panels:
- *   1. Engine Backtest — deterministic fixture replay across the five
- *      canonical regimes with full Phase 2 metrics.
+ * Three stacked panels, ordered from "most representative of live" to
+ * "most reproducible":
+ *   1. Historical Backtest — runs the live signal engine against real
+ *      Binance USDⓈ-M Futures klines. Symbol, timeframe, depth, costs,
+ *      max-hold, and conflict-resolution are tunable.
  *   2. Paper Trading — live status of signals submitted from the Futures
- *      panel with `source: 'paper'`.
+ *      panel with `source: 'paper'`. Outcomes derived from live ticks.
+ *   3. Engine Backtest (Fixtures) — deterministic fixture replay across
+ *      the five canonical regimes for fast regression checks.
  */
 export default function BacktestPage() {
   return (
@@ -23,14 +28,15 @@ export default function BacktestPage() {
             Engine Validation
           </h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Run the signal engine against deterministic regime fixtures and track paper signals
-            against live Binance Futures prices. Capital preservation beats inflated backtest
-            numbers &mdash; warnings below are surfaced verbatim.
+            Validate the futures signal engine three ways &mdash; against real Binance klines, against
+            live paper-traded ticks, and against deterministic regime fixtures. Capital
+            preservation beats inflated backtest numbers; warnings below are surfaced verbatim.
           </p>
         </div>
 
-        <BacktestPanel />
+        <HistoricalBacktestPanel />
         <PaperTradingPanel />
+        <BacktestPanel />
       </div>
     </AppShell>
   );

@@ -292,15 +292,19 @@ export function FuturesSignalPanel({ signal, symbol, timeframe }: FuturesSignalP
             onClick={handleSaveSignal}
             disabled={alreadySaved}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+              'pressable inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-all',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               alreadySaved
                 ? 'cursor-not-allowed border border-market-up/30 bg-market-up/5 text-market-up'
-                : 'border border-accent-primary/30 bg-accent-primary/10 text-accent-primary hover:bg-accent-primary/20'
+                : 'border border-accent-primary/30 bg-accent-primary/10 text-accent-primary shadow-[0_6px_20px_-8px_rgba(56,189,248,0.45)] hover:bg-accent-primary/20 hover:shadow-[0_10px_24px_-6px_rgba(56,189,248,0.55)]'
             )}
             aria-label={alreadySaved ? 'Signal already saved to journal' : 'Save signal to journal'}
           >
-            {alreadySaved ? <Check className="h-3.5 w-3.5" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+            {alreadySaved ? (
+              <Check className="h-3.5 w-3.5 animate-in" />
+            ) : (
+              <BookmarkPlus className="h-3.5 w-3.5" />
+            )}
             {alreadySaved ? 'Saved' : 'Save Signal'}
           </button>
         </div>

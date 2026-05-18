@@ -109,4 +109,25 @@ export interface SignalJournalMetrics {
   longWinRate: number;
   /** Win rate for SHORT signals only (% of closed SHORTs that hit TP). */
   shortWinRate: number;
+
+  // ----- Phase 3 additive fields. -----
+
+  /** Total closed entries (TP/SL/EXPIRED). */
+  closed: number;
+  /** Total expired entries (PENDING that hit max-hold). */
+  expired: number;
+  /** Source breakdown. */
+  paperCount: number;
+  manualCount: number;
+  backtestCount: number;
+  /** Sum of finalR across closed entries. */
+  closedR: number;
+  /** Mean finalR across closed entries. */
+  averageR: number;
+  /** Implied unrealised R across PENDING entries (uses MFE/MAE). */
+  openR: number;
+  /** Highest finalR among closed entries. */
+  bestR: number;
+  /** Lowest finalR among closed entries. */
+  worstR: number;
 }

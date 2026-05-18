@@ -29,3 +29,4 @@ export {
   FIXTURES,
   type FixtureName,
 } from './fixtures';
+export { projectEquityCurve, type EquityPoint } from './equity-curve';

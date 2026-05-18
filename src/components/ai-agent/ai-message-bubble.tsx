@@ -20,8 +20,10 @@ export function AiMessageBubble({ message, isStreaming }: AiMessageBubbleProps) 
   return (
     <div
       className={cn(
-        'flex gap-2.5 animate-fade-in',
-        isUser ? 'flex-row-reverse' : 'flex-row'
+        'flex gap-2.5',
+        // Directional spring entrance — user from the right, AI from the left.
+        // Subtle scale + translation makes the chat feel alive without distracting.
+        isUser ? 'flex-row-reverse animate-bubble-in-right' : 'flex-row animate-bubble-in-left'
       )}
     >
       {/* Avatar */}
@@ -66,14 +68,26 @@ export function AiMessageBubble({ message, isStreaming }: AiMessageBubbleProps) 
 }
 
 /**
- * Typing indicator — animated dots shown while AI is generating.
+ * Typing indicator — wave-style dots, animated via translateY so the
+ * motion arcs instead of pulsing flat. Three dots staggered by ~150ms
+ * read as a soft sine wave.
  */
 function TypingIndicator() {
+  const dot = 'h-1.5 w-1.5 rounded-full bg-accent-secondary/70';
   return (
-    <div className="flex items-center gap-1 py-1">
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-secondary/60 [animation-delay:0ms]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-secondary/60 [animation-delay:150ms]" />
-      <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-accent-secondary/60 [animation-delay:300ms]" />
+    <div className="flex items-center gap-1 py-1" aria-label="AI is generating a response">
+      <span
+        className={dot}
+        style={{ animation: 'typing-wave 1.2s var(--ease-in-out) infinite', animationDelay: '0ms' }}
+      />
+      <span
+        className={dot}
+        style={{ animation: 'typing-wave 1.2s var(--ease-in-out) infinite', animationDelay: '150ms' }}
+      />
+      <span
+        className={dot}
+        style={{ animation: 'typing-wave 1.2s var(--ease-in-out) infinite', animationDelay: '300ms' }}
+      />
     </div>
   );
 }

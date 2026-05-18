@@ -334,7 +334,7 @@ export default function CoinDetailPage() {
                 else addCoin(coinSymbol, coinName);
               }}
               className={cn(
-                'ml-auto inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                'pressable ml-auto inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                 isInWatchlist
                   ? 'bg-accent-warm/10 text-accent-warm hover:bg-accent-warm/20'
@@ -342,7 +342,12 @@ export default function CoinDetailPage() {
               )}
               aria-label={isInWatchlist ? `Remove ${coinSymbol} from watchlist` : `Add ${coinSymbol} to watchlist`}
             >
-              <Star className={cn('h-4 w-4', isInWatchlist && 'fill-current')} />
+              <Star
+                className={cn(
+                  'h-4 w-4 transition-transform duration-300',
+                  isInWatchlist && 'fill-current scale-110'
+                )}
+              />
               {isInWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
             </button>
           )}
@@ -359,10 +364,10 @@ export default function CoinDetailPage() {
                   key={tf}
                   onClick={() => setTimeframe(tf)}
                   className={cn(
-                    'rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                    'pressable rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                     timeframe === tf
-                      ? 'bg-accent-primary/10 text-accent-primary'
+                      ? 'bg-accent-primary/10 text-accent-primary shadow-[inset_0_0_0_1px_rgba(56,189,248,0.25)]'
                       : 'text-text-muted hover:bg-bg-surface-soft hover:text-text-secondary'
                   )}
                   aria-label={`Show ${tf} chart`}
@@ -393,10 +398,10 @@ export default function CoinDetailPage() {
                 <button
                   onClick={() => setChartMode('clean')}
                   className={cn(
-                    'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                    'pressable flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                     chartMode === 'clean'
-                      ? 'bg-bg-surface-raised text-text-primary'
+                      ? 'bg-bg-surface-raised text-text-primary shadow-[inset_0_0_0_1px_rgba(56,189,248,0.18)]'
                       : 'text-text-muted hover:text-text-secondary'
                   )}
                   aria-pressed={chartMode === 'clean'}
@@ -407,10 +412,10 @@ export default function CoinDetailPage() {
                 <button
                   onClick={() => setChartMode('technical')}
                   className={cn(
-                    'flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                    'pressable flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                     chartMode === 'technical'
-                      ? 'bg-accent-secondary/10 text-accent-secondary'
+                      ? 'bg-accent-secondary/10 text-accent-secondary shadow-[inset_0_0_0_1px_rgba(139,92,246,0.3)]'
                       : 'text-text-muted hover:text-text-secondary'
                   )}
                   aria-pressed={chartMode === 'technical'}
@@ -480,7 +485,7 @@ export default function CoinDetailPage() {
 
         {/* Technical Mode CTA when in Clean Mode */}
         {chartMode === 'clean' && (
-          <div className="card flex items-center justify-between px-4 py-4">
+          <div className="card interactive flex items-center justify-between px-4 py-4">
             <div>
               <p className="text-sm font-medium text-text-secondary">Technical Analysis</p>
               <p className="mt-0.5 text-xs text-text-muted">
@@ -489,7 +494,7 @@ export default function CoinDetailPage() {
             </div>
             <button
               onClick={() => setChartMode('technical')}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent-secondary/10 px-3 py-1.5 text-xs font-medium text-accent-secondary transition-colors hover:bg-accent-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="pressable inline-flex items-center gap-1.5 rounded-lg bg-accent-secondary/10 px-3 py-1.5 text-xs font-medium text-accent-secondary transition-all hover:bg-accent-secondary/20 hover:shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               <BarChart3 className="h-3.5 w-3.5" />
               Enable
@@ -513,7 +518,7 @@ function ChartDeferredSkeleton() {
   return (
     <div className="flex h-[420px] items-center justify-center rounded-xl border border-border-subtle/60 bg-bg-surface-soft/40">
       <div className="text-center">
-        <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-bg-surface-raised" />
+        <div className="skeleton mx-auto h-8 w-8 !rounded-full" />
         <p className="mt-3 text-xs font-medium uppercase tracking-wider text-text-muted">
           Preparing chart
         </p>
