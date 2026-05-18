@@ -127,6 +127,68 @@ npm run start:local
 | `npm run start:local` | Menjalankan production server di port 3000 |
 | `npm run typecheck` | Validasi TypeScript |
 | `npm run lint` | Menjalankan ESLint |
+| `npm run screener` | Menjalankan screener long-running loop |
+| `npm run screener -- --once` | Single-shot screener evaluation |
+
+## Futures Screener
+
+### Running the Screener
+
+```bash
+# Single-shot: evaluate all 10 symbols, persist results, exit
+npm run screener -- --once
+
+# Long-running: evaluate every 15 minutes with graceful shutdown
+npm run screener
+
+# Help
+npm run screener -- --help
+```
+
+### Data Storage
+
+The screener persists data to `data/screener/`:
+
+| File | Purpose |
+|------|---------|
+| `latest.json` | Most recent run snapshot (atomic write) |
+| `history.jsonl` | Append-only run summaries |
+| `alerts.jsonl` | Append-only alert policy decisions |
+| `settings.json` | User alert/rank settings (atomic write) |
+
+Missing files return safe defaults — the UI can always render an empty state.
+
+### Alert Rules (Defaults)
+
+| Setting | Default |
+|---------|---------|
+| Alerts enabled | `false` (opt-in) |
+| Min confidence | 75% |
+| Min grade | B |
+| Min risk:reward | 1.5 |
+| Cooldown per symbol/action | 60 minutes |
+| Max alerts per hour | 3 |
+| Send WAIT alerts | `false` |
+| Top N only | 3 |
+
+Alerts are suppressed for stale data, insufficient data, duplicate symbol/action within cooldown, and hourly caps. Material changes (grade improvement, confidence +10) can override cooldown.
+
+### AI Auditor (Optional)
+
+The screener supports optional AI auditing of top candidates. AI audits are **commentary only** — they never determine LONG/SHORT/WAIT and never invent price levels.
+
+Limitations:
+- Requires an OpenAI-compatible API key configured in the app.
+- If AI is not configured or the request fails, the screener works without audit.
+- AI output is schema-validated; malformed responses are rejected.
+- Audits are cached by (symbol, action, candleCloseTime) to avoid redundant API cost.
+
+### Risk Disclaimer
+
+> **This is educational decision-support software, not financial advice.**
+> Signals are deterministic outputs from technical analysis, never guarantees of price movement.
+> Confidence scores reflect setup quality, not win probability.
+> WAIT is a valid analysis outcome, not an error.
 
 ## Deployment Singkat
 
