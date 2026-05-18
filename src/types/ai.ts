@@ -59,3 +59,34 @@ export interface TechnicalContext {
   fibonacci?: { direction: string; levels: { label: string; price: number }[] };
   orderBlocks?: { type: string; high: number; low: number; strength: string }[];
 }
+
+/**
+ * Strict allowlist of AI Agent actions.
+ *
+ * The agent may explain, audit, compare, suggest wait conditions, or request
+ * fresh data. It can NEVER place orders, set leverage, open/close positions,
+ * or cancel orders.
+ */
+export type AiAgentAction =
+  | 'EXPLAIN_SIGNAL'
+  | 'AUDIT_SIGNAL'
+  | 'CHECK_RISK'
+  | 'COMPARE_LONG_SHORT'
+  | 'SUGGEST_WAIT_CONDITIONS'
+  | 'REQUEST_FRESH_DATA';
+
+/**
+ * Structured action call returned by the AI Agent.
+ *
+ * `allowedToTrade` is intentionally pinned to `false` at the type level so any
+ * attempt to surface trade-execution intent is rejected by both TypeScript
+ * and the runtime guard in `src/lib/ai/action-call-guard.ts`.
+ */
+export interface AiAgentActionCall {
+  action: AiAgentAction;
+  symbol: string;
+  timeframe: string;
+  reason: string;
+  requiresFreshData: boolean;
+  allowedToTrade: false;
+}

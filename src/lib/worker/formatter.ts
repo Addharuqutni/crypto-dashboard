@@ -34,6 +34,22 @@ export function formatTradeAlert(args: FormatTradeAlertArgs): string {
     );
   }
 
+  // Forecast/Kronos lines — surfaced only when forecast metadata is present.
+  // Forecast remains supporting evidence; the footer reaffirms risk-engine
+  // authority on every alert.
+  const forecastLines: string[] = [];
+  if (s.forecastAlignment) {
+    forecastLines.push(`- Kronos: ${s.forecastAlignment}`);
+    if (s.forecastDirection) {
+      forecastLines.push(`- Forecast: ${s.forecastDirection}`);
+    }
+    if (s.forecastWarnings && s.forecastWarnings.length > 0) {
+      for (const w of s.forecastWarnings) {
+        forecastLines.push(`- Forecast note: ${escapeMd(w)}`);
+      }
+    }
+  }
+
   const riskLines: string[] = [];
   if (s.entryZone?.min != null) {
     riskLines.push(`- Entry: ${formatPrice(s.entryZone.min)}`);
@@ -57,12 +73,19 @@ export function formatTradeAlert(args: FormatTradeAlertArgs): string {
   const heading = `*Action:* ${action}  |  *Confidence:* ${conf}  |  *Grade:* ${grade}`;
   const tfLine = `*Timeframe:* ${escapeMd(args.symbol)} Futures — ${args.setupTimeframe}, arah ${args.macroTimeframe}`;
 
-  return [
+  const sections: string[] = [
     heading,
     tfLine,
     '',
     '*Setup:*',
     ...setupLines,
+  ];
+
+  if (forecastLines.length > 0) {
+    sections.push('', '*Forecast:*', ...forecastLines);
+  }
+
+  sections.push(
     '',
     '*Risk:*',
     ...riskLines,
@@ -72,7 +95,11 @@ export function formatTradeAlert(args: FormatTradeAlertArgs): string {
     '',
     '*Next step:*',
     `- ${nextStep}`,
-  ].join('\n');
+    '',
+    '_Risk engine remains final authority._'
+  );
+
+  return sections.join('\n');
 }
 
 /**

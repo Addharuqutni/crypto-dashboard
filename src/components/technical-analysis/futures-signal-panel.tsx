@@ -3,7 +3,6 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatting';
-import { generateFuturesSignal } from '@/lib/analysis/futures-signal-engine';
 import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
 import type {
   FuturesEntryTrigger,
@@ -14,10 +13,6 @@ import type {
   FuturesSignalAction,
   FuturesSignalGrade,
 } from '@/types/futures-signal';
-import type { Candle } from '@/types/chart';
-import type { RsiResult } from '@/lib/indicators/rsi';
-import type { MacdPoint } from '@/lib/indicators/macd';
-import type { SupportResistance } from '@/lib/indicators/support-resistance';
 import {
   TrendingUp,
   TrendingDown,
@@ -33,24 +28,18 @@ import {
   Zap,
   BookmarkPlus,
   Check,
+  ShieldCheck,
+  Clock,
 } from 'lucide-react';
 
 interface FuturesSignalPanelProps {
-  candles: Candle[];
+  /**
+   * Pre-computed deterministic signal. Hoisted from the page so the same
+   * engine output drives both the Futures Setup panel and the AI Summary.
+   */
+  signal: FuturesSignal;
   symbol: string;
   timeframe: string;
-  livePrice?: number;
-  rsi?: RsiResult;
-  macd?: MacdPoint | null;
-  supportResistance?: SupportResistance;
-  /** Macro timeframe candles (recommended 4H). */
-  macroCandles?: Candle[];
-  /** Trigger timeframe candles (recommended 15m). */
-  triggerCandles?: Candle[];
-  /** Latest funding rate as decimal. */
-  fundingRate?: number | null;
-  /** % change in open interest over a recent window. */
-  openInterestChangePercent?: number | null;
 }
 
 /**
@@ -61,51 +50,13 @@ interface FuturesSignalPanelProps {
  *   - Middle: entry, SL, TP, RR (only when actionable)
  *   - Confirmation: MTF, funding, OI, liquidity sweep
  *   - Reasoning: reasons, warnings, ranked no-trade reasons
+ *
+ * Signal computation is hoisted to the parent so AI Summary and this
+ * panel always agree. "Kronos informs. Risk engine decides."
  */
-export function FuturesSignalPanel({
-  candles,
-  symbol,
-  timeframe,
-  livePrice,
-  rsi,
-  macd,
-  supportResistance,
-  macroCandles,
-  triggerCandles,
-  fundingRate,
-  openInterestChangePercent,
-}: FuturesSignalPanelProps) {
+export function FuturesSignalPanel({ signal, symbol, timeframe }: FuturesSignalPanelProps) {
   const journalAdd = useSignalJournalStore((s) => s.add);
   const journalEntries = useSignalJournalStore((s) => s.entries);
-
-  const signal = useMemo<FuturesSignal | null>(() => {
-    if (!candles || candles.length === 0) return null;
-    return generateFuturesSignal({
-      symbol,
-      timeframe,
-      candles,
-      livePrice,
-      rsi,
-      macd,
-      supportResistance,
-      macroCandles,
-      triggerCandles,
-      fundingRate: fundingRate ?? null,
-      openInterestChangePercent: openInterestChangePercent ?? null,
-    });
-  }, [
-    candles,
-    symbol,
-    timeframe,
-    livePrice,
-    rsi,
-    macd,
-    supportResistance,
-    macroCandles,
-    triggerCandles,
-    fundingRate,
-    openInterestChangePercent,
-  ]);
 
   // Determine whether the current setup has already been saved.
   //
@@ -125,20 +76,6 @@ export function FuturesSignalPanel({
         Math.abs(e.entryPrice - targetEntry) < 1e-9
     );
   }, [journalEntries, signal, symbol, timeframe]);
-
-  if (!signal) {
-    return (
-      <div className="card px-4 py-6 text-center" id="futures-signal-empty">
-        <AlertTriangle className="mx-auto h-6 w-6 text-warning/60" />
-        <p className="mt-2 text-sm font-medium text-text-secondary">
-          Futures setup unavailable
-        </p>
-        <p className="mt-1 text-xs text-text-muted">
-          Waiting for candle data on {symbol} ({timeframe}).
-        </p>
-      </div>
-    );
-  }
 
   if (signal.regime === 'INSUFFICIENT_DATA') {
     return (
@@ -179,7 +116,7 @@ export function FuturesSignalPanel({
       action: signal.action,
       confidenceScore: signal.confidenceScore,
       signalGrade: signal.signalGrade,
-      entryPrice: signal.entryZone.min ?? livePrice ?? null,
+      entryPrice: signal.entryZone.min ?? null,
       stopLoss: signal.stopLoss,
       tp1: signal.takeProfits.tp1,
       tp2: signal.takeProfits.tp2,
@@ -259,6 +196,24 @@ export function FuturesSignalPanel({
         <MtfBlock signal={signal} />
         <PositioningBlock signal={signal} />
       </div>
+
+      {/* Section 3b — Kronos forecast (supporting evidence only). */}
+      {signal.forecastAlignment && (
+        <ForecastBlock signal={signal} />
+      )}
+
+      {/* Section 3c — late-entry guard. */}
+      {signal.lateEntryBlocked && (
+        <div className="rounded-lg border border-accent-warm/40 bg-accent-warm/10 px-3 py-2.5">
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent-warm">
+            <Clock className="h-3 w-3" />
+            Late-entry guard: Blocked
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-accent-warm/90">
+            {signal.lateEntryReason ?? 'Setup is too extended. Wait for a better location.'}
+          </p>
+        </div>
+      )}
 
       {/* Section 4 — primary no-trade reason (when WAIT). */}
       {signal.action === 'WAIT' && signal.primaryNoTradeReason && (
@@ -351,14 +306,30 @@ export function FuturesSignalPanel({
         </div>
       )}
 
-      {/* Disclaimer */}
-      <div className="flex items-start gap-2 rounded-lg border border-border-subtle/70 bg-bg-surface-soft/60 px-3 py-2.5">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
-        <p className="text-[11px] leading-relaxed text-text-muted">
-          Setup guidance only. Bias, risk, and invalidation are estimates from
-          public market data. Not financial advice. Trade with discipline and
-          confirm independently.
-        </p>
+      {/* Skill mode notice + Disclaimer */}
+      <div className="space-y-2">
+        <div
+          className="flex items-center gap-1.5 rounded-lg border border-accent-secondary/20 bg-accent-secondary/5 px-3 py-2"
+          role="note"
+          aria-label="AI Agent skill policy"
+        >
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-accent-secondary" aria-hidden />
+          <p className="text-[11px] leading-relaxed text-text-muted">
+            Skill: <span className="font-semibold text-accent-secondary">Crypto + Kronos</span>
+            <span className="mx-1 text-text-muted/50">·</span>
+            Kronos informs.
+            <span className="mx-1 text-text-muted/50">·</span>
+            <span className="font-semibold text-text-secondary">Risk engine remains final authority.</span>
+          </p>
+        </div>
+        <div className="flex items-start gap-2 rounded-lg border border-border-subtle/70 bg-bg-surface-soft/60 px-3 py-2.5">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
+          <p className="text-[11px] leading-relaxed text-text-muted">
+            Setup guidance only. Bias, risk, and invalidation are estimates from
+            public market data. Not financial advice. Trade with discipline and
+            confirm independently.
+          </p>
+        </div>
       </div>
     </section>
   );
@@ -751,4 +722,77 @@ function oiBiasLabel(b: FuturesOpenInterestBias): string {
     default:
       return '—';
   }
+}
+
+/**
+ * ForecastBlock — visualizes the Kronos forecast as supporting evidence.
+ *
+ * Shows alignment vs. the deterministic action, the forecast direction,
+ * the confidence adjustment that was applied, and any warnings. The block
+ * is purely informational: it cannot create or modify a trade decision.
+ */
+function ForecastBlock({ signal }: { signal: FuturesSignal }) {
+  const alignment = signal.forecastAlignment;
+  if (!alignment) return null;
+
+  const alignmentTone =
+    alignment === 'aligned'
+      ? { label: 'Aligned', className: 'text-market-up' }
+      : alignment === 'conflicting'
+        ? { label: 'Conflicting', className: 'text-market-down' }
+        : alignment === 'invalid'
+          ? { label: 'Invalid', className: 'text-accent-warm' }
+          : alignment === 'unavailable'
+            ? { label: 'Unavailable', className: 'text-text-muted' }
+            : { label: 'Neutral', className: 'text-text-secondary' };
+
+  const direction = signal.forecastDirection;
+  const adjustment = signal.forecastConfidenceAdjustment;
+  const warnings = signal.forecastWarnings ?? [];
+
+  return (
+    <div className="rounded-lg border border-accent-secondary/20 bg-accent-secondary/5 px-3 py-2.5">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-accent-secondary">
+        <ShieldCheck className="h-3 w-3" />
+        Kronos Forecast
+        <span className="ml-2 text-[9px] font-medium text-text-muted">supporting evidence only</span>
+      </p>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+        <div className="rounded-md border border-border-subtle/60 bg-bg-surface-raised/40 px-2 py-1.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-text-muted">Alignment</p>
+          <p className={cn('mt-0.5 text-[11px] font-semibold uppercase', alignmentTone.className)}>
+            {alignmentTone.label}
+          </p>
+        </div>
+        <div className="rounded-md border border-border-subtle/60 bg-bg-surface-raised/40 px-2 py-1.5">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-text-muted">Direction</p>
+          <p className="mt-0.5 text-[11px] font-semibold uppercase text-text-secondary">
+            {direction ?? '—'}
+          </p>
+        </div>
+      </div>
+      {adjustment != null && adjustment !== 0 && (
+        <p className="mt-2 text-[11px] text-text-muted">
+          Confidence adjustment:{' '}
+          <span
+            className={cn(
+              'numeric font-semibold',
+              adjustment > 0 ? 'text-market-up' : 'text-market-down'
+            )}
+          >
+            {adjustment > 0 ? `+${adjustment}` : adjustment}
+          </span>
+        </p>
+      )}
+      {warnings.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {warnings.map((w, i) => (
+            <li key={i} className="text-[11px] leading-relaxed text-accent-warm/90">
+              · {w}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }

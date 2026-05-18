@@ -21,12 +21,14 @@ import { fetchOpenInterestSnapshot } from '@/lib/api/binance-open-interest';
 import { useBinanceKlineWebSocket } from '@/lib/websocket/use-binance-kline-websocket';
 import { resolveBinanceSymbol } from '@/lib/registry/coin-registry';
 import { MTF_CASCADE } from '@/lib/analysis/mtf-cascade';
+import { generateFuturesSignal } from '@/lib/analysis/futures-signal-engine';
 import { getRsiStatus, calculateMACD, calculateSupportResistance, calculateTrendLabel, calculateFibonacci, calculateOrderBlocks } from '@/lib/indicators';
 import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/formatting';
 import { cn } from '@/lib/utils';
 import { Star, TrendingUp, TrendingDown, Minus, ArrowLeft, RefreshCw, LineChart, BarChart3 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import type { ChartTimeframe, AnalysisResult } from '@/types/chart';
+import type { FuturesSignal } from '@/types/futures-signal';
 
 type ChartMode = 'clean' | 'technical';
 
@@ -183,6 +185,40 @@ export default function CoinDetailPage() {
 
     return { rsi, macd: latestMacd, sr, trend, fib, orderBlocks };
   }, [chartMode, candles]);
+
+  /**
+   * Compute the deterministic Futures signal once and share it with both
+   * the Futures Setup panel and the AI Summary. This guarantees the AI
+   * narrates the exact decision the user sees — it cannot invent or drift.
+   */
+  const futuresSignal: FuturesSignal | null = useMemo(() => {
+    if (chartMode !== 'technical') return null;
+    if (!candles || candles.length === 0) return null;
+    return generateFuturesSignal({
+      symbol: coinSymbol,
+      timeframe,
+      candles,
+      ...(price != null ? { livePrice: price } : {}),
+      ...(analysis?.rsi ? { rsi: analysis.rsi } : {}),
+      ...(analysis?.macd ? { macd: analysis.macd } : {}),
+      ...(analysis?.sr ? { supportResistance: analysis.sr } : {}),
+      ...(macroCandles && macroCandles.length > 0 ? { macroCandles } : {}),
+      ...(triggerCandles && triggerCandles.length > 0 ? { triggerCandles } : {}),
+      fundingRate: funding?.lastFundingRate ?? null,
+      openInterestChangePercent: oiSnapshot?.changePercent ?? null,
+    });
+  }, [
+    chartMode,
+    candles,
+    coinSymbol,
+    timeframe,
+    price,
+    analysis,
+    macroCandles,
+    triggerCandles,
+    funding?.lastFundingRate,
+    oiSnapshot?.changePercent,
+  ]);
 
   // Toggle indicator
   /**
@@ -419,23 +455,16 @@ export default function CoinDetailPage() {
             currentPrice={price}
             activeIndicators={activeIndicators}
             analysis={analysis}
+            signal={futuresSignal}
           />
         )}
 
         {/* Futures Setup — disciplined LONG/SHORT/WAIT decision engine */}
-        {chartMode === 'technical' && candles && candles.length > 0 && (
+        {chartMode === 'technical' && candles && candles.length > 0 && futuresSignal && (
           <FuturesSignalPanel
-            candles={candles}
+            signal={futuresSignal}
             symbol={coinSymbol}
             timeframe={timeframe}
-            livePrice={price}
-            rsi={analysis?.rsi}
-            macd={analysis?.macd ?? null}
-            supportResistance={analysis?.sr}
-            macroCandles={macroCandles && macroCandles.length > 0 ? macroCandles : undefined}
-            triggerCandles={triggerCandles && triggerCandles.length > 0 ? triggerCandles : undefined}
-            fundingRate={funding?.lastFundingRate ?? null}
-            openInterestChangePercent={oiSnapshot?.changePercent ?? null}
           />
         )}
 

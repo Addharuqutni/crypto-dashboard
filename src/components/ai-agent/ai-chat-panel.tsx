@@ -206,6 +206,25 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
                   <AiContextBadge context={technicalContext} />
                 </div>
 
+                {/* Crypto + Kronos skill notice — clarifies the AI's role
+                    boundary so users know the AI explains/audits and the
+                    risk engine remains the final authority. */}
+                <div
+                  className="mx-3 mt-2 rounded-lg border border-accent-secondary/20 bg-accent-secondary/5 px-2.5 py-1.5 text-[10px] leading-tight text-text-muted"
+                  role="note"
+                  aria-label="AI Agent skill policy"
+                >
+                  <span className="font-semibold text-accent-secondary">
+                    Skill: Crypto + Kronos
+                  </span>
+                  <span className="mx-1.5 text-text-muted/50">·</span>
+                  Mode: Explain/Audit only
+                  <span className="mx-1.5 text-text-muted/50">·</span>
+                  Final authority: Risk Engine
+                  <span className="mx-1.5 text-text-muted/50">·</span>
+                  Kronos: Evidence only
+                </div>
+
                 {/* Messages */}
                 <div className="max-h-[400px] min-h-[200px] overflow-y-auto px-3 py-3 space-y-3" aria-live="polite" aria-atomic="false">
                   {messages.length === 0 && (

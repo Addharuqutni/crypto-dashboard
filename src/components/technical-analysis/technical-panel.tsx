@@ -6,6 +6,7 @@ import { formatCurrency } from '@/lib/formatting';
 import { AiTechnicalSummary } from '@/components/ai-agent/ai-technical-summary';
 import type { Candle, AnalysisResult } from '@/types/chart';
 import type { TechnicalContext } from '@/types/ai';
+import type { FuturesSignal } from '@/types/futures-signal';
 import type { RsiResult } from '@/lib/indicators/rsi';
 import type { MacdPoint } from '@/lib/indicators/macd';
 import type { SupportResistance } from '@/lib/indicators/support-resistance';
@@ -22,6 +23,11 @@ interface TechnicalPanelProps {
   activeIndicators: Set<string>;
   /** Pre-computed analysis from parent — avoids duplicate indicator calculation */
   analysis: AnalysisResult | null;
+  /**
+   * Deterministic engine output, hoisted from the page so the AI Summary
+   * audits the same signal that drives the Futures Setup panel.
+   */
+  signal?: FuturesSignal | null;
 }
 
 /**
@@ -30,7 +36,7 @@ interface TechnicalPanelProps {
  * Only renders when Technical Mode is active.
  * Receives pre-computed analysis from parent for performance.
  */
-export function TechnicalPanel({ candles, symbol, timeframe, currentPrice, activeIndicators, analysis }: TechnicalPanelProps) {
+export function TechnicalPanel({ candles, symbol, timeframe, currentPrice, activeIndicators, analysis, signal }: TechnicalPanelProps) {
   // Build TechnicalContext for AI Summary
   const aiContext: TechnicalContext | null = useMemo(() => {
     if (!analysis) return null;
@@ -109,7 +115,7 @@ export function TechnicalPanel({ candles, symbol, timeframe, currentPrice, activ
       </div>
 
       {/* AI Technical Summary */}
-      <AiTechnicalSummary context={aiContext} />
+      <AiTechnicalSummary context={aiContext} signal={signal ?? null} />
 
       {/* Disclaimer */}
       <div className="flex items-start gap-2 rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-3">

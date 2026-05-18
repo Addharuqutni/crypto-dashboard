@@ -5,13 +5,19 @@
  */
 
 import type { TechnicalContext } from '@/types/ai';
+import { CRYPTO_KRONOS_SKILL_POLICY } from './crypto-kronos-skill-policy';
 
 /**
  * Builds the system prompt that defines the AI agent's persona and behavior.
  * Includes current technical analysis data as structured context.
+ *
+ * The Crypto-Kronos skill policy is injected FIRST so its boundary rules
+ * (no inventing trades, no overriding risk engine) take precedence over
+ * everything else in the prompt.
  */
 export function buildSystemPrompt(context: TechnicalContext): string {
   const sections: string[] = [
+    CRYPTO_KRONOS_SKILL_POLICY,
     PERSONA_PROMPT,
     buildMarketContext(context),
     RULES_PROMPT,

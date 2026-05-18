@@ -39,6 +39,8 @@ import {
 import { getRsiStatus } from '@/lib/indicators/rsi';
 import { calculateMACD } from '@/lib/indicators/macd';
 import { calculateSupportResistance } from '@/lib/indicators/support-resistance';
+import { evaluateForecastAgreement } from './forecast-agreement';
+import { evaluateLateEntryGuard } from './late-entry-guard';
 
 /**
  * Futures Signal Engine V2.
@@ -557,9 +559,124 @@ export function generateFuturesSignal(
     warningsCount: finalWarnings.length,
   });
 
+  // --- 13a. Late-entry guard. ---
+  // Even if every prior gate passed, refuse to chase setups that are already
+  // extended (RSI extreme near key levels, or stretched from EMA20 with weak
+  // volume). Returns WAIT but preserves the original bias in warnings.
+  const setupRsi = (input.rsi ?? getRsiStatus(candles)).value ?? null;
+  const triggerRsi =
+    input.triggerCandles && input.triggerCandles.length > 0
+      ? (getRsiStatus(input.triggerCandles).value ?? null)
+      : null;
+  const ema20 = regimeCtx.ema20;
+  const distanceFromEma20Pct =
+    ema20 != null && ema20 > 0 ? (Math.abs(price - ema20) / ema20) * 100 : null;
+  const sr = input.supportResistance ?? calculateSupportResistance(candles);
+  const proximityPct = 0.0075; // 0.75% — "near" structural levels
+  const nearSupport =
+    sr.support != null && Math.abs(price - sr.support) / price <= proximityPct;
+  const nearResistance =
+    sr.resistance != null && Math.abs(price - sr.resistance) / price <= proximityPct;
+  const recentBarsForVol = candles.slice(-Math.min(candles.length, 21));
+  const lastBarVol = lastCandle.volume ?? 0;
+  const priorBarsVol = recentBarsForVol.slice(0, -1);
+  const avgPriorVol =
+    priorBarsVol.length > 0
+      ? priorBarsVol.reduce((s, c) => s + c.volume, 0) / priorBarsVol.length
+      : 0;
+  const volumeIsWeak = avgPriorVol > 0 ? lastBarVol < avgPriorVol * 0.7 : false;
+
+  const lateEntry = evaluateLateEntryGuard({
+    side: candidateSide,
+    macroRegime: macroRegimeId,
+    setupRsi,
+    triggerRsi,
+    distanceFromEma20Pct,
+    nearSupport,
+    nearResistance,
+    volumeIsWeak,
+  });
+
+  if (lateEntry.blocked) {
+    finalWarnings.push(`Original ${candidateSide} bias preserved, but entry blocked: ${lateEntry.reason}`);
+    noTradeReasons.push({
+      severity: 'OVEREXTENDED',
+      message: lateEntry.reason ?? 'Late entry blocked.',
+    });
+    return {
+      ...wait({
+        regime: regimeCtx.regime,
+        summary: lateEntry.reason ?? 'Late entry blocked. Wait for a better location.',
+        breakdown,
+        reasons,
+        warnings: finalWarnings,
+        confidence: candidateFinal,
+        mtf,
+        liquiditySweep,
+        positioning,
+        candidateSide,
+        candles,
+        regimeCtx,
+        ranked: noTradeReasons,
+        riskApproval: 'pass',
+      }),
+      lateEntryBlocked: true,
+      lateEntryReason: lateEntry.reason,
+    };
+  }
+
+  // --- 13b. Forecast agreement (Kronos). ---
+  // Forecast is supporting evidence only. It can adjust confidence but never
+  // create a trade or override the risk engine. If a conflicting forecast
+  // pushes confidence below the actionable threshold, downgrade to WAIT.
+  const forecastAgreement = evaluateForecastAgreement({
+    action,
+    grade: toCoarseGrade(grade),
+    forecast: input.forecast ?? null,
+  });
+  const forecastWarnings = forecastAgreement.warning ? [forecastAgreement.warning] : [];
+  const adjustedScore = clamp(
+    candidateFinal + forecastAgreement.confidenceAdjustment,
+    0,
+    100
+  );
+
+  if (
+    forecastAgreement.alignment === 'conflicting' &&
+    adjustedScore < config.scoreActionable
+  ) {
+    noTradeReasons.push({
+      severity: 'MTF_CONFLICT',
+      message: 'Kronos forecast conflicts with deterministic setup.',
+    });
+    return {
+      ...wait({
+        regime: regimeCtx.regime,
+        summary: 'Forecast conflicts with deterministic signal. Wait for confirmation.',
+        breakdown: { ...breakdown, finalScore: adjustedScore },
+        reasons,
+        warnings: [...finalWarnings, ...forecastWarnings],
+        confidence: adjustedScore,
+        mtf,
+        liquiditySweep,
+        positioning,
+        candidateSide,
+        candles,
+        regimeCtx,
+        ranked: noTradeReasons,
+        riskApproval: 'pass',
+      }),
+      forecastAlignment: forecastAgreement.alignment,
+      ...(input.forecast ? { forecastDirection: input.forecast.direction } : {}),
+      forecastConfidenceAdjustment: forecastAgreement.confidenceAdjustment,
+      forecastWarnings,
+      forecastUsedInDecision: forecastAgreement.usedInDecision,
+    };
+  }
+
   // Apply the data-health confidence cap so secondary-data gaps cannot let
   // a top-tier confidence value leak through to the UI/journal.
-  const cappedConfidence = Math.min(candidateFinal, dataHealth.confidenceCap);
+  const cappedConfidence = Math.min(adjustedScore, dataHealth.confidenceCap);
   const confidenceOut = clamp(Math.round(cappedConfidence), 0, 100);
 
   return {
@@ -577,13 +694,13 @@ export function generateFuturesSignal(
     invalidationReason: plan.invalidationReason,
     summary,
     reasons,
-    warnings: finalWarnings,
+    warnings: [...finalWarnings, ...forecastWarnings],
     noTradeReasons: [],
     primaryNoTradeReason: null,
     mtfConfirmation: mtf,
     positioning,
     liquiditySweep,
-    scoreBreakdown: { ...breakdown, finalScore: candidateFinal },
+    scoreBreakdown: { ...breakdown, finalScore: adjustedScore },
 
     // Strict pipeline outputs.
     confidence: confidenceOut,
@@ -595,6 +712,17 @@ export function generateFuturesSignal(
     riskApproval: 'pass',
     invalidation: plan.invalidationReason,
     reason: reasons,
+
+    // Phase 5 forecast metadata.
+    forecastAlignment: forecastAgreement.alignment,
+    ...(input.forecast ? { forecastDirection: input.forecast.direction } : {}),
+    forecastConfidenceAdjustment: forecastAgreement.confidenceAdjustment,
+    forecastWarnings,
+    forecastUsedInDecision: forecastAgreement.usedInDecision,
+
+    // Phase 5 late-entry metadata.
+    lateEntryBlocked: false,
+    lateEntryReason: null,
   };
 }
 

@@ -17,6 +17,7 @@ import type { Candle } from '@/types/chart';
 import type { RsiResult } from '@/lib/indicators/rsi';
 import type { MacdPoint } from '@/lib/indicators/macd';
 import type { SupportResistance } from '@/lib/indicators/support-resistance';
+import type { ForecastAlignment, ForecastDirection, ForecastSummary } from '@/types/forecast';
 
 export type FuturesSignalAction = 'LONG' | 'SHORT' | 'WAIT';
 
@@ -256,6 +257,31 @@ export interface FuturesSignal {
 
   /** Spec alias for `reasons`. Same content; both kept for stability. */
   reason: string[];
+
+  // ----- Phase 5: forecast (Kronos) integration (additive, all optional) -----
+
+  /** Alignment of forecast vs deterministic signal. Undefined when not evaluated. */
+  forecastAlignment?: ForecastAlignment;
+
+  /** Forecast direction as reported by the provider (e.g. Kronos). */
+  forecastDirection?: ForecastDirection;
+
+  /** Confidence delta applied by forecast agreement (positive = boost). */
+  forecastConfidenceAdjustment?: number;
+
+  /** Human-readable warnings from the forecast agreement layer. */
+  forecastWarnings?: string[];
+
+  /** Whether the forecast materially affected the final decision. */
+  forecastUsedInDecision?: boolean;
+
+  // ----- Phase 5: late-entry guard outputs (additive, all optional) -----
+
+  /** True when late-entry guard blocked the trade. */
+  lateEntryBlocked?: boolean;
+
+  /** Reason produced by the late-entry guard, when blocked. */
+  lateEntryReason?: string | null;
 }
 
 /**
@@ -292,6 +318,13 @@ export interface FuturesSignalInput {
   fundingRateUpdatedAtMs?: number | null;
   /** Timestamp (ms) of the latest open-interest sample. Optional. */
   openInterestUpdatedAtMs?: number | null;
+
+  /**
+   * Optional forecast summary (e.g. Kronos). When provided and valid, the
+   * forecast agreement layer adjusts the final confidence score. Forecasts
+   * never create trades or override the risk engine.
+   */
+  forecast?: ForecastSummary | null;
 }
 
 /**
