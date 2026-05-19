@@ -11,11 +11,11 @@
  * gracefully — the in-flight cycle is allowed to complete before exit.
  */
 
-import { loadWorkerConfig, validateWorkerConfig } from '@/lib/worker/config';
-import { runCycle } from '@/lib/worker/runner';
-import { WorkerStore } from '@/lib/worker/store';
-import { hasTelegramCredentials } from '@/lib/worker/config';
-import type { WorkerConfig } from '@/lib/worker/types';
+import { loadWorkerConfig, validateWorkerConfig } from '@/lib/application/worker/config';
+import { runCycle } from '@/lib/application/worker/runner';
+import { WorkerStore } from '@/lib/application/worker/store';
+import { hasTelegramCredentials } from '@/lib/application/worker/config';
+import type { WorkerConfig } from '@/lib/application/worker/types';
 
 interface CliArgs {
   once: boolean;

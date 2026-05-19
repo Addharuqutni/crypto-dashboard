@@ -1,8 +1,8 @@
 'use client';
 
 import { Activity, AlertTriangle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
-import type { ScreenerLatestRun } from '@/lib/screener/store';
-import { cn } from '@/lib/utils';
+import type { ScreenerLatestRun } from '@/lib/application/screener/store';
+import { cn } from '@/lib/shared/utils';
 
 interface ScreenerStatusCardProps {
   latest: ScreenerLatestRun | null;

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { defaultScreenerStore } from '@/lib/screener/store';
+import { defaultScreenerStore } from '@/lib/application/screener/store';
 
 /**
  * GET /api/screener — serves the latest screener snapshot to the UI.

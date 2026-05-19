@@ -6,8 +6,8 @@ import { MarketOverviewCards } from '@/components/market/market-overview-cards';
 import { MarketTable } from '@/components/market/market-table';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
-import { useMarketData } from '@/lib/api/hooks';
-import { getCoinBySymbol } from '@/lib/registry/coin-registry';
+import { useMarketData } from '@/lib/adapters/api/hooks';
+import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
 import type { MarketRow, CoinMetadata, LivePrice } from '@/types/market';
 
 /**

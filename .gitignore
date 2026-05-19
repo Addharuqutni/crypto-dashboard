@@ -19,6 +19,10 @@ dist/
 coverage/
 *.tsbuildinfo
 
+# Local deploy artefacts (produced by deploy-cpanel.bat)
+deploy-package/
+crypto-dashboard-deploy.zip
+
 # Environment variables
 .env
 .env*.local

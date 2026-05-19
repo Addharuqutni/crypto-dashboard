@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell, BellOff } from 'lucide-react';
-import type { ScreenerAlertSettings } from '@/lib/screener/types';
+import type { ScreenerAlertSettings } from '@/lib/application/screener/types';
 
 interface AlertRulesPanelProps {
   settings: ScreenerAlertSettings | null;
@@ -40,9 +40,8 @@ export function AlertRulesPanel({ settings, isLoading }: AlertRulesPanelProps) {
       </div>
 
       <p className="mt-4 rounded-lg bg-bg-surface-soft p-3 text-xs text-text-secondary">
-        Alerts are suppressed for stale data, insufficient data, duplicate symbol/action within
-        cooldown, and hourly caps. Telegram misconfiguration is recorded as delivery status without
-        exposing tokens.
+        All alerts are local dashboard events only. Alerts are suppressed for stale data, insufficient
+        data, duplicate symbol/action within cooldown, and hourly caps. No external delivery is configured.
       </p>
     </section>
   );

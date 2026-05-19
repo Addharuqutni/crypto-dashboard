@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { WatchlistItem } from '@/types/market';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
 
 interface WatchlistState {
   /** List of watchlist items */

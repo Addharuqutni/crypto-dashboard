@@ -8,13 +8,13 @@ import { CoinHeader } from '@/components/coin/coin-header';
 import { CoinChartSection } from '@/components/coin/coin-chart-section';
 import { CoinAnalysisSection } from '@/components/coin/coin-analysis-section';
 import { useMarketStore } from '@/stores/use-market-store';
-import { useCoinMetadata } from '@/lib/api/hooks';
-import { getCoinBySymbol } from '@/lib/registry/coin-registry';
-import { fetchSingleTicker24hr } from '@/lib/binance/binance-futures-client';
-import { formatCurrency, formatCompactNumber } from '@/lib/formatting';
+import { useCoinMetadata } from '@/lib/adapters/api/hooks';
+import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
+import { fetchSingleTicker24hr } from '@/lib/adapters/binance/binance-futures-client';
+import { formatCurrency, formatCompactNumber } from '@/lib/shared/formatting';
 import { ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { resolveBinanceSymbol } from '@/lib/registry/coin-registry';
+import { resolveBinanceSymbol } from '@/lib/shared/registry/coin-registry';
 import type { ChartTimeframe } from '@/types/chart';
 
 import { useCoinMarketData } from '@/hooks/use-coin-market-data';

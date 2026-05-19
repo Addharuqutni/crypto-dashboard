@@ -14,9 +14,9 @@
  */
 
 import type { Candle } from '@/types/chart';
-import type { RsiResult } from '@/lib/indicators/rsi';
-import type { MacdPoint } from '@/lib/indicators/macd';
-import type { SupportResistance } from '@/lib/indicators/support-resistance';
+import type { RsiResult } from '@/lib/domain/indicators/rsi';
+import type { MacdPoint } from '@/lib/domain/indicators/macd';
+import type { SupportResistance } from '@/lib/domain/indicators/support-resistance';
 import type { ForecastAlignment, ForecastDirection, ForecastSummary } from '@/types/forecast';
 
 export type FuturesSignalAction = 'LONG' | 'SHORT' | 'WAIT';

@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, X, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { searchCoins, getCoinBySymbol } from '@/lib/registry/coin-registry';
+import { searchCoins, getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
 import { useMarketStore } from '@/stores/use-market-store';
-import { formatCurrency, formatPercentage } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 
 /** Max results shown in dropdown to keep it performant. */
 const MAX_RESULTS = 12;
@@ -260,7 +260,7 @@ export function SearchCoin() {
 
       {/* Results Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-border-subtle bg-bg-surface-raised shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-dropdown mt-1 overflow-hidden rounded-lg border border-border-subtle bg-bg-surface-raised shadow-elev-2">
           {results.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-text-muted">
               No coins found for &ldquo;{debouncedQuery}&rdquo;

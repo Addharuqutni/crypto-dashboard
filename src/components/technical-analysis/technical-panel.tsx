@@ -1,18 +1,18 @@
 'use client';
 
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatting';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency } from '@/lib/shared/formatting';
 import { AiTechnicalSummary } from '@/components/ai-agent/ai-technical-summary';
 import type { Candle, AnalysisResult } from '@/types/chart';
 import type { TechnicalContext } from '@/types/ai';
 import type { FuturesSignal } from '@/types/futures-signal';
-import type { RsiResult } from '@/lib/indicators/rsi';
-import type { MacdPoint } from '@/lib/indicators/macd';
-import type { SupportResistance } from '@/lib/indicators/support-resistance';
-import type { TrendLabel } from '@/lib/indicators/trend-label';
-import type { FibonacciResult } from '@/lib/indicators/fibonacci';
-import type { OrderBlock } from '@/lib/indicators/order-block';
+import type { RsiResult } from '@/lib/domain/indicators/rsi';
+import type { MacdPoint } from '@/lib/domain/indicators/macd';
+import type { SupportResistance } from '@/lib/domain/indicators/support-resistance';
+import type { TrendLabel } from '@/lib/domain/indicators/trend-label';
+import type { FibonacciResult } from '@/lib/domain/indicators/fibonacci';
+import type { OrderBlock } from '@/lib/domain/indicators/order-block';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Info } from 'lucide-react';
 
 interface TechnicalPanelProps {

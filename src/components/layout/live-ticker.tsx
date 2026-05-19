@@ -2,9 +2,9 @@
 
 import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { fetchFearGreedIndex } from '@/lib/api/fear-greed';
-import { formatCurrency, formatPercentage, formatRelativeTime } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
+import { formatCurrency, formatPercentage, formatRelativeTime } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import { useMarketStore } from '@/stores/use-market-store';
 import type { ConnectionStatus, LivePrice } from '@/types/market';
 

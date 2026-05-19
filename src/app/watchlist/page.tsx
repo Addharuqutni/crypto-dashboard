@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
-import { formatCurrency, formatPercentage } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import { Star, TrendingUp, TrendingDown, Minus, Trash2, Search } from 'lucide-react';
 import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
-import { getPriceFreshness } from '@/lib/market/freshness';
+import { getPriceFreshness } from '@/lib/shared/market/freshness';
 
 /**
  * Watchlist page — full view of user's saved coins with live data.

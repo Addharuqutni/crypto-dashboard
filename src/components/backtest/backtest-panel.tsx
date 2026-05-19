@@ -12,8 +12,8 @@ import {
   type BacktestMetrics,
   type BacktestResult,
   type FixtureName,
-} from '@/lib/backtest';
-import { cn } from '@/lib/utils';
+} from '@/lib/application/backtest';
+import { cn } from '@/lib/shared/utils';
 
 /**
  * Backtest validation panel.

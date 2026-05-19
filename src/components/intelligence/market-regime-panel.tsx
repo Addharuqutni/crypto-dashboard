@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity, Layers, Shield, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import type { MarketContext } from '@/types/intelligence';
 
 /**

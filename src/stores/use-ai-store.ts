@@ -12,8 +12,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AiConfig, AiMessage, TechnicalContext } from '@/types/ai';
-import { sendStreamingChatCompletion, AiClientError } from '@/lib/ai/ai-client';
-import { buildSystemPrompt, buildUserMessage } from '@/lib/ai/ai-prompt-builder';
+import { sendStreamingChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
+import { buildSystemPrompt, buildUserMessage } from '@/lib/adapters/ai/ai-prompt-builder';
 
 /** Module-level abort controller — kept outside store to avoid non-serializable state */
 let activeController: AbortController | null = null;

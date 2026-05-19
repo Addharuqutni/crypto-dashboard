@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { CheckCircle2, AlertTriangle, X, Info } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -103,7 +103,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {/* Toast Container */}
       <div
-        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col gap-2"
+        className="pointer-events-none fixed bottom-4 right-4 z-toast flex flex-col gap-2"
         aria-live="polite"
         aria-atomic="true"
       >

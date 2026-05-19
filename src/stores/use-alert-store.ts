@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { PriceAlert } from '@/types/alert';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
 
 interface AlertState {
   alerts: PriceAlert[];

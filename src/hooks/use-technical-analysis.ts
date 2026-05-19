@@ -9,7 +9,7 @@ import {
   calculateTrendLabel,
   calculateFibonacci,
   calculateOrderBlocks,
-} from '@/lib/indicators';
+} from '@/lib/domain/indicators';
 
 /**
  * Maximum number of candles fed into client-side technical indicator

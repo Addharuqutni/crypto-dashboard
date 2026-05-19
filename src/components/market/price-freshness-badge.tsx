@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import {
   formatPriceAge,
   getPriceFreshness,
   getPriceFreshnessLabel,
   type PriceFreshness,
-} from '@/lib/market/freshness';
+} from '@/lib/shared/market/freshness';
 
 const FRESHNESS_CLOCK_INTERVAL_MS = 1_000;
 

@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Bot, Sparkles, AlertTriangle, RefreshCw, Shield, ShieldAlert, Check, X } from 'lucide-react';
 import { useAiStore } from '@/stores/use-ai-store';
-import { sendChatCompletion } from '@/lib/ai/ai-client';
+import { sendChatCompletion } from '@/lib/adapters/ai/ai-client';
 import {
   AUDITOR_SYSTEM_PROMPT,
   buildAuditorUserPrompt,
   parseAuditorResponse,
   AiAuditorParseError,
-} from '@/lib/intelligence/ai-auditor';
-import { cn } from '@/lib/utils';
+} from '@/lib/domain/intelligence/ai-auditor';
+import { cn } from '@/lib/shared/utils';
 import type { AiAuditorInput, AiAuditorReport } from '@/types/intelligence';
 
 /**

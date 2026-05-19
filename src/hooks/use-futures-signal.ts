@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import type { AnalysisResult, Candle, ChartTimeframe } from '@/types/chart';
 import type { FuturesSignal } from '@/types/futures-signal';
-import { generateFuturesSignal } from '@/lib/analysis/futures-signal-engine';
+import { generateFuturesSignal } from '@/lib/domain/analysis/futures-signal-engine';
 
 interface UseFuturesSignalParams {
   symbol: string;

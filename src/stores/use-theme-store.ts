@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { ThemePreference } from '@/types/market';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
 
 interface ThemeState {
   /** Current theme preference */
@@ -16,7 +16,7 @@ interface ThemeState {
 
 /**
  * Theme store — manages dark/light/system preference.
- * Dark mode is the default per ui-spec.md.
+ * Dark mode is the default for the dashboard's terminal aesthetic.
  */
 export const useThemeStore = create<ThemeState>((set) => ({
   theme: 'dark',

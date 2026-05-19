@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getRiskProfile, RISK_PROFILES } from '@/lib/intelligence/risk-profile';
+import { getRiskProfile, RISK_PROFILES } from '@/lib/domain/intelligence/risk-profile';
 import type { RiskProfile, RiskProfileId } from '@/types/intelligence';
 
 /**
@@ -12,7 +12,7 @@ import type { RiskProfile, RiskProfileId } from '@/types/intelligence';
  *
  * Consumers should treat the profile as read-only context. Anything that
  * needs to *apply* discipline thresholds should call `applyProfile()` from
- * `@/lib/intelligence/risk-profile` rather than mutating fields locally.
+ * `@/lib/domain/intelligence/risk-profile` rather than mutating fields locally.
  */
 
 interface RiskProfileState {

@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { useAlertStore } from '@/stores/use-alert-store';
 import { useMarketStore } from '@/stores/use-market-store';
-import { getCoinBySymbol } from '@/lib/registry/coin-registry';
-import { formatCurrency } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
+import { formatCurrency } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import { Bell, BellOff, Plus, Trash2, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import type { PriceAlert } from '@/types/alert';
 

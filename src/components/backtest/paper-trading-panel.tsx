@@ -5,8 +5,8 @@ import { Activity, AlertTriangle } from 'lucide-react';
 import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { usePaperTradingStore } from '@/stores/use-paper-trading-store';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatting';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency } from '@/lib/shared/formatting';
 import type { SignalJournalEntry } from '@/types/signal-journal';
 
 /**

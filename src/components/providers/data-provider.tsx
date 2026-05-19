@@ -1,7 +1,7 @@
 'use client';
 
-import { useBinanceWebSocket } from '@/lib/websocket/use-binance-websocket';
-import { useAlertEvaluator } from '@/lib/alerts/use-alert-evaluator';
+import { useBinanceWebSocket } from '@/lib/adapters/websocket/use-binance-websocket';
+import { useAlertEvaluator } from '@/lib/application/alerts/use-alert-evaluator';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useThemeStore } from '@/stores/use-theme-store';
 import { usePortfolioStore } from '@/stores/use-portfolio-store';

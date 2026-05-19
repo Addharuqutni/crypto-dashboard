@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useAiStore } from '@/stores/use-ai-store';
-import { testConnection } from '@/lib/ai/ai-client';
-import { cn } from '@/lib/utils';
+import { testConnection } from '@/lib/adapters/ai/ai-client';
+import { cn } from '@/lib/shared/utils';
 import { X, Loader2, CheckCircle2, XCircle, Settings2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 interface AiSettingsModalProps {
@@ -97,7 +97,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-overlay flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"

@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 
 const INDICATORS = ['MA7', 'MA25', 'MA99', 'RSI', 'MACD', 'Volume', 'S/R', 'Fib', 'OB'] as const;
 

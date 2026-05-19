@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { usePortfolioStore } from '@/stores/use-portfolio-store';
 import { useMarketStore } from '@/stores/use-market-store';
-import { getCoinBySymbol } from '@/lib/registry/coin-registry';
-import { formatCurrency, formatPercentage } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
+import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Minus, Wallet } from 'lucide-react';
 import type { PortfolioHolding, CalculatedHolding, PortfolioSummary } from '@/types/portfolio';
 

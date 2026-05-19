@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
-import { formatCurrency, formatPercentage } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import { Star, TrendingUp, TrendingDown, Minus, ArrowRight } from 'lucide-react';
 
 /**

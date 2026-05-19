@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { formatCurrency, formatPercentage } from '@/lib/formatting';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { Star, TrendingUp, TrendingDown, Minus, ArrowLeft } from 'lucide-react';
 

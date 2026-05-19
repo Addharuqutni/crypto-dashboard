@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
-import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/formatting';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/shared/formatting';
 import { useMarketStore } from '@/stores/use-market-store';
 import type { MarketRow } from '@/types/market';
 import { TrendingUp, TrendingDown, Minus, Activity, DollarSign, BarChart3 } from 'lucide-react';
@@ -28,7 +28,7 @@ function useLiveRow(row: MarketRow | undefined): MarketRow | undefined {
 
 /**
  * Market summary cards — BTC, ETH, 24h Volume, Biggest Mover.
- * Per ui-spec.md: label, main metric, delta indicator, supporting line.
+ * Each card surfaces a label, main metric, delta indicator, and supporting line.
  * Subscribes to Binance WebSocket for live price display.
  */
 export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
@@ -63,21 +63,21 @@ export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
         icon={<DollarSign className="h-4 w-4" />}
         value={formatCurrency(btc?.price)}
         change={btc?.priceChangePercent24h}
-        accentColor="text-accent-warm"
+        accent={{ text: 'text-accent-warm', bar: 'bg-accent-warm/60' }}
       />
       <SummaryCard
         label="Ethereum"
         icon={<DollarSign className="h-4 w-4" />}
         value={formatCurrency(eth?.price)}
         change={eth?.priceChangePercent24h}
-        accentColor="text-accent-secondary"
+        accent={{ text: 'text-accent-secondary', bar: 'bg-accent-secondary/60' }}
       />
       <SummaryCard
         label="24h Volume"
         icon={<BarChart3 className="h-4 w-4" />}
         value={formatCompactNumber(totalVolume)}
         sublabel={`${data.length} assets tracked`}
-        accentColor="text-accent-primary"
+        accent={{ text: 'text-accent-primary', bar: 'bg-accent-primary/60' }}
       />
       {biggestMover && (
         <SummaryCard
@@ -85,7 +85,7 @@ export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
           icon={<Activity className="h-4 w-4" />}
           value={formatCurrency(biggestMover.price)}
           change={biggestMover.priceChangePercent24h}
-          accentColor="text-market-up"
+          accent={{ text: 'text-market-up', bar: 'bg-market-up/60' }}
         />
       )}
     </div>
@@ -93,38 +93,34 @@ export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
 }
 
 /**
-
- * Komponen SummaryCard untuk merender bagian UI terkait summary card.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
+ * One summary card. Each card receives an `accent` pair so the icon color
+ * and the top-edge bar stay coordinated without relying on `currentColor`.
  */
-
 function SummaryCard({
   label,
   icon,
   value,
   change,
   sublabel,
-  accentColor,
+  accent,
 }: {
   label: string;
   icon: React.ReactNode;
   value: string;
   change?: number | null;
   sublabel?: string;
-  accentColor?: string;
+  accent?: { text: string; bar: string };
 }) {
   const isUp = (change ?? 0) > 0;
   const isDown = (change ?? 0) < 0;
 
   return (
     <div className="card group relative overflow-hidden px-4 py-4">
-      {/* Subtle top accent line */}
-      <div className={cn('absolute inset-x-0 top-0 h-[2px] opacity-40', accentColor ? `bg-current ${accentColor}` : 'bg-accent-primary')} />
+      {/* Top accent bar — explicit color so the design system stays predictable. */}
+      <div className={cn('absolute inset-x-0 top-0 h-[2px]', accent?.bar ?? 'bg-accent-primary/60')} />
 
       <div className="flex items-center gap-2">
-        <span className={cn('opacity-50', accentColor)}>{icon}</span>
+        <span className={cn('opacity-60', accent?.text)}>{icon}</span>
         <p className="text-xs font-medium uppercase tracking-wider text-text-muted">{label}</p>
       </div>
       <p className="numeric mt-2 text-2xl font-bold text-text-primary">{value}</p>

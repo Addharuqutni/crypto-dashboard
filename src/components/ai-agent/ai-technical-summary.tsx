@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAiStore } from '@/stores/use-ai-store';
-import { sendChatCompletion } from '@/lib/ai/ai-client';
-import { buildSystemPrompt } from '@/lib/ai/ai-prompt-builder';
-import { cn } from '@/lib/utils';
+import { sendChatCompletion } from '@/lib/adapters/ai/ai-client';
+import { buildSystemPrompt } from '@/lib/adapters/ai/ai-prompt-builder';
+import { cn } from '@/lib/shared/utils';
 import type { TechnicalContext } from '@/types/ai';
 import type { FuturesSignal } from '@/types/futures-signal';
 import { Bot, RefreshCw, Sparkles, AlertTriangle, Copy, Check, ShieldCheck } from 'lucide-react';

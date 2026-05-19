@@ -1,11 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import type { ScreenerLatestRun } from '@/lib/screener/store';
+import type { ScreenerLatestRun } from '@/lib/application/screener/store';
 import type {
   ScreenerAlertRecord,
   ScreenerAlertSettings,
-} from '@/lib/screener/types';
+} from '@/lib/application/screener/types';
 
 export interface ScreenerApiPayload {
   ok: boolean;

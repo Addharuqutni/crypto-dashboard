@@ -31,10 +31,10 @@ export type ChartDataPoint = {
  * Calculated once in the parent and shared across TechnicalPanel and AiChatPanel.
  */
 export type AnalysisResult = {
-  rsi: import('@/lib/indicators/rsi').RsiResult;
-  macd: import('@/lib/indicators/macd').MacdPoint | null;
-  sr: import('@/lib/indicators/support-resistance').SupportResistance;
-  trend: import('@/lib/indicators/trend-label').TrendLabel;
-  fib: import('@/lib/indicators/fibonacci').FibonacciResult | null;
-  orderBlocks: import('@/lib/indicators/order-block').OrderBlock[];
+  rsi: import('@/lib/domain/indicators/rsi').RsiResult;
+  macd: import('@/lib/domain/indicators/macd').MacdPoint | null;
+  sr: import('@/lib/domain/indicators/support-resistance').SupportResistance;
+  trend: import('@/lib/domain/indicators/trend-label').TrendLabel;
+  fib: import('@/lib/domain/indicators/fibonacci').FibonacciResult | null;
+  orderBlocks: import('@/lib/domain/indicators/order-block').OrderBlock[];
 };

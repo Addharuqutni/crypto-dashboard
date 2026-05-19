@@ -2,7 +2,7 @@
 
 import { Hourglass, AlertTriangle, Eye } from 'lucide-react';
 import type { NoTradeExplanation } from '@/types/intelligence';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 
 /**
  * No-Trade Intelligence panel.

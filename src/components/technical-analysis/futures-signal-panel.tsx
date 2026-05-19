@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatting';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency } from '@/lib/shared/formatting';
 import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
 import type {
   FuturesEntryTrigger,

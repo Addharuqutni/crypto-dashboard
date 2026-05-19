@@ -69,7 +69,7 @@ Crypto Market Dashboard adalah aplikasi dashboard crypto berbasis **Next.js** un
 - **ESLint 10** — linting.
 - **Prettier 3** — formatting.
 - **TypeScript compiler** — type checking.
-- **Vitest 3** — tersedia di script, test files saat ini sudah dihapus.
+- **Vitest 3** — unit & integration testing untuk engine deterministik, AI guard, worker, dan store.
 
 ## Cara Install dan Run
 

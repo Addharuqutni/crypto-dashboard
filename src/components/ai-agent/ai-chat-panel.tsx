@@ -5,7 +5,7 @@ import { useAiStore } from '@/stores/use-ai-store';
 import { AiMessageBubble } from './ai-message-bubble';
 import { AiContextBadge } from './ai-context-badge';
 import { AiSettingsModal } from './ai-settings-modal';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import type { AnalysisResult } from '@/types/chart';
 import type { TechnicalContext } from '@/types/ai';
 import {

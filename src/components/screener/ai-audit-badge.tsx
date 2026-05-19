@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { Bot, ChevronDown, ChevronUp, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
-import type { ScreenerAiAuditSummary } from '@/lib/screener/types';
-import { cn } from '@/lib/utils';
+import type { ScreenerAiAuditSummary } from '@/lib/application/screener/types';
+import { cn } from '@/lib/shared/utils';
 
 interface AiAuditBadgeProps {
   audit: ScreenerAiAuditSummary;

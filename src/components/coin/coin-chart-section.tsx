@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { CandlestickChart } from '@/components/chart/candlestick-chart';
 import { VisibilityGate } from '@/components/ui/visibility-gate';
 import { IndicatorToggles } from '@/components/technical-analysis/indicator-toggles';

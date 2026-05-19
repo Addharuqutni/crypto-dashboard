@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { buildContextSummary } from '@/lib/ai/ai-prompt-builder';
+import { cn } from '@/lib/shared/utils';
+import { buildContextSummary } from '@/lib/adapters/ai/ai-prompt-builder';
 import type { TechnicalContext } from '@/types/ai';
 import { Database, ChevronDown } from 'lucide-react';
 

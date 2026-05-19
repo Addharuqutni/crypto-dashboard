@@ -2,13 +2,14 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/formatting';
+import Image from 'next/image';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/shared/formatting';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { TrendingUp, TrendingDown, Minus, Star, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
-import { getPriceFreshness } from '@/lib/market/freshness';
+import { getPriceFreshness } from '@/lib/shared/market/freshness';
 import type { MarketRow } from '@/types/market';
 
 type DisplayMarketRow = MarketRow;
@@ -99,28 +100,30 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
           ))}
         </div>
 
-        <div className="hidden items-center gap-0.5 rounded-lg border border-border-subtle p-0.5 md:flex">
+        <div className="hidden items-center gap-0.5 rounded-lg border border-border-subtle p-1 md:flex">
           <button
             onClick={() => setViewMode('cards')}
             className={cn(
-              'rounded-md p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               viewMode === 'cards' ? 'bg-bg-surface-raised text-text-primary' : 'text-text-muted hover:text-text-secondary'
             )}
             aria-label="Card view"
             aria-pressed={viewMode === 'cards'}
           >
-            <LayoutGrid className="h-3.5 w-3.5" />
+            <LayoutGrid className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode('table')}
             className={cn(
-              'rounded-md p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+              'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               viewMode === 'table' ? 'bg-bg-surface-raised text-text-primary' : 'text-text-muted hover:text-text-secondary'
             )}
             aria-label="Table view"
             aria-pressed={viewMode === 'table'}
           >
-            <List className="h-3.5 w-3.5" />
+            <List className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -281,7 +284,14 @@ function useLiveMarketRow(row: MarketRow, now: number): DisplayMarketRow {
   }, [livePrice, now, row]);
 }
 
-/** Card view row, memoized because formatting/icons are repeated for every coin. */
+/**
+ * Card view row.
+ *
+ * Implementation note: WatchlistToggle is rendered as an absolute-positioned
+ * sibling so it doesn't end up nested inside an `<a>` (which is invalid HTML
+ * and confuses some assistive tech). The Link still covers the surface via
+ * `inset-0`; the star sits above it on the z-axis.
+ */
 const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
   const now = useFreshnessClock();
   const displayRow = useLiveMarketRow(row, now);
@@ -289,27 +299,37 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
   const isDown = (displayRow.priceChangePercent24h ?? 0) < 0;
 
   return (
-    <Link
-      href={`/coin/${displayRow.symbol.toLowerCase()}`}
+    <div
       className={cn(
         'card group relative flex flex-col justify-between overflow-hidden px-4 py-4 transition-all duration-200',
-        'hover:border-border-strong hover:shadow-lg hover:shadow-black/10',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
+        'hover:border-border-strong hover:shadow-lg hover:shadow-black/10'
       )}
     >
-      <div className="flex items-start justify-between">
-        <CoinIdentity row={displayRow} size="sm" />
+      {/* Watchlist sits ABOVE the link cover; renders before the link so it
+          gets a stable focus order. */}
+      <div className="absolute right-3 top-3 z-10">
         <WatchlistToggle symbol={displayRow.symbol} name={displayRow.name} />
       </div>
 
-      <div className="mt-3 flex items-end justify-between gap-2">
+      {/* Link cover — takes the entire card surface. */}
+      <Link
+        href={`/coin/${displayRow.symbol.toLowerCase()}`}
+        className="absolute inset-0 z-0 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-app"
+        aria-label={`Open ${displayRow.symbol} detail`}
+      />
+
+      <div className="pointer-events-none relative z-[1] flex items-start justify-between">
+        <CoinIdentity row={displayRow} size="sm" />
+      </div>
+
+      <div className="pointer-events-none relative z-[1] mt-3 flex items-end justify-between gap-2">
         <p className={cn('numeric text-xl font-bold text-text-primary', displayRow.isStale && 'text-text-muted')}>
           {formatCurrency(displayRow.price)}
         </p>
         <PriceFreshnessBadge receivedAt={displayRow.lastUpdatedAt} now={now} compact />
       </div>
 
-      <div className="mt-2 flex items-center justify-between">
+      <div className="pointer-events-none relative z-[1] mt-2 flex items-center justify-between">
         <PriceChange value={displayRow.priceChangePercent24h} symbol={displayRow.symbol} />
         <span className="numeric text-[11px] text-text-muted">
           Vol {formatCompactNumber(displayRow.volume24h)}
@@ -324,7 +344,7 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
           !isUp && !isDown && 'bg-gradient-to-r from-market-neutral/40 to-transparent'
         )}
       />
-    </Link>
+    </div>
   );
 });
 
@@ -409,13 +429,29 @@ function CoinIdentity({ row, size }: { row: DisplayMarketRow; size: 'sm' | 'md' 
   );
 }
 
-/** Renders a logo when available, otherwise a stable symbol fallback. */
+/**
+ * Renders a logo when available, otherwise a stable symbol fallback.
+ *
+ * Uses `next/image` so logos benefit from automatic format negotiation
+ * (AVIF/WebP) and lazy loading. `unoptimized` is on by default for remote
+ * URLs that aren't on the Next.js image-domain allowlist; remove the flag
+ * once `next.config` adds the relevant remote patterns.
+ */
 function CoinAvatar({ row, size }: { row: DisplayMarketRow; size: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'lg' ? 'h-9 w-9' : 'h-8 w-8';
+  const pixelSize = size === 'lg' ? 36 : 32;
 
   if (row.logoUrl) {
-    const pixelSize = size === 'lg' ? 36 : 32;
-    return <img src={row.logoUrl} alt="" className={cn(sizeClass, 'rounded-full')} width={pixelSize} height={pixelSize} />;
+    return (
+      <Image
+        src={row.logoUrl}
+        alt=""
+        width={pixelSize}
+        height={pixelSize}
+        className={cn(sizeClass, 'rounded-full')}
+        unoptimized
+      />
+    );
   }
 
   return (

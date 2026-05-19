@@ -43,7 +43,11 @@
   --radius-lg: 18px;
   --radius-pill: 999px;
 
-  /* Fonts */
+  /*
+   * Fonts — values are injected by `next/font` via the html className.
+   * The declarations here serve as design-system fallbacks so the tokens
+   * remain referenceable even before fonts hydrate.
+   */
   --font-display: 'Space Grotesk', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
 
@@ -65,6 +69,79 @@
   --animate-fade-in: fade-in 0.18s var(--ease-out);
   --animate-slide-up: slide-up 0.22s var(--ease-out);
   --animate-price-flash: price-flash 0.6s var(--ease-out);
+
+  /* ============================================
+     EXPANDED TOKENS — added 2026-05.
+     Aditif: tidak menggantikan token di atas. Komponen lama yang masih
+     pakai class hard-coded boleh diganti bertahap.
+     ============================================ */
+
+  /*
+   * Container width — single source of truth for the "app frame".
+   * Tailwind 4 auto-generates `max-w-app` from the `--container-*` namespace.
+   */
+  --container-app: 1440px;
+  --container-content: 960px;
+  --container-prose: 72ch;
+
+  /*
+   * Elevation shadows. Numbered scale so it's obvious which is heavier.
+   * `--shadow-overlay` is used by drawers/popovers that float over the app.
+   */
+  --shadow-elev-1: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-elev-2: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --shadow-elev-3: 0 18px 45px rgba(0, 0, 0, 0.20);
+  --shadow-overlay: 0 30px 80px rgba(0, 0, 0, 0.55);
+
+  /*
+   * Type scale — semantic sizes generate `text-eyebrow`, `text-h1`, etc.
+   * Pair each size with a tuned `--text-X--line-height` for vertical rhythm.
+   * Use the heading recipe utilities (.h1 / .eyebrow / .display-md) below
+   * when you also need weight + tracking + family applied together.
+   */
+  --text-eyebrow: 0.6875rem;       /* 11px */
+  --text-eyebrow--line-height: 1.4;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.4;
+  --text-caption: 0.75rem;         /* 12px */
+  --text-caption--line-height: 1.45;
+  --text-body-sm: 0.8125rem;       /* 13px */
+  --text-body-sm--line-height: 1.5;
+  --text-body: 0.875rem;           /* 14px */
+  --text-body--line-height: 1.55;
+  --text-h3: 1rem;                 /* 16px — panel section title */
+  --text-h3--line-height: 1.4;
+  --text-h2: 1.25rem;              /* 20px — section heading */
+  --text-h2--line-height: 1.3;
+  --text-h1: 1.5rem;               /* 24px — page heading */
+  --text-h1--line-height: 1.25;
+  --text-display-sm: 1.875rem;     /* 30px */
+  --text-display-sm--line-height: 1.2;
+  --text-display-md: 2.25rem;      /* 36px */
+  --text-display-md--line-height: 1.15;
+  --text-display-lg: 3rem;         /* 48px */
+  --text-display-lg--line-height: 1.05;
+
+  /*
+   * Font weights as named tokens. Drives `font-regular`, `font-medium`, etc.
+   * Reduces magic numbers like `font-[600]` and keeps the weight palette
+   * intentionally narrow (4 weights).
+   */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /*
+   * Letter-spacing tokens. `display` tightens optical spacing on big sizes;
+   * `eyebrow` widens for uppercase labels so they read as deliberate
+   * micro-typography rather than cramped capitals.
+   */
+  --tracking-display: -0.02em;
+  --tracking-tight: -0.01em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.04em;
+  --tracking-eyebrow: 0.08em;
 }
 
 /* ============================================
@@ -100,11 +177,18 @@ body {
   background: linear-gradient(180deg, rgba(17, 24, 39, 0.92), rgba(11, 16, 32, 0.92));
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-elev-3);
   transition:
     border-color 0.2s var(--ease-out),
     box-shadow 0.25s var(--ease-out),
     transform 0.25s var(--ease-out);
+  /*
+   * Subtle entrance for cards. Stagger is opt-in via `.card-stagger` parent
+   * (see below) so we don't accidentally animate cards in error banners or
+   * deeply-nested contexts. `backwards` keeps the initial frame applied
+   * before the animation triggers, avoiding a flash of unstyled content.
+   */
+  animation: enter 0.25s var(--ease-out) backwards;
 }
 
 /* ============================================
@@ -353,19 +437,45 @@ body {
   overflow: hidden;
 }
 
-/* Staggered card entrance */
-.card {
-  animation: enter 0.25s var(--ease-out) backwards;
+/*
+ * Staggered card entrance — scoped to an opt-in parent so the stagger only
+ * applies where it was intentionally chosen (dashboards, market grids).
+ * Avoids unintended motion on banners, drawers, or single-card surfaces.
+ */
+.card-stagger > .card:nth-child(1) { animation-delay: 0ms; }
+.card-stagger > .card:nth-child(2) { animation-delay: 30ms; }
+.card-stagger > .card:nth-child(3) { animation-delay: 60ms; }
+.card-stagger > .card:nth-child(4) { animation-delay: 90ms; }
+.card-stagger > .card:nth-child(5) { animation-delay: 120ms; }
+.card-stagger > .card:nth-child(6) { animation-delay: 150ms; }
+.card-stagger > .card:nth-child(7) { animation-delay: 180ms; }
+.card-stagger > .card:nth-child(8) { animation-delay: 210ms; }
+
+/*
+ * Scroll affordance — fades the right edge of a horizontal scroller so
+ * users see content continues. Apply to the `overflow-x-auto` wrapper.
+ */
+.scroll-x-hint {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
 }
 
-.card:nth-child(1) { animation-delay: 0ms; }
-.card:nth-child(2) { animation-delay: 30ms; }
-.card:nth-child(3) { animation-delay: 60ms; }
-.card:nth-child(4) { animation-delay: 90ms; }
-.card:nth-child(5) { animation-delay: 120ms; }
-.card:nth-child(6) { animation-delay: 150ms; }
-.card:nth-child(7) { animation-delay: 180ms; }
-.card:nth-child(8) { animation-delay: 210ms; }
+.scroll-x-hint.scroll-x-end {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/*
+ * Minimum-44px tap target wrapper for small icon buttons. Use as a flex
+ * container when the inner element is too small to meet WCAG 2.5.5 alone.
+ */
+.tap-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
 
 /* ============================================
    REDUCED MOTION
@@ -429,4 +539,110 @@ body {
 ::selection {
   background-color: rgba(56, 189, 248, 0.2);
   color: var(--color-text-primary);
+}
+
+/* ============================================
+   TYPOGRAPHY RECIPES
+   Combine size + family + weight + tracking in a single class so call
+   sites read as `<h1 class="h1">` instead of stacking 4-5 utilities.
+   Use these for headings; for body text the size utilities alone are fine.
+   ============================================ */
+
+.eyebrow {
+  font-size: var(--text-eyebrow);
+  line-height: var(--text-eyebrow--line-height);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-primary);
+}
+
+.h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  line-height: var(--text-h2--line-height);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-text-primary);
+}
+
+.h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  line-height: var(--text-h1--line-height);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text-primary);
+}
+
+.display-sm {
+  font-family: var(--font-display);
+  font-size: var(--text-display-sm);
+  line-height: var(--text-display-sm--line-height);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text-primary);
+}
+
+.display-md {
+  font-family: var(--font-display);
+  font-size: var(--text-display-md);
+  line-height: var(--text-display-md--line-height);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text-primary);
+}
+
+.display-lg {
+  font-family: var(--font-display);
+  font-size: var(--text-display-lg);
+  line-height: var(--text-display-lg--line-height);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-display);
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+   Z-INDEX LAYERS
+   Named layers so stacking is intentional. Use these instead of
+   arbitrary `z-[N]` values to keep the layering predictable.
+
+     base       = 0   (default content)
+     dropdown   = 30  (popovers anchored to a trigger)
+     header     = 40  (sticky header)
+     overlay    = 50  (drawers, modals, full-screen sheets)
+     toast      = 60  (toast notifications)
+   ============================================ */
+
+.z-dropdown { z-index: 30; }
+.z-header { z-index: 40; }
+.z-overlay { z-index: 50; }
+.z-toast { z-index: 60; }
+
+/* ============================================
+   APP CONTAINER
+   Shorthand for the page frame so layouts don't repeat
+   `mx-auto w-full max-w-[1440px] px-4 lg:px-6`.
+   ============================================ */
+
+.container-app {
+  width: 100%;
+  max-width: var(--container-app);
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .container-app {
+    padding-inline: 1.5rem;
+  }
 }

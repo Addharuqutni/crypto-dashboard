@@ -1,8 +1,8 @@
 'use client';
 
 import { TrendingUp, TrendingDown, Minus, Shield } from 'lucide-react';
-import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/screener/types';
-import { cn } from '@/lib/utils';
+import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/application/screener/types';
+import { cn } from '@/lib/shared/utils';
 import { AiAuditBadge } from './ai-audit-badge';
 
 interface TopSetupsPanelProps {

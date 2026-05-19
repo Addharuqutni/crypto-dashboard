@@ -1,9 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchFearGreedIndex } from '@/lib/api/fear-greed';
-import { formatRelativeTime } from '@/lib/formatting';
-import { cn } from '@/lib/utils';
+import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
+import { formatRelativeTime } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import type { FearGreedLabel } from '@/types/fear-greed';
 
 /**

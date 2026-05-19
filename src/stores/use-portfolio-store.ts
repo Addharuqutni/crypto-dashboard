@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { PortfolioHolding } from '@/types/portfolio';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
 
 interface PortfolioState {
   holdings: PortfolioHolding[];

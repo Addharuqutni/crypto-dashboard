@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BarChart3, Star, Wallet, Bell, BookOpen, FlaskConical, Crosshair, Menu, X } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/shared/utils';
 import { SearchCoin } from '@/components/search/search-coin';
 
 const NAV_ITEMS = [
@@ -19,15 +19,15 @@ const NAV_ITEMS = [
 
 /**
  * App header — brand, navigation, global search, and mobile menu.
- * Kept slim and precise per ui-spec.md.
+ * Kept slim so global navigation stays scannable on every viewport.
  */
 export function AppHeader() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border-subtle bg-bg-surface/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-4 px-4 lg:px-6">
+    <header className="sticky top-0 z-header border-b border-border-subtle bg-bg-surface/95 backdrop-blur-sm">
+      <div className="container-app flex h-14 items-center gap-4">
         {/* Brand */}
         <Link
           href="/"
@@ -36,7 +36,7 @@ export function AppHeader() {
           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
             <BarChart3 className="h-4 w-4" />
           </span>
-          <span className="hidden sm:inline">CryptoHar</span>
+          <span className="hidden sm:inline">CryptoHawk</span>
         </Link>
 
         {/* Desktop Navigation */}

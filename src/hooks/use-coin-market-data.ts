@@ -2,14 +2,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { Candle, ChartTimeframe } from '@/types/chart';
-import { fetchKlineData } from '@/lib/api/binance-kline';
-import { fetchFundingRate } from '@/lib/api/binance-funding-rate';
-import { fetchOpenInterestSnapshot } from '@/lib/api/binance-open-interest';
-import { useBinanceKlineWebSocket } from '@/lib/websocket/use-binance-kline-websocket';
-import { resolveBinanceSymbol } from '@/lib/registry/coin-registry';
-import { MTF_CASCADE } from '@/lib/analysis/mtf-cascade';
-import type { FundingRateSnapshot } from '@/lib/api/binance-funding-rate';
-import type { OpenInterestSnapshot } from '@/lib/api/binance-open-interest';
+import { fetchKlineData } from '@/lib/adapters/api/binance-kline';
+import { fetchFundingRate } from '@/lib/adapters/api/binance-funding-rate';
+import { fetchOpenInterestSnapshot } from '@/lib/adapters/api/binance-open-interest';
+import { useBinanceKlineWebSocket } from '@/lib/adapters/websocket/use-binance-kline-websocket';
+import { resolveBinanceSymbol } from '@/lib/shared/registry/coin-registry';
+import { MTF_CASCADE } from '@/lib/domain/analysis/mtf-cascade';
+import type { FundingRateSnapshot } from '@/lib/adapters/api/binance-funding-rate';
+import type { OpenInterestSnapshot } from '@/lib/adapters/api/binance-open-interest';
 
 interface UseCoinMarketDataParams {
   /** Resolved coin symbol (e.g. BTC). */

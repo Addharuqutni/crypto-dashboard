@@ -17,12 +17,12 @@ import {
   type BacktestResult,
   type BacktestTrade,
   type EquityPoint,
-} from '@/lib/backtest';
-import { fetchHistoricalKlines, KlineFetchError } from '@/lib/api/binance-kline';
+} from '@/lib/application/backtest';
+import { fetchHistoricalKlines, KlineFetchError } from '@/lib/adapters/api/binance-kline';
 import type { ChartTimeframe } from '@/types/chart';
-import { COIN_REGISTRY, getDefaultCoins } from '@/lib/registry/coin-registry';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatting';
+import { COIN_REGISTRY, getDefaultCoins } from '@/lib/shared/registry/coin-registry';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency } from '@/lib/shared/formatting';
 
 /**
  * Historical backtest panel.

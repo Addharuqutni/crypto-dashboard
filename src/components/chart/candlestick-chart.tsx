@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/lib/formatting';
+import { cn } from '@/lib/shared/utils';
+import { formatCurrency } from '@/lib/shared/formatting';
 import {
   toChartCandles,
   toVolumeData,
@@ -11,8 +11,8 @@ import {
   formatChartTime,
   type RawOhlcv,
   type ChartCandle,
-} from '@/lib/chart/transform';
-import { calculateSMA } from '@/lib/indicators/moving-average';
+} from '@/lib/domain/chart/transform';
+import { calculateSMA } from '@/lib/domain/indicators/moving-average';
 import type { ChartTimeframe, Candle } from '@/types/chart';
 import type {
   IChartApi,
@@ -44,7 +44,7 @@ interface CandlestickChartProps {
  *   (length differs, earlier bar mutated, ascending sort broken).
  * - Effect 3: Apply MA overlays based on activeIndicators.
  *
- * Data transformation lives in `@/lib/chart/transform` so this component
+ * Data transformation lives in `@/lib/domain/chart/transform` so this component
  * stays focused on chart lifecycle and presentation.
  */
 export function CandlestickChart({
