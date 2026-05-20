@@ -2,12 +2,24 @@ import type { NextConfig } from 'next';
 
 /**
  * Next.js configuration.
- * Standalone output packages only production files needed by cPanel Node.js hosting.
+ *
+ * - `output: 'standalone'` packages only the production files needed by
+ *   cPanel Node.js hosting.
+ * - `outputFileTracingRoot` keeps the standalone trace anchored to this
+ *   workspace so Next doesn't pull in files from sibling projects.
+ * - `experimental.optimizePackageImports` rewrites barrel-style imports
+ *   from the listed packages to use named subpath imports during build.
+ *   For `lucide-react` (38+ call sites) this prevents pulling the entire
+ *   icon set into a chunk; for `@tanstack/react-query` it keeps unused
+ *   utilities out of the bundle.
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: __dirname,
   output: 'standalone',
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@tanstack/react-query'],
+  },
 };
 
 export default nextConfig;

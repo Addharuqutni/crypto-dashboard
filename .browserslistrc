@@ -1,0 +1,9 @@
+# Modern browser baselines.
+# Drops Next.js auto-polyfills (~110 KB) since we target evergreen browsers
+# with native ESM, async/await, and modern Web APIs.
+last 2 Chrome versions
+last 2 Firefox versions
+last 2 Safari versions
+last 2 Edge versions
+not dead
+not IE 11

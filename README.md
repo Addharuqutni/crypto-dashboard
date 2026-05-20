@@ -1,60 +1,87 @@
 # Crypto Market Dashboard
 
-## Deskripsi Singkat
+Crypto Market Dashboard adalah aplikasi dashboard analisis crypto berbasis **Next.js App Router** untuk memantau market **Binance USDⓈ-M Futures** secara real time. Aplikasi ini menggabungkan market overview, candlestick chart, technical analysis, futures signal engine, AI technical summary, watchlist, alert, journal, screener, dan worker Telegram untuk membantu proses analisis yang lebih disiplin.
 
-Crypto Market Dashboard adalah aplikasi dashboard crypto berbasis **Next.js** untuk memantau market **Binance USDⓈ-M Futures** secara real time. Aplikasi ini menyediakan chart candlestick, technical analysis, futures signal engine, AI technical summary, watchlist, alert, dan signal journal untuk membantu proses analisis market secara lebih disiplin.
+> **Disclaimer:** Aplikasi ini dibuat untuk edukasi, analisis, dan journaling. Ini bukan financial advice, bukan sinyal pasti, dan bukan jaminan profit.
 
-> Aplikasi ini hanya untuk edukasi, analisis, dan journaling. Bukan financial advice.
+## Daftar Isi
+
+- [Fitur Utama](#fitur-utama)
+- [Tech Stack](#tech-stack)
+- [Prasyarat](#prasyarat)
+- [Instalasi](#instalasi)
+- [Menjalankan Aplikasi](#menjalankan-aplikasi)
+- [Script Penting](#script-penting)
+- [Environment Variable](#environment-variable)
+- [Futures Screener](#futures-screener)
+- [Worker Alert Telegram](#worker-alert-telegram)
+- [Struktur Project](#struktur-project)
+- [Quality Check](#quality-check)
+- [Deployment Singkat](#deployment-singkat)
+- [Catatan Risiko](#catatan-risiko)
 
 ## Fitur Utama
 
-- **Realtime Futures Market**
-  - Harga Binance USDⓈ-M Futures secara real time via WebSocket.
-  - Data 24h change, volume, dan market movement.
-  - Search coin dan market overview responsif.
+### Realtime Futures Market
 
-- **Chart & Technical Analysis**
-  - Candlestick chart menggunakan TradingView Lightweight Charts.
-  - Data OHLCV dari Binance Futures Kline API.
-  - Mode chart clean dan technical.
-  - Indikator EMA, RSI, MACD, ATR, ADX, Fibonacci, support/resistance, order block, dan trend/regime detector.
+- Harga Binance USDⓈ-M Futures secara real time melalui WebSocket.
+- Data 24h change, volume, market movement, dan market overview.
+- Search coin dan UI responsif untuk analisis cepat.
 
-- **Futures Signal Engine**
-  - Rekomendasi `LONG`, `SHORT`, atau `WAIT` berbasis risk-first decision engine.
-  - Entry zone, stop loss, take profit, risk:reward ratio, confidence score, signal grade, dan suggested leverage.
-  - Filter tambahan seperti multi-timeframe confirmation, funding rate, open interest, liquidity sweep, dan no-trade risk guard.
+### Chart & Technical Analysis
 
-- **Signal Journal**
-  - Halaman khusus `/journal` untuk menyimpan dan mengevaluasi signal.
-  - Tampilan card-based journal.
-  - Tracking status signal: pending, TP1, TP2, TP3, SL, expired, dan cancelled.
-  - Realtime PnL percentage, MFE, MAE, win rate, loss rate, dan statistik LONG/SHORT.
+- Candlestick chart menggunakan TradingView Lightweight Charts.
+- Data OHLCV dari Binance Futures Kline API.
+- Mode chart clean dan technical.
+- Indikator EMA, RSI, MACD, ATR, ADX, Fibonacci, support/resistance, order block, liquidity sweep, dan trend/regime detector.
 
-- **AI Technical Agent**
-  - AI summary dan chat berbasis OpenAI-compatible API.
-  - Streaming response.
-  - API key input dimasking dan persistensi key bersifat opsional.
+### Futures Signal Engine
 
-- **Watchlist, Alerts, dan Sentiment**
-  - Watchlist lokal berbasis browser storage.
-  - Alert lokal untuk kondisi market/signal.
-  - Fear & Greed Index dari Alternative.me.
-  - Metadata coin dari CoinGecko.
+- Rekomendasi `LONG`, `SHORT`, atau `WAIT` berbasis risk-first decision engine.
+- Entry zone, stop loss, take profit, risk:reward ratio, confidence score, signal grade, dan suggested leverage.
+- Guard tambahan untuk multi-timeframe confirmation, funding rate, open interest, liquidity sweep, stale data, dan no-trade risk.
+
+### Signal Journal
+
+- Halaman `/journal` untuk menyimpan dan mengevaluasi signal.
+- Tampilan card-based journal.
+- Tracking status signal: pending, TP1, TP2, TP3, SL, expired, dan cancelled.
+- Statistik PnL percentage, MFE, MAE, win rate, loss rate, serta distribusi LONG/SHORT.
+
+### AI Technical Agent
+
+- AI summary dan chat berbasis OpenAI-compatible API.
+- Mendukung streaming response.
+- API key input dimasking dan penyimpanan key bersifat opsional.
+- AI bersifat commentary only dan tidak menggantikan risk engine deterministik.
+
+### Watchlist, Alerts, dan Sentiment
+
+- Watchlist lokal berbasis browser storage.
+- Alert lokal untuk kondisi market dan signal.
+- Fear & Greed Index dari Alternative.me.
+- Metadata coin dari CoinGecko.
+
+### Screener & Worker
+
+- Futures screener untuk evaluasi berkala beberapa symbol.
+- Penyimpanan snapshot, history, dan alert decision dalam format JSON/JSONL.
+- Worker opsional untuk mengirim alert Telegram berdasarkan rule yang terukur.
 
 ## Tech Stack
 
 ### Frontend
 
-- **Next.js 16** — App Router framework.
+- **Next.js 16** — React framework dengan App Router.
 - **React 19** — UI rendering.
 - **TypeScript 6** — static typing.
-- **Tailwind CSS 4** — styling dan design tokens.
+- **Tailwind CSS 4** — styling dan design token.
 
 ### Data & State
 
 - **Zustand 5** — client-side state management dan local persistence.
 - **TanStack Query 5** — server-state fetching dan caching.
-- **Binance USDⓈ-M Futures API** — market price, kline, funding rate, dan open interest.
+- **Binance USDⓈ-M Futures API** — price, kline, funding rate, dan open interest.
 - **CoinGecko API** — metadata coin.
 - **Alternative.me API** — Fear & Greed Index.
 
@@ -69,32 +96,34 @@ Crypto Market Dashboard adalah aplikasi dashboard crypto berbasis **Next.js** un
 - **ESLint 10** — linting.
 - **Prettier 3** — formatting.
 - **TypeScript compiler** — type checking.
-- **Vitest 3** — unit & integration testing untuk engine deterministik, AI guard, worker, dan store.
+- **Vitest 3** — unit dan integration testing.
+- **tsx** — menjalankan script TypeScript untuk screener dan worker.
 
-## Cara Install dan Run
-
-### Prasyarat
+## Prasyarat
 
 - Node.js 20+ direkomendasikan.
 - npm 10+ direkomendasikan.
 - Koneksi internet untuk Binance, CoinGecko, Alternative.me, dan optional AI provider.
+- Telegram bot token dan chat ID jika ingin memakai worker alert Telegram.
 
-### Install Dependency
+## Instalasi
 
 ```bash
 npm install
 ```
 
-### Jalankan Development Server
+## Menjalankan Aplikasi
+
+### Development Server
 
 ```bash
 npm run dev
 ```
 
-Buka aplikasi di browser:
+### Development Server dengan Webpack
 
-```txt
-http://localhost:3000
+```bash
+npm run dev:webpack
 ```
 
 ### Build Production
@@ -103,7 +132,13 @@ http://localhost:3000
 npm run build
 ```
 
-### Jalankan Production Server
+### Build Production dengan Webpack
+
+```bash
+npm run build:webpack
+```
+
+### Production Server
 
 ```bash
 npm start
@@ -119,76 +154,150 @@ npm run start:local
 
 | Script | Fungsi |
 |---|---|
-| `npm run dev` | Menjalankan development server dengan Webpack |
-| `npm run dev:turbo` | Menjalankan development server dengan Turbopack |
-| `npm run build` | Build production dengan Webpack |
-| `npm run build:turbo` | Build production dengan Turbopack |
+| `npm run dev` | Menjalankan development server dengan Turbopack |
+| `npm run dev:webpack` | Menjalankan development server dengan Webpack |
+| `npm run build` | Build production dengan Turbopack |
+| `npm run build:webpack` | Build production dengan Webpack |
 | `npm start` | Menjalankan production server |
 | `npm run start:local` | Menjalankan production server di port 3000 |
-| `npm run typecheck` | Validasi TypeScript |
-| `npm run lint` | Menjalankan ESLint |
-| `npm run screener` | Menjalankan screener long-running loop |
-| `npm run screener -- --once` | Single-shot screener evaluation |
+| `npm run lint` | Menjalankan ESLint untuk folder `src/` |
+| `npm run typecheck` | Validasi TypeScript tanpa emit |
+| `npm run test` | Menjalankan test dengan Vitest |
+| `npm run test:watch` | Menjalankan Vitest watch mode |
+| `npm run screener` | Menjalankan futures screener long-running loop |
+| `npm run screener -- --once` | Menjalankan screener satu kali lalu exit |
+| `npm run worker` | Menjalankan worker alert Telegram |
+
+## Environment Variable
+
+Project menggunakan `.env.local` untuk konfigurasi lokal. File ini tidak boleh di-commit karena dapat berisi secret.
+
+Untuk worker Telegram, salin contoh konfigurasi:
+
+```bash
+copy .env.worker.example .env.local
+```
+
+Lalu isi nilai yang dibutuhkan:
+
+| Variable | Fungsi | Wajib |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | Token bot Telegram untuk pengiriman alert | Untuk worker alert |
+| `TELEGRAM_CHAT_ID` | Target chat/channel Telegram | Untuk worker alert |
+| `WORKER_SYMBOLS` | Daftar symbol worker, contoh `BTCUSDT,ETHUSDT` | Tidak |
+| `WORKER_INTERVAL_MIN` | Interval evaluasi worker dalam menit | Tidak |
+| `WORKER_SETUP_TF` | Timeframe setup utama | Tidak |
+| `WORKER_MACRO_TF` | Timeframe macro confirmation | Tidak |
+| `WORKER_TRIGGER_TF` | Timeframe trigger | Tidak |
+| `WORKER_ALERT_COOLDOWN_MIN` | Cooldown alert per symbol/action | Tidak |
+| `WORKER_MIN_CONFIDENCE` | Minimum confidence untuk alert | Tidak |
+| `WORKER_SEND_WAIT_ALERTS` | Mengirim alert WAIT atau tidak | Tidak |
+| `WORKER_SEND_HEALTH_ALERTS` | Mengirim health alert worker | Tidak |
+| `WORKER_DATA_DIR` | Folder penyimpanan state worker | Tidak |
+| `WORKER_CONTINUE_ON_TELEGRAM_FAILURE` | Worker lanjut saat Telegram error | Tidak |
+
+> Jangan pernah commit `.env.local`, token API, private key, atau credential lain.
 
 ## Futures Screener
 
-### Running the Screener
+### Menjalankan Screener
 
 ```bash
-# Single-shot: evaluate all 10 symbols, persist results, exit
+# Single-shot: evaluasi symbol, simpan hasil, lalu exit
 npm run screener -- --once
 
-# Long-running: evaluate every 15 minutes with graceful shutdown
+# Long-running: evaluasi berkala dengan graceful shutdown
 npm run screener
 
-# Help
+# Bantuan command
 npm run screener -- --help
 ```
 
-### Data Storage
+### Penyimpanan Data
 
-The screener persists data to `data/screener/`:
+Screener menyimpan data ke `data/screener/`:
 
-| File | Purpose |
-|------|---------|
-| `latest.json` | Most recent run snapshot (atomic write) |
-| `history.jsonl` | Append-only run summaries |
-| `alerts.jsonl` | Append-only alert policy decisions |
-| `settings.json` | User alert/rank settings (atomic write) |
+| File | Fungsi |
+|---|---|
+| `latest.json` | Snapshot hasil run terbaru dengan atomic write |
+| `history.jsonl` | Append-only summary setiap run |
+| `alerts.jsonl` | Append-only keputusan policy alert |
+| `settings.json` | Setting rank dan alert user dengan atomic write |
 
-Missing files return safe defaults — the UI can always render an empty state.
+Jika file belum ada, sistem mengembalikan safe default agar UI tetap bisa menampilkan empty state.
 
-### Alert Rules (Defaults)
+### Default Alert Rules
 
 | Setting | Default |
-|---------|---------|
-| Alerts enabled | `false` (opt-in) |
+|---|---|
+| Alerts enabled | `false` atau opt-in |
 | Min confidence | 75% |
 | Min grade | B |
 | Min risk:reward | 1.5 |
-| Cooldown per symbol/action | 60 minutes |
+| Cooldown per symbol/action | 60 menit |
 | Max alerts per hour | 3 |
 | Send WAIT alerts | `false` |
 | Top N only | 3 |
 
-Alerts are suppressed for stale data, insufficient data, duplicate symbol/action within cooldown, and hourly caps. Material changes (grade improvement, confidence +10) can override cooldown.
+Alert akan ditekan untuk stale data, insufficient data, duplicate symbol/action dalam cooldown, dan hourly cap. Material change seperti grade improvement atau confidence naik signifikan dapat melewati cooldown.
 
-### AI Auditor (Optional)
+### AI Auditor Opsional
 
-The screener supports optional AI auditing of top candidates. AI audits are **commentary only** — they never determine LONG/SHORT/WAIT and never invent price levels.
+Screener mendukung AI audit untuk kandidat teratas. AI audit bersifat **commentary only**:
 
-Limitations:
-- Requires an OpenAI-compatible API key configured in the app.
-- If AI is not configured or the request fails, the screener works without audit.
-- AI output is schema-validated; malformed responses are rejected.
-- Audits are cached by (symbol, action, candleCloseTime) to avoid redundant API cost.
+- Tidak menentukan `LONG`, `SHORT`, atau `WAIT`.
+- Tidak boleh mengarang price level.
+- Jika AI tidak dikonfigurasi atau request gagal, screener tetap berjalan tanpa audit.
+- Output AI divalidasi dengan schema; response invalid akan ditolak.
+- Audit di-cache berdasarkan symbol, action, dan candle close time untuk mengurangi biaya API.
 
-### Risk Disclaimer
+## Worker Alert Telegram
 
-> **This is educational decision-support software, not financial advice.**
-> Signals are deterministic outputs from technical analysis, never guarantees of price movement.
-> Confidence scores reflect setup quality, not win probability.
-> WAIT is a valid analysis outcome, not an error.
+Worker digunakan untuk menjalankan evaluasi berkala dan mengirim alert ke Telegram jika rule terpenuhi.
+
+```bash
+npm run worker
+```
+
+Sebelum menjalankan worker:
+
+1. Buat bot Telegram melalui BotFather.
+2. Ambil `TELEGRAM_BOT_TOKEN`.
+3. Ambil `TELEGRAM_CHAT_ID` target.
+4. Isi `.env.local` berdasarkan `.env.worker.example`.
+5. Jalankan `npm run worker`.
+
+Worker tetap dapat berjalan tanpa Telegram credential untuk menulis state lokal, tetapi status delivery akan dianggap disabled.
+
+## Struktur Project
+
+```txt
+crypto-dashboard/
+├── data/                    # Data runtime lokal untuk screener/worker
+├── scripts/                 # Script TypeScript untuk screener dan worker
+├── src/                     # Source code aplikasi
+├── .env.worker.example      # Contoh konfigurasi worker Telegram
+├── next.config.ts           # Konfigurasi Next.js
+├── package.json             # Script dan dependency project
+├── tsconfig.json            # Konfigurasi TypeScript
+└── vitest.config.ts         # Konfigurasi Vitest
+```
+
+## Quality Check
+
+Jalankan pemeriksaan berikut sebelum membuat perubahan besar atau deployment:
+
+```bash
+npm run typecheck
+npm run lint
+npm run test
+```
+
+Untuk validasi production build:
+
+```bash
+npm run build
+```
 
 ## Deployment Singkat
 
@@ -199,3 +308,11 @@ output: 'standalone'
 ```
 
 Konfigurasi ini membantu deployment ke hosting Node.js seperti cPanel Node.js hosting karena output production lebih ringkas dan berisi file yang dibutuhkan untuk menjalankan server.
+
+## Catatan Risiko
+
+- Signal adalah output analisis teknikal deterministik, bukan prediksi pasti.
+- Confidence score menggambarkan kualitas setup, bukan probabilitas menang.
+- `WAIT` adalah hasil analisis valid, bukan error.
+- Gunakan position sizing, stop loss, dan risk management secara disiplin.
+- Selalu verifikasi kondisi market sebelum mengambil keputusan trading.

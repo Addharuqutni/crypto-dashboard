@@ -1,12 +1,27 @@
 'use client';
 
 import { useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { cn } from '@/lib/shared/utils';
-import { CandlestickChart } from '@/components/chart/candlestick-chart';
 import { VisibilityGate } from '@/components/ui/visibility-gate';
 import { IndicatorToggles } from '@/components/technical-analysis/indicator-toggles';
 import { RefreshCw, LineChart, BarChart3 } from 'lucide-react';
 import type { Candle, ChartTimeframe } from '@/types/chart';
+
+/**
+ * Lazy-load the candlestick chart shell along with its `lightweight-charts`
+ * dependency. The chart is below the fold on first paint of the coin page
+ * and only renders inside a VisibilityGate, so deferring the entire bundle
+ * is safe and removes ~30-40 KB from the coin route's first-load JS.
+ */
+const CandlestickChart = dynamic(
+  () => import('@/components/chart/candlestick-chart').then((m) => m.CandlestickChart),
+  {
+    ssr: false,
+    loading: () => <ChartDeferredSkeleton />,
+  }
+);
+
 
 type ChartMode = 'clean' | 'technical';
 
