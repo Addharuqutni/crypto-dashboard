@@ -106,12 +106,17 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface shadow-2xl">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-settings-title"
+        className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
           <div className="flex items-center gap-2.5">
             <Settings2 className="h-5 w-5 text-accent-secondary" />
-            <h2 className="text-base font-semibold text-text-primary">AI Agent Settings</h2>
+            <h2 id="ai-settings-title" className="text-base font-semibold text-text-primary">AI Agent Settings</h2>
           </div>
           <button
             onClick={onClose}
@@ -218,6 +223,8 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
           {/* Test Result */}
           {testResult && (
             <div
+              role={testResult.success ? 'status' : 'alert'}
+              aria-live={testResult.success ? 'polite' : 'assertive'}
               className={cn(
                 'flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs',
                 testResult.success

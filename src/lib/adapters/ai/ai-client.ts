@@ -1,10 +1,21 @@
 /**
- * AI Client — handles communication with OpenAI-compatible LLM APIs.
- * Supports both streaming and non-streaming responses.
- * Works with OpenAI, Groq, Together AI, Ollama, and any compatible provider.
+ * AI Client — handles communication with approved OpenAI-compatible LLM APIs.
+ * Supports streaming and non-streaming responses while preventing browser-side
+ * API keys from being sent to arbitrary remote hosts.
  */
 
 import type { AiConfig, AiChatCompletionRequest, AiChatCompletionResponse, AiStreamChunk, AiMessageRole } from '@/types/ai';
+
+const OPENAI_COMPATIBLE_PATH = '/chat/completions';
+const ALLOWED_REMOTE_HOSTS = new Set([
+  'api.openai.com',
+  'api.groq.com',
+  'api.together.xyz',
+  'openrouter.ai',
+  // Anthropic uses /v1/messages and an `x-api-key` header, not the OpenAI shape
+  // this client speaks. Add it back only after a dedicated adapter exists.
+]);
+const LOCAL_AI_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 export class AiClientError extends Error {
   constructor(
@@ -26,10 +37,10 @@ export async function sendChatCompletion(
   messages: { role: AiMessageRole; content: string }[],
   options?: { temperature?: number; maxTokens?: number }
 ): Promise<string> {
-  const url = buildUrl(config.baseUrl, '/chat/completions');
+  const url = buildSafeProviderUrl(config.baseUrl, OPENAI_COMPATIBLE_PATH);
 
   const body: AiChatCompletionRequest = {
-    model: config.model,
+    model: validateRequiredText(config.model, 'Model'),
     messages,
     stream: false,
     temperature: options?.temperature ?? 0.7,
@@ -68,10 +79,21 @@ export function sendStreamingChatCompletion(
 ): AbortController {
   const controller = new AbortController();
 
-  const url = buildUrl(config.baseUrl, '/chat/completions');
+  let url: string;
+  let model: string;
+  try {
+    url = buildSafeProviderUrl(config.baseUrl, OPENAI_COMPATIBLE_PATH);
+    model = validateRequiredText(config.model, 'Model');
+    validateRequiredText(config.apiKey, 'API key');
+  } catch (error) {
+    queueMicrotask(() => {
+      callbacks.onError(error instanceof AiClientError ? error : new AiClientError('Invalid AI configuration'));
+    });
+    return controller;
+  }
 
   const body: AiChatCompletionRequest = {
-    model: config.model,
+    model,
     messages,
     stream: true,
     temperature: options?.temperature ?? 0.7,
@@ -115,11 +137,9 @@ export function sendStreamingChatCompletion(
           try {
             const json: AiStreamChunk = JSON.parse(trimmed.slice(6));
             const content = json.choices[0]?.delta?.content;
-            if (content) {
-              callbacks.onChunk(content);
-            }
+            if (content) callbacks.onChunk(content);
           } catch {
-            // Skip malformed JSON lines
+            // Providers may emit keep-alive or malformed SSE lines; ignore them.
           }
         }
       }
@@ -160,44 +180,68 @@ export async function testConnection(config: AiConfig): Promise<{ success: boole
   }
 }
 
-// --- Helpers ---
-
 /**
-
- * Membuat url berdasarkan input saat ini.
-
- * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
-
+ * Builds a provider URL only when the destination is safe for browser-held keys.
+ * This prevents `Authorization: Bearer ...` from being exfiltrated to arbitrary
+ * user-supplied remote hosts.
  */
+function buildSafeProviderUrl(baseUrl: string, path: string): string {
+  const parsed = parseProviderBaseUrl(baseUrl);
+  const isLocal = LOCAL_AI_HOSTS.has(parsed.hostname);
+  const isAllowedRemote = parsed.protocol === 'https:' && ALLOWED_REMOTE_HOSTS.has(parsed.hostname);
 
-function buildUrl(baseUrl: string, path: string): string {
-  const base = baseUrl.replace(/\/+$/, '');
-  return base.includes('/v1') ? `${base}${path}` : `${base}/v1${path}`;
+  if (!isLocal && !isAllowedRemote) {
+    throw new AiClientError(
+      'AI Base URL is not allowed. Use a known HTTPS provider or a local endpoint such as http://localhost:11434.'
+    );
+  }
+
+  if (!isLocal && parsed.protocol !== 'https:') {
+    throw new AiClientError('Remote AI providers must use HTTPS.');
+  }
+
+  const pathname = parsed.pathname.replace(/\/+$/, '');
+  parsed.pathname = pathname.endsWith('/v1') ? `${pathname}${path}` : `${pathname}/v1${path}`;
+  parsed.search = '';
+  parsed.hash = '';
+  return parsed.toString();
 }
 
-/**
+/** Parse and validate the provider base URL before any request is sent. */
+function parseProviderBaseUrl(baseUrl: string): URL {
+  const value = validateRequiredText(baseUrl, 'Base URL');
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new AiClientError('AI Base URL must be a valid URL.');
+  }
 
- * Membuat headers berdasarkan input saat ini.
+  if (parsed.username || parsed.password) {
+    throw new AiClientError('AI Base URL must not include credentials.');
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new AiClientError('AI Base URL must use HTTP or HTTPS.');
+  }
+  return parsed;
+}
 
- * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
+/** Validate required text inputs so empty config fails before fetch. */
+function validateRequiredText(value: string, label: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) throw new AiClientError(`${label} is required.`);
+  return trimmed;
+}
 
- */
-
+/** Build request headers after validating the API key. */
 function buildHeaders(apiKey: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${validateRequiredText(apiKey, 'API key')}`,
   };
 }
 
-/**
-
- * Menjalankan logic parse error.
-
- * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
- */
-
+/** Parse provider error payloads into safe UI-facing errors. */
 async function parseError(response: Response): Promise<AiClientError> {
   let message = `API error: ${response.status} ${response.statusText}`;
   let code: string | undefined;
@@ -209,7 +253,7 @@ async function parseError(response: Response): Promise<AiClientError> {
       code = body.error.code;
     }
   } catch {
-    // Use default message
+    // Use default message.
   }
 
   if (response.status === 401) {

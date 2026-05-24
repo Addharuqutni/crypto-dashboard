@@ -11,18 +11,23 @@ const BINANCE_FUTURES_KLINE_BASE = 'https://fapi.binance.com/fapi/v1';
 export const BINANCE_KLINE_MAX_PER_REQUEST = 1500;
 
 /**
- * Default kline counts per timeframe for the live charts. The backtest path
- * uses an explicit `limit` override to fetch deeper history.
+ * Default kline counts per timeframe for the live charts. Short intraday
+ * TFs fetch 1500 candles for maximum Binance single-request depth, while
+ * higher TFs keep 1000 candles so indicators and S/R have enough history to
+ * stabilize on first paint. Backtest paths still pass an explicit `limit`
+ * override when they need deeper history.
+ *
+ * Binance's per-request cap is 1500, so all defaults stay a single round-trip.
  */
 const TIMEFRAME_CONFIG: Record<ChartTimeframe, { interval: string; limit: number }> = {
-  '5m': { interval: '5m', limit: 200 },
-  '15m': { interval: '15m', limit: 200 },
-  '30m': { interval: '30m', limit: 200 },
-  '1H': { interval: '1h', limit: 200 },
-  '4H': { interval: '4h', limit: 200 },
-  '24H': { interval: '1d', limit: 120 },
-  '7D': { interval: '1w', limit: 52 },
-  '30D': { interval: '1M', limit: 36 },
+  '5m': { interval: '5m', limit: 1500 },
+  '15m': { interval: '15m', limit: 1500 },
+  '30m': { interval: '30m', limit: 1500 },
+  '1H': { interval: '1h', limit: 1000 },
+  '4H': { interval: '4h', limit: 1000 },
+  '24H': { interval: '1d', limit: 1000 },
+  '7D': { interval: '1w', limit: 1000 },
+  '30D': { interval: '1M', limit: 1000 },
 };
 
 /**

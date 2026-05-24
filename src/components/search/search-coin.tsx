@@ -234,8 +234,8 @@ export function SearchCoin() {
           onFocus={() => debouncedQuery.trim() && setIsOpen(true)}
           placeholder="Search coin..."
           className={cn(
-            'h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised pl-9 pr-8 text-sm text-text-primary placeholder:text-text-muted',
-            'transition-colors focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30'
+            'h-10 w-full rounded-xl border border-border-subtle bg-bg-surface pl-9 pr-8 text-sm text-text-primary placeholder:text-text-muted',
+            'transition-colors focus:border-border-strong focus:outline-none focus:ring-2 focus:ring-focus-ring/30'
           )}
           role="combobox"
           aria-expanded={isOpen}
@@ -260,7 +260,7 @@ export function SearchCoin() {
 
       {/* Results Dropdown */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full z-dropdown mt-1 overflow-hidden rounded-lg border border-border-subtle bg-bg-surface-raised shadow-elev-2">
+        <div className="absolute left-0 right-0 top-full z-dropdown mt-1.5 overflow-hidden rounded-xl border border-border-subtle bg-bg-surface shadow-elev-1">
           {results.length === 0 ? (
             <div className="px-4 py-6 text-center text-sm text-text-muted">
               No coins found for &ldquo;{debouncedQuery}&rdquo;
@@ -281,10 +281,10 @@ export function SearchCoin() {
                   onClick={() => selectResult(result)}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={cn(
-                    'flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm transition-colors',
+                    'flex cursor-pointer items-center gap-3 border-l-2 px-4 py-2.5 text-sm transition-colors',
                     index === activeIndex
-                      ? 'bg-bg-surface-soft text-text-primary'
-                      : 'text-text-secondary hover:bg-bg-surface-soft'
+                      ? 'border-accent-primary bg-bg-surface-soft text-text-primary'
+                      : 'border-transparent text-text-secondary hover:bg-bg-surface-soft'
                   )}
                 >
                   {/* Coin icon placeholder */}

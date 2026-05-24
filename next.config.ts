@@ -20,6 +20,26 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@tanstack/react-query'],
   },
+  /**
+   * Baseline browser security headers. CSP is intentionally deferred because
+   * Next.js runtime/script requirements need a dedicated nonce/hash pass.
+   */
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=(self)',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

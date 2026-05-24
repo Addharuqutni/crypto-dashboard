@@ -6,9 +6,8 @@
  *   - one-shot:  `npm run worker -- --once`
  *   - long-run:  `npm run worker`
  *
- * Long-run mode schedules itself with `setTimeout` rather than `setInterval`
- * so a slow cycle never causes a stampede. SIGINT/SIGTERM are handled
- * gracefully — the in-flight cycle is allowed to complete before exit.
+ * Long-run mode schedules itself with an interruptible sleep so SIGINT/SIGTERM
+ * can stop promptly between cycles. In-flight cycles are allowed to complete.
  */
 
 import { loadWorkerConfig, validateWorkerConfig } from '@/lib/application/worker/config';
@@ -67,7 +66,7 @@ function summariseConfig(cfg: WorkerConfig): string {
 }
 
 let stopRequested = false;
-let cycleInFlight: Promise<void> | null = null;
+let sleepController: AbortController | null = null;
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
@@ -82,7 +81,8 @@ async function main(): Promise<void> {
     // eslint-disable-next-line no-console
     console.error('[worker] invalid configuration:');
     for (const p of problems) console.error('  -', p);
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   // eslint-disable-next-line no-console
@@ -94,15 +94,13 @@ async function main(): Promise<void> {
   process.on('SIGTERM', requestStop);
 
   if (args.once) {
-    await executeOne(cfg, store);
+    const ok = await executeOne(cfg, store);
+    if (!ok) process.exitCode = 1;
     return;
   }
 
-  // Long-run loop: schedule next cycle via setTimeout to avoid stampedes.
   while (!stopRequested) {
-    cycleInFlight = executeOne(cfg, store);
-    await cycleInFlight;
-    cycleInFlight = null;
+    await executeOne(cfg, store);
     if (stopRequested) break;
     await sleep(cfg.intervalMinutes * 60_000);
   }
@@ -111,7 +109,8 @@ async function main(): Promise<void> {
   console.log('[worker] shutdown complete');
 }
 
-async function executeOne(cfg: WorkerConfig, store: WorkerStore): Promise<void> {
+/** Execute one worker cycle and report whether it completed successfully. */
+async function executeOne(cfg: WorkerConfig, store: WorkerStore): Promise<boolean> {
   try {
     const result = await runCycle(cfg, { store });
     for (const ev of result.evaluations) {
@@ -130,25 +129,42 @@ async function executeOne(cfg: WorkerConfig, store: WorkerStore): Promise<void> 
       // eslint-disable-next-line no-console
       console.log('[worker] cycle produced no evaluations (data fetch failed for all symbols)');
     }
+    return true;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[worker] cycle failed:', err);
+    return false;
   }
 }
 
 function requestStop(): void {
   if (stopRequested) return;
   stopRequested = true;
+  sleepController?.abort();
   // eslint-disable-next-line no-console
-  console.log('[worker] stop requested, waiting for in-flight cycle to finish');
+  console.log('[worker] stop requested');
 }
 
+/** Sleep until the next cycle or resolve immediately when shutdown is requested. */
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const t = setTimeout(resolve, ms);
-    // Allow the process to exit if no other handles are pending.
-    if (typeof t.unref === 'function') t.unref();
+  if (stopRequested) return Promise.resolve();
+  sleepController = new AbortController();
+  const signal = sleepController.signal;
+
+  return new Promise<void>((resolve) => {
+    const timeout = setTimeout(resolve, ms);
+    const abort = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    signal.addEventListener('abort', abort, { once: true });
+  }).finally(() => {
+    sleepController = null;
   });
 }
 
-void main();
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('[worker] fatal:', err);
+  process.exitCode = 1;
+});

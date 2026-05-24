@@ -44,7 +44,7 @@ export function TechnicalPanel({ candles, symbol, timeframe, currentPrice, activ
       symbol,
       timeframe,
       price: currentPrice,
-      rsi: analysis.rsi.value ? { value: analysis.rsi.value, status: analysis.rsi.status } : undefined,
+      rsi: analysis.rsi.value != null ? { value: analysis.rsi.value, status: analysis.rsi.status } : undefined,
       macd: analysis.macd ? { macd: analysis.macd.macd, signal: analysis.macd.signal, histogram: analysis.macd.histogram } : undefined,
       trend: { value: analysis.trend.value, reasons: analysis.trend.reasons },
       supportResistance: { support: analysis.sr.support ?? null, resistance: analysis.sr.resistance ?? null, confidence: analysis.sr.confidence },
@@ -195,7 +195,7 @@ function IndicatorCard({ title, children }: { title: string; children: React.Rea
  */
 
 function RsiDisplay({ rsi }: { rsi: RsiResult }) {
-  if (!rsi.value) {
+  if (rsi.value == null) {
     return <p className="text-sm text-text-muted">Insufficient data</p>;
   }
 

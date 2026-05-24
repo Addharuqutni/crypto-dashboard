@@ -61,6 +61,7 @@ Optional AI auditor (fail-soft, never decides actions):
 }
 
 let stopRequested = false;
+let sleepController: AbortController | null = null;
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
@@ -83,7 +84,8 @@ async function main(): Promise<void> {
   const auditCache = new AuditCache();
 
   if (args.once) {
-    await executeOnce(cfg, store, aiConfig, auditCache);
+    const ok = await executeOnce(cfg, store, aiConfig, auditCache);
+    if (!ok) process.exitCode = 1;
     return;
   }
 
@@ -96,6 +98,23 @@ async function main(): Promise<void> {
 
 /** Execute one screener cycle: evaluate → rank → audit → persist → alert policy. */
 async function executeOnce(
+  cfg: ScreenerConfig,
+  store: ScreenerStore,
+  aiConfig: AiConfig | null,
+  auditCache: AuditCache
+): Promise<boolean> {
+  try {
+    await executeOnceUnsafe(cfg, store, aiConfig, auditCache);
+    return true;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[screener] cycle failed:', err);
+    return false;
+  }
+}
+
+/** Contains the actual screener cycle so caller controls one-shot vs daemon failures. */
+async function executeOnceUnsafe(
   cfg: ScreenerConfig,
   store: ScreenerStore,
   aiConfig: AiConfig | null,
@@ -148,7 +167,7 @@ async function executeOnce(
   };
   await store.writeLatest(latestRun);
 
-  // 5. Append history summary.
+  // 6. Append history summary.
   const topResult = ranked.find((r) => r.alertEligible);
   const historyEntry: ScreenerHistoryEntry = {
     ts: now,
@@ -161,18 +180,18 @@ async function executeOnce(
   };
   await store.appendHistory(historyEntry);
 
-  // 6. Evaluate alert policy.
+  // 7. Evaluate alert policy.
   const recentAlerts = await store.readRecentAlerts(100);
   const decisions = evaluateAlertPolicy(ranked, { settings, recentAlerts, now });
 
-  // 7. Persist only useful local alert records; skip neutral/low-quality spam.
+  // 8. Persist only useful local alert records; skip neutral/low-quality spam.
   for (const decision of decisions) {
     if (shouldPersistAlertRecord(decision.record.status)) {
       await store.appendAlert(decision.record);
     }
   }
 
-  // 8. Print results.
+  // 9. Print results.
   for (const row of ranked) {
     printResult(row);
   }
@@ -213,23 +232,48 @@ function shouldPersistAlertRecord(status: string): boolean {
 
 function requestStop(): void {
   stopRequested = true;
+  sleepController?.abort();
   // eslint-disable-next-line no-console
   console.log('[screener] stop requested');
 }
 
+/** Sleep until the next cycle or resolve immediately when shutdown is requested. */
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    const t = setTimeout(resolve, ms);
-    if (typeof t.unref === 'function') t.unref();
+  if (stopRequested) return Promise.resolve();
+  sleepController = new AbortController();
+  const signal = sleepController.signal;
+
+  return new Promise<void>((resolve) => {
+    const timeout = setTimeout(resolve, ms);
+    const abort = () => {
+      clearTimeout(timeout);
+      resolve();
+    };
+    signal.addEventListener('abort', abort, { once: true });
+  }).finally(() => {
+    sleepController = null;
   });
 }
 
-/** Read optional AI config from env. Missing values disable AI cleanly. */
+/** Read optional AI config from env. Missing or unsafe values disable AI cleanly. */
 function readAiConfigFromEnv(): AiConfig | null {
-  const baseUrl = process.env.AI_BASE_URL;
-  const apiKey = process.env.AI_API_KEY;
-  const model = process.env.AI_MODEL;
+  const baseUrl = process.env.AI_BASE_URL?.trim();
+  const apiKey = process.env.AI_API_KEY?.trim();
+  const model = process.env.AI_MODEL?.trim();
   if (!baseUrl || !apiKey || !model) return null;
+
+  try {
+    const url = new URL(baseUrl);
+    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
+    if (!isLocal && url.protocol !== 'https:') {
+      throw new Error('remote AI base URL must use HTTPS');
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[screener] invalid AI_BASE_URL, AI audit disabled:', err instanceof Error ? err.message : err);
+    return null;
+  }
+
   return { baseUrl, apiKey, model };
 }
 
@@ -241,4 +285,8 @@ async function runCleanup(): Promise<void> {
   console.log('[screener] cleanup completed', report);
 }
 
-void main();
+main().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('[screener] fatal:', err);
+  process.exitCode = 1;
+});

@@ -6,6 +6,8 @@ import { usePortfolioStore } from '@/stores/use-portfolio-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
 import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { buildPriceChangeAriaLabel } from '@/lib/shared/a11y/price-change-label';
+import { buildPnlAriaLabel } from '@/lib/shared/a11y/pnl-label';
 import { cn } from '@/lib/shared/utils';
 import { Plus, Pencil, Trash2, X, TrendingUp, TrendingDown, Minus, Wallet } from 'lucide-react';
 import type { PortfolioHolding, CalculatedHolding, PortfolioSummary } from '@/types/portfolio';
@@ -259,10 +261,13 @@ function SummaryCard({ label, value, change }: { label: string; value: string; c
       <p className="text-xs font-medium uppercase tracking-wider text-text-muted">{label}</p>
       <p className="numeric mt-1 text-2xl font-bold text-text-primary">{value}</p>
       {change != null && (
-        <span className={cn('numeric mt-1 inline-flex items-center gap-1 text-sm font-medium', isUp && 'text-market-up', isDown && 'text-market-down', !isUp && !isDown && 'text-market-neutral')}>
-          {isUp && <TrendingUp className="h-3 w-3" />}
-          {isDown && <TrendingDown className="h-3 w-3" />}
-          {!isUp && !isDown && <Minus className="h-3 w-3" />}
+        <span
+          className={cn('numeric mt-1 inline-flex items-center gap-1 text-sm font-medium', isUp && 'text-market-up', isDown && 'text-market-down', !isUp && !isDown && 'text-market-neutral')}
+          aria-label={buildPriceChangeAriaLabel(label, change)}
+        >
+          {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
+          {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
+          {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
           {formatPercentage(change)}
         </span>
       )}
@@ -271,23 +276,26 @@ function SummaryCard({ label, value, change }: { label: string; value: string; c
 }
 
 /**
-
- * Komponen PnlDisplay untuk merender bagian UI terkait pnl display.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
+ * PnlDisplay — small inline cell that renders a profit/loss value with a
+ * coloured directional icon, an optional percentage, and an aria-label that
+ * pairs both magnitudes into a single screen-reader sentence.
+ *
+ * `compact` shrinks the typography for table rows.
  */
 
 function PnlDisplay({ pnl, pnlPercent, compact }: { pnl: number | null; pnlPercent: number | null; compact?: boolean }) {
-  if (pnl == null) return <span className={cn('text-text-muted', compact ? 'text-xs' : 'text-sm')}>—</span>;
+  if (pnl == null) return <span className={cn('text-text-muted', compact ? 'text-xs' : 'text-sm')} aria-label={buildPnlAriaLabel(null, null)}>—</span>;
 
   const isUp = pnl > 0;
   const isDown = pnl < 0;
 
   return (
-    <span className={cn('numeric inline-flex items-center gap-1 font-medium', compact ? 'text-xs' : 'text-sm', isUp && 'text-market-up', isDown && 'text-market-down', !isUp && !isDown && 'text-market-neutral')}>
-      {isUp && <TrendingUp className="h-3 w-3" />}
-      {isDown && <TrendingDown className="h-3 w-3" />}
+    <span
+      className={cn('numeric inline-flex items-center gap-1 font-medium', compact ? 'text-xs' : 'text-sm', isUp && 'text-market-up', isDown && 'text-market-down', !isUp && !isDown && 'text-market-neutral')}
+      aria-label={buildPnlAriaLabel(pnl, pnlPercent)}
+    >
+      {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
+      {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
       {formatCurrency(pnl)} {pnlPercent != null && `(${formatPercentage(pnlPercent)})`}
     </span>
   );

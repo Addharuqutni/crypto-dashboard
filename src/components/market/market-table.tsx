@@ -5,9 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/shared/utils';
 import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/shared/formatting';
+import { buildPriceChangeAriaLabel } from '@/lib/shared/a11y/price-change-label';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
-import { TrendingUp, TrendingDown, Minus, Star, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Star, LayoutGrid, List, ChevronLeft, ChevronRight, ArrowDown, ArrowUp } from 'lucide-react';
 import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
 import { getPriceFreshness } from '@/lib/shared/market/freshness';
 import type { MarketRow } from '@/types/market';
@@ -81,49 +82,66 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
     <div className="space-y-4">
       {/* Sort + View Controls */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-1">
-          {(['marketCap', 'price', 'priceChangePercent24h', 'volume24h'] as SortKey[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => toggleSort(key)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-[11px] font-medium uppercase tracking-wider transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
-                sortKey === key
-                  ? 'bg-accent-primary/10 text-accent-primary'
-                  : 'text-text-muted hover:bg-bg-surface-soft hover:text-text-secondary'
-              )}
-              aria-label={`Sort by ${getSortLabel(key)}`}
-            >
-              {getSortLabel(key)}
-            </button>
-          ))}
+        <div
+          className="inline-flex items-center gap-1 rounded-xl border border-border-subtle bg-bg-surface p-1"
+          role="group"
+          aria-label="Sort coins"
+        >
+          {(['marketCap', 'price', 'priceChangePercent24h', 'volume24h'] as SortKey[]).map((key) => {
+            const isActive = sortKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleSort(key)}
+                aria-pressed={isActive}
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
+                  isActive
+                    ? 'bg-bg-surface-raised text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary'
+                )}
+              >
+                {getSortLabel(key)}
+                {isActive && (
+                  sortDir === 'desc' ? (
+                    <ArrowDown className="h-3 w-3 text-text-muted" aria-hidden="true" />
+                  ) : (
+                    <ArrowUp className="h-3 w-3 text-text-muted" aria-hidden="true" />
+                  )
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        <div className="hidden items-center gap-0.5 rounded-lg border border-border-subtle p-1 md:flex">
+        <div className="hidden items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1 md:flex">
           <button
+            type="button"
             onClick={() => setViewMode('cards')}
             className={cn(
-              'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               viewMode === 'cards' ? 'bg-bg-surface-raised text-text-primary' : 'text-text-muted hover:text-text-secondary'
             )}
             aria-label="Card view"
             aria-pressed={viewMode === 'cards'}
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
           </button>
           <button
+            type="button"
             onClick={() => setViewMode('table')}
             className={cn(
-              'inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+              'inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               viewMode === 'table' ? 'bg-bg-surface-raised text-text-primary' : 'text-text-muted hover:text-text-secondary'
             )}
             aria-label="Table view"
             aria-pressed={viewMode === 'table'}
           >
-            <List className="h-4 w-4" />
+            <List className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -167,9 +185,9 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
       </div>
 
       {visibleRows.length === 0 && (
-        <div className="card px-5 py-10 text-center">
-          <p className="text-sm font-semibold text-text-primary">Coin tidak ditemukan</p>
-          <p className="mt-1 text-sm text-text-muted">Coba gunakan symbol atau nama coin lain.</p>
+        <div className="card px-5 py-12 text-center">
+          <p className="text-base font-medium text-text-primary">No coins found</p>
+          <p className="mt-1.5 text-sm text-text-muted">Try a different sort or check the live connection.</p>
         </div>
       )}
 
@@ -211,7 +229,7 @@ const PaginationControls = memo(function PaginationControls({
   const isNextDisabled = currentPage >= totalPages;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border-subtle bg-bg-surface/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-text-muted">
         Menampilkan <span className="numeric text-text-primary">{totalItems === 0 ? 0 : pageStart}-{pageEnd}</span> dari{' '}
         <span className="numeric text-text-primary">{totalItems}</span> coin
@@ -295,14 +313,12 @@ function useLiveMarketRow(row: MarketRow, now: number): DisplayMarketRow {
 const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
   const now = useFreshnessClock();
   const displayRow = useLiveMarketRow(row, now);
-  const isUp = (displayRow.priceChangePercent24h ?? 0) > 0;
-  const isDown = (displayRow.priceChangePercent24h ?? 0) < 0;
 
   return (
     <div
       className={cn(
-        'card group relative flex flex-col justify-between overflow-hidden px-4 py-4 transition-all duration-200',
-        'hover:border-border-strong hover:shadow-lg hover:shadow-black/10'
+        'card group relative flex flex-col justify-between overflow-hidden px-5 py-4 transition-colors duration-200',
+        'hover:border-border-strong'
       )}
     >
       {/* Watchlist sits ABOVE the link cover; renders before the link so it
@@ -322,8 +338,8 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
         <CoinIdentity row={displayRow} size="sm" />
       </div>
 
-      <div className="pointer-events-none relative z-[1] mt-3 flex items-end justify-between gap-2">
-        <p className={cn('numeric text-xl font-bold text-text-primary', displayRow.isStale && 'text-text-muted')}>
+      <div className="pointer-events-none relative z-[1] mt-4 flex items-end justify-between gap-2">
+        <p className={cn('numeric text-xl font-semibold tracking-tight text-text-primary', displayRow.isStale && 'text-text-muted')}>
           {formatCurrency(displayRow.price)}
         </p>
         <PriceFreshnessBadge receivedAt={displayRow.lastUpdatedAt} now={now} compact />
@@ -335,15 +351,6 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
           Vol {formatCompactNumber(displayRow.volume24h)}
         </span>
       </div>
-
-      <div
-        className={cn(
-          'pointer-events-none absolute inset-x-0 bottom-0 h-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100',
-          isUp && 'bg-gradient-to-r from-market-up/60 to-transparent',
-          isDown && 'bg-gradient-to-r from-market-down/60 to-transparent',
-          !isUp && !isDown && 'bg-gradient-to-r from-market-neutral/40 to-transparent'
-        )}
-      />
     </div>
   );
 });
@@ -483,7 +490,7 @@ const PriceChange = memo(function PriceChange({
         isDown && 'text-market-down',
         !isUp && !isDown && 'text-market-neutral'
       )}
-      aria-label={`${symbol} ${isUp ? 'up' : isDown ? 'down' : 'unchanged'} ${formatPercentage(value)}`}
+      aria-label={buildPriceChangeAriaLabel(symbol, value)}
     >
       {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
       {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}

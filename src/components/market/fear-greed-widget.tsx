@@ -23,10 +23,10 @@ export function FearGreedWidget() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="card animate-pulse px-4 py-5">
-        <div className="h-3 w-24 rounded bg-bg-surface-raised" />
-        <div className="mt-3 h-10 w-16 rounded bg-bg-surface-raised" />
-        <div className="mt-2 h-3 w-32 rounded bg-bg-surface-raised" />
+      <div className="card px-5 py-5">
+        <div className="skeleton h-3 w-28" />
+        <div className="skeleton mt-4 h-10 w-16" />
+        <div className="skeleton mt-3 h-2 w-full" />
       </div>
     );
   }
@@ -34,13 +34,13 @@ export function FearGreedWidget() {
   // Error state
   if (isError || !data) {
     return (
-      <div className="card px-4 py-5">
-        <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+      <div className="card px-5 py-5">
+        <p className="text-sm font-medium text-text-secondary">
           Fear & Greed Index
         </p>
-        <p className="mt-2 text-sm text-text-secondary">Sentiment data unavailable</p>
-        <p className="mt-1 text-xs text-text-muted">
-          Unable to load market sentiment. Dashboard continues to function normally.
+        <p className="mt-3 text-sm text-text-secondary">Sentiment data unavailable</p>
+        <p className="mt-1.5 text-sm text-text-muted">
+          Dashboard continues to function normally.
         </p>
       </div>
     );
@@ -49,9 +49,9 @@ export function FearGreedWidget() {
   const { value, label, timestamp } = data;
 
   return (
-    <div className="card px-4 py-5">
+    <div className="card px-5 py-5">
       {/* Header */}
-      <p className="text-xs font-medium uppercase tracking-wider text-text-muted">
+      <p className="text-sm font-medium text-text-secondary">
         Fear & Greed Index
       </p>
 
@@ -59,7 +59,7 @@ export function FearGreedWidget() {
       <div className="mt-3 flex items-end gap-3">
         <span
           className={cn(
-            'numeric text-4xl font-bold',
+            'numeric text-4xl font-semibold tracking-tight',
             getLabelColor(label)
           )}
         >

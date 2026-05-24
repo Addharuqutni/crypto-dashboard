@@ -95,34 +95,42 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Page header — lightweight context */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+        <h1 className="h2">Markets</h1>
+        <p className="text-sm text-text-muted">
+          {trackedSymbolCount > 0
+            ? `${trackedSymbolCount} pairs tracked`
+            : 'Connecting\u2026'}
+        </p>
+      </div>
+
       {/* API Error Banner */}
       {isError && (
-        <div className="rounded-lg border border-warning/30 bg-warning/5 px-4 py-3 text-sm text-warning">
-          Market metadata may be outdated. Live Binance prices remain active when the WebSocket is connected.
+        <div className="flex items-start gap-3 rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 text-sm text-text-secondary">
+          <span className="mt-0.5 inline-block h-2 w-2 shrink-0 rounded-full bg-warning" aria-hidden="true" />
+          <span>Market metadata may be outdated. Live prices remain active.</span>
         </div>
       )}
 
-      {/* Market Summary Cards — primary content, renders first */}
+      {/* Market Summary Cards */}
       <MarketOverviewCards data={marketData} />
 
       {/* Main Grid: Table + Sidebar */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
         {/* Top Coins Table — primary content */}
         <section>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-muted">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-medium text-text-secondary">
               Futures Market
             </h2>
-            <span className="numeric text-xs text-text-muted">
-              {trackedSymbolCount} pairs tracked
-            </span>
           </div>
           {isLoading && trackedSymbolCount === 0 ? <TableSkeleton /> : <MarketTable data={marketData} />}
         </section>
 
         {/* Right Rail — lazy-loaded, secondary content */}
-        <aside className="space-y-4">
+        <aside className="space-y-6">
           <WatchlistSnapshot />
           <FearGreedWidget />
         </aside>

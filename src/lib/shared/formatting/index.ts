@@ -1,9 +1,14 @@
 /**
  * Currency formatter — formats number as USD currency.
- * Examples: $67,245.20, $0.00, $1,234.56
+ *
+ * Values with absolute magnitude below `$1` (and non-zero) auto-extend to
+ * 4 decimals so micro-cap prices stay readable; everything else uses the
+ * `decimals` argument (default 2).
+ *
+ * Examples: $67,245.20, $1,234.56, $0.0050, $0.00 (when value is exactly 0).
  */
 export function formatCurrency(value: number | undefined | null, decimals = 2): string {
-  if (value == null || isNaN(value)) return '—';
+  if (value == null || !Number.isFinite(value)) return '—';
 
   // For very small values (< $1), show more decimals
   const effectiveDecimals = Math.abs(value) < 1 && Math.abs(value) > 0 ? 4 : decimals;
@@ -21,10 +26,23 @@ export function formatCurrency(value: number | undefined | null, decimals = 2): 
  * Examples: +2.45%, -1.12%, 0.00%
  */
 export function formatPercentage(value: number | undefined | null, decimals = 2): string {
-  if (value == null || isNaN(value)) return '—';
+  if (value == null || !Number.isFinite(value)) return '—';
 
   const sign = value > 0 ? '+' : '';
   return `${sign}${value.toFixed(decimals)}%`;
+}
+
+/**
+ * Magnitude-only percentage formatter — returns the absolute value without sign.
+ * Used by aria-labels paired with directional words like "up"/"down" so screen
+ * readers don't speak "down +2.50%" or "up -1.10%". Visible labels should keep
+ * using `formatPercentage` so the sign stays consistent with the visual cue.
+ *
+ * Examples: 2.45%, 1.12%, 0.00%
+ */
+export function formatPercentageMagnitude(value: number | undefined | null, decimals = 2): string {
+  if (value == null || !Number.isFinite(value)) return '—';
+  return `${Math.abs(value).toFixed(decimals)}%`;
 }
 
 /**
@@ -32,7 +50,7 @@ export function formatPercentage(value: number | undefined | null, decimals = 2)
  * Examples: $1.2B, $456.7M, $12.3K
  */
 export function formatCompactNumber(value: number | undefined | null): string {
-  if (value == null || isNaN(value)) return '—';
+  if (value == null || !Number.isFinite(value)) return '—';
 
   if (Math.abs(value) >= 1_000_000_000) {
     return `$${(value / 1_000_000_000).toFixed(1)}B`;
@@ -50,7 +68,7 @@ export function formatCompactNumber(value: number | undefined | null): string {
  * Date/time formatter — formats timestamp to readable string.
  */
 export function formatDateTime(timestamp: number | undefined | null): string {
-  if (timestamp == null || isNaN(timestamp)) return '—';
+  if (timestamp == null || !Number.isFinite(timestamp)) return '—';
 
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
@@ -65,7 +83,7 @@ export function formatDateTime(timestamp: number | undefined | null): string {
  * Examples: "12s ago", "3m ago", "1h ago"
  */
 export function formatRelativeTime(timestamp: number | undefined | null): string {
-  if (timestamp == null || isNaN(timestamp)) return '—';
+  if (timestamp == null || !Number.isFinite(timestamp)) return '—';
 
   const diff = Date.now() - timestamp;
   const seconds = Math.floor(diff / 1000);

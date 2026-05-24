@@ -33,7 +33,16 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      include: ['src/lib/chart/**/*.ts'],
+      include: [
+        'src/lib/application/**/*.ts',
+        'src/lib/domain/**/*.ts',
+        'src/lib/adapters/**/*.ts',
+      ],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/**/index.ts',
+      ],
     },
   },
   resolve: {

@@ -11,8 +11,8 @@ import { FearGreedTicker, LiveConnectionSummary, LiveTicker } from './live-ticke
  */
 export function MarketPulseStrip() {
   return (
-    <div className="border-b border-border-subtle bg-bg-surface-soft/50">
-      <div className="container-app flex h-8 items-center gap-3 overflow-x-auto text-xs">
+    <div className="border-b border-border-subtle">
+      <div className="container-app flex h-9 items-center gap-3 overflow-x-auto text-xs">
         <LiveConnectionSummary />
 
         <div className="hidden h-3 w-px shrink-0 bg-border-subtle sm:block" />

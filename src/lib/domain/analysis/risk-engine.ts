@@ -14,13 +14,20 @@ import { DEFAULT_FUTURES_SIGNAL_CONFIG } from '@/types/futures-signal';
  *
  * The risk engine is the final authority. Even a 95-confidence signal can be
  * downgraded to WAIT if:
- *   - the resulting risk:reward is below threshold
  *   - volatility is extreme
  *   - price is overextended from EMA20 (chasing risk)
  *   - swing structure is missing
  *
  * Risk override beats signal score. This is intentional and non-negotiable.
+ *
+ * Take-profit model: fixed risk-multiple (1R, 2R, 3R). The RR gate validates
+ * that the configured `minRiskReward` is achievable given this model. If the
+ * config demands a higher RR than the fixed TP2 multiple can deliver, the
+ * engine returns WAIT with a clear reason rather than silently passing.
  */
+
+/** Fixed risk-multiple for TP2 — the primary target used for RR evaluation. */
+const TP2_R_MULTIPLE = 2;
 
 export interface RiskInputs {
   side: 'LONG' | 'SHORT';
@@ -77,7 +84,16 @@ export function buildRiskPlan(
     );
   }
 
-  // 2. Volatility filter — extreme volatility forces WAIT.
+  // 2. Config sanity: reject impossible RR demands for the fixed-R model.
+  if (config.minRiskReward > TP2_R_MULTIPLE) {
+    return waitPlan(
+      `Config minRiskReward (${config.minRiskReward}) exceeds the fixed TP2 multiple (${TP2_R_MULTIPLE}R). ` +
+      `Adjust config or implement market-structure TP targets.`,
+      warnings
+    );
+  }
+
+  // 3. Volatility filter — extreme volatility forces WAIT.
   if (atrPctOfPrice != null && atrPctOfPrice >= config.extremeVolatilityRatio) {
     warnings.push(
       `Volatility is extreme (ATR is ${(atrPctOfPrice * 100).toFixed(2)}% of price).`
@@ -85,7 +101,7 @@ export function buildRiskPlan(
     return waitPlan('Volatility is too extreme to define a safe stop.', warnings);
   }
 
-  // 3. Overextension filter — too far from EMA20 = chasing.
+  // 4. Overextension filter — too far from EMA20 = chasing.
   if (ema20 != null && ema20 > 0) {
     const distancePct = Math.abs(entry - ema20) / ema20;
     if (distancePct >= config.overextensionRatio) {
@@ -97,7 +113,7 @@ export function buildRiskPlan(
     }
   }
 
-  // 4. Derive stop loss from the more conservative of: recent swing or ATR.
+  // 5. Derive stop loss from the more conservative of: recent swing or ATR.
   const recent = candles.slice(-config.swingLookback);
   let swingHigh = -Infinity;
   let swingLow = Infinity;
@@ -119,18 +135,21 @@ export function buildRiskPlan(
     stopLoss = Math.max(swingStop, atrStop);
   }
 
-  // 5. Derive take profits using risk multiples (1R, 2R, 3R).
+  // 6. Derive take profits using fixed risk multiples (1R, 2R, 3R).
   const risk = side === 'LONG' ? entry - stopLoss : stopLoss - entry;
   if (risk <= 0) {
     return waitPlan('Computed stop is on the wrong side of entry.', warnings);
   }
 
   const tp1 = side === 'LONG' ? entry + risk * 1 : entry - risk * 1;
-  const tp2 = side === 'LONG' ? entry + risk * 2 : entry - risk * 2;
+  const tp2 = side === 'LONG' ? entry + risk * TP2_R_MULTIPLE : entry - risk * TP2_R_MULTIPLE;
   const tp3 = side === 'LONG' ? entry + risk * 3 : entry - risk * 3;
-  const riskRewardRatio = (Math.abs(tp2 - entry)) / risk; // RR to TP2 = 2.0 by construction
 
-  // 6. Risk:reward floor. Below this we refuse to take the trade.
+  // RR is always TP2_R_MULTIPLE by construction in the fixed-R model.
+  const riskRewardRatio = TP2_R_MULTIPLE;
+
+  // 7. Risk:reward floor — already validated against config in step 2, but
+  //    kept as a runtime assertion for safety.
   if (riskRewardRatio < config.minRiskReward) {
     return waitPlan(
       `Risk:reward ${riskRewardRatio.toFixed(2)} is below minimum ${config.minRiskReward}.`,
@@ -138,7 +157,7 @@ export function buildRiskPlan(
     );
   }
 
-  // 7. Risk level — bigger ATR/price ratio = higher risk = lower leverage.
+  // 8. Risk level — bigger ATR/price ratio = higher risk = lower leverage.
   let riskLevel: Exclude<FuturesRiskLevel, 'NO_TRADE'> = 'MEDIUM';
   if (atrPctOfPrice != null) {
     if (atrPctOfPrice < 0.012) riskLevel = 'LOW';
@@ -146,9 +165,7 @@ export function buildRiskPlan(
     else riskLevel = 'HIGH';
   }
 
-  // 8. Entry zone — small symmetric band around entry to absorb micro-noise.
-  // The band is the same for LONG and SHORT because it represents acceptable
-  // slippage around the trigger price, not directional asymmetry.
+  // 9. Entry zone — small symmetric band around entry to absorb micro-noise.
   const halfBand = atr * 0.25;
   const entryZone: FuturesEntryZone = {
     min: entry - halfBand,

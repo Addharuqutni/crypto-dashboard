@@ -6,6 +6,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { buildPriceChangeAriaLabel } from '@/lib/shared/a11y/price-change-label';
 import { cn } from '@/lib/shared/utils';
 import { Star, TrendingUp, TrendingDown, Minus, Trash2, Search } from 'lucide-react';
 import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
@@ -133,10 +134,11 @@ export default function WatchlistPage() {
                                 isDown && 'text-market-down',
                                 !isUp && !isDown && 'text-market-neutral'
                               )}
+                              aria-label={buildPriceChangeAriaLabel(item.symbol, change)}
                             >
-                              {isUp && <TrendingUp className="h-3 w-3" />}
-                              {isDown && <TrendingDown className="h-3 w-3" />}
-                              {!isUp && !isDown && <Minus className="h-3 w-3" />}
+                              {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
+                              {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
+                              {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
                               {formatPercentage(change)}
                             </span>
                           </td>
@@ -199,10 +201,11 @@ export default function WatchlistPage() {
                               isDown && 'text-market-down',
                               !isUp && !isDown && 'text-market-neutral'
                             )}
+                            aria-label={buildPriceChangeAriaLabel(item.symbol, change)}
                           >
-                            {isUp && <TrendingUp className="h-3 w-3" />}
-                            {isDown && <TrendingDown className="h-3 w-3" />}
-                            {!isUp && !isDown && <Minus className="h-3 w-3" />}
+                            {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
+                            {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
+                            {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
                             {formatPercentage(change)}
                           </span>
                         </div>

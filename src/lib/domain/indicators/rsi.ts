@@ -40,8 +40,7 @@ export function calculateRSI(candles: Candle[], period = 14): RsiPoint[] {
   avgLoss /= period;
 
   // First RSI point
-  const firstRs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-  const firstRsi = 100 - 100 / (1 + firstRs);
+  const firstRsi = computeRsi(avgGain, avgLoss);
   result.push({ time: candles[period]!.openTime, value: firstRsi });
 
   // Subsequent points using smoothed averages
@@ -53,13 +52,23 @@ export function calculateRSI(candles: Candle[], period = 14): RsiPoint[] {
     avgGain = (avgGain * (period - 1) + gain) / period;
     avgLoss = (avgLoss * (period - 1) + loss) / period;
 
-    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    const rsi = 100 - 100 / (1 + rs);
+    const rsi = computeRsi(avgGain, avgLoss);
 
     result.push({ time: candles[i + 1]!.openTime, value: rsi });
   }
 
   return result;
+}
+
+/**
+ * Convert smoothed gain/loss averages into RSI.
+ * Handles flat markets as neutral (50) and lossless uptrends as 100.
+ */
+function computeRsi(avgGain: number, avgLoss: number): number {
+  if (avgLoss === 0 && avgGain === 0) return 50;
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
 }
 
 /**

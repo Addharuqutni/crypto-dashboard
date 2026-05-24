@@ -6,6 +6,7 @@ import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useThemeStore } from '@/stores/use-theme-store';
 import { usePortfolioStore } from '@/stores/use-portfolio-store';
 import { useAlertStore } from '@/stores/use-alert-store';
+import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
 import { useEffect } from 'react';
 
 /**
@@ -18,6 +19,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const hydrateTheme = useThemeStore((s) => s.hydrate);
   const hydratePortfolio = usePortfolioStore((s) => s.hydrate);
   const hydrateAlerts = useAlertStore((s) => s.hydrate);
+  const hydrateSignalJournal = useSignalJournalStore((s) => s.hydrate);
 
   // Hydrate all stores from localStorage
   useEffect(() => {
@@ -25,7 +27,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     hydrateTheme();
     hydratePortfolio();
     hydrateAlerts();
-  }, [hydrateWatchlist, hydrateTheme, hydratePortfolio, hydrateAlerts]);
+    hydrateSignalJournal();
+  }, [hydrateWatchlist, hydrateTheme, hydratePortfolio, hydrateAlerts, hydrateSignalJournal]);
 
   // Initialize WebSocket connection
   useBinanceWebSocket();

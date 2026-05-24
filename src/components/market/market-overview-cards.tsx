@@ -2,10 +2,10 @@
 
 import { useMemo } from 'react';
 import { cn } from '@/lib/shared/utils';
-import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/shared/formatting';
+import { formatCurrency, formatPercentage, formatPercentageMagnitude, formatCompactNumber } from '@/lib/shared/formatting';
 import { useMarketStore } from '@/stores/use-market-store';
 import type { MarketRow } from '@/types/market';
-import { TrendingUp, TrendingDown, Minus, Activity, DollarSign, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 /**
  * Merges a MarketRow with its live Binance price when available.
@@ -60,32 +60,28 @@ export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <SummaryCard
         label="Bitcoin"
-        icon={<DollarSign className="h-4 w-4" />}
+        marker="BTC"
         value={formatCurrency(btc?.price)}
         change={btc?.priceChangePercent24h}
-        accent={{ text: 'text-accent-warm', bar: 'bg-accent-warm/60' }}
       />
       <SummaryCard
         label="Ethereum"
-        icon={<DollarSign className="h-4 w-4" />}
+        marker="ETH"
         value={formatCurrency(eth?.price)}
         change={eth?.priceChangePercent24h}
-        accent={{ text: 'text-accent-secondary', bar: 'bg-accent-secondary/60' }}
       />
       <SummaryCard
         label="24h Volume"
-        icon={<BarChart3 className="h-4 w-4" />}
+        marker="VOL"
         value={formatCompactNumber(totalVolume)}
         sublabel={`${data.length} assets tracked`}
-        accent={{ text: 'text-accent-primary', bar: 'bg-accent-primary/60' }}
       />
       {biggestMover && (
         <SummaryCard
-          label={`Top Mover — ${biggestMover.symbol}`}
-          icon={<Activity className="h-4 w-4" />}
+          label="Top Mover"
+          marker={biggestMover.symbol}
           value={formatCurrency(biggestMover.price)}
           change={biggestMover.priceChangePercent24h}
-          accent={{ text: 'text-market-up', bar: 'bg-market-up/60' }}
         />
       )}
     </div>
@@ -93,39 +89,36 @@ export function MarketOverviewCards({ data }: { data: MarketRow[] }) {
 }
 
 /**
- * One summary card. Each card receives an `accent` pair so the icon color
- * and the top-edge bar stay coordinated without relying on `currentColor`.
+ * One summary card. Uses a small ticker marker instead of decorative icons so
+ * the card stays data-first and visually light.
  */
 function SummaryCard({
   label,
-  icon,
+  marker,
   value,
   change,
   sublabel,
-  accent,
 }: {
   label: string;
-  icon: React.ReactNode;
+  marker: string;
   value: string;
   change?: number | null;
   sublabel?: string;
-  accent?: { text: string; bar: string };
 }) {
   const isUp = (change ?? 0) > 0;
   const isDown = (change ?? 0) < 0;
 
   return (
-    <div className="card group relative overflow-hidden px-4 py-4">
-      {/* Top accent bar — explicit color so the design system stays predictable. */}
-      <div className={cn('absolute inset-x-0 top-0 h-[2px]', accent?.bar ?? 'bg-accent-primary/60')} />
-
-      <div className="flex items-center gap-2">
-        <span className={cn('opacity-60', accent?.text)}>{icon}</span>
-        <p className="text-xs font-medium uppercase tracking-wider text-text-muted">{label}</p>
+    <div className="card px-5 py-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-text-secondary">{label}</p>
+        <span className="numeric rounded-full border border-border-subtle px-2 py-0.5 text-[10px] font-semibold text-text-muted">
+          {marker}
+        </span>
       </div>
-      <p className="numeric mt-2 text-2xl font-bold text-text-primary">{value}</p>
+      <p className="numeric mt-3 text-2xl font-semibold tracking-tight text-text-primary">{value}</p>
       {change != null && (
-        <div className="mt-1.5 flex items-center gap-1">
+        <div className="mt-2 flex items-center gap-1.5">
           {isUp && <TrendingUp className="h-3.5 w-3.5 text-market-up" aria-hidden="true" />}
           {isDown && <TrendingDown className="h-3.5 w-3.5 text-market-down" aria-hidden="true" />}
           {!isUp && !isDown && <Minus className="h-3.5 w-3.5 text-market-neutral" aria-hidden="true" />}
@@ -136,13 +129,13 @@ function SummaryCard({
               isDown && 'text-market-down',
               !isUp && !isDown && 'text-market-neutral'
             )}
-            aria-label={`${isUp ? 'Up' : isDown ? 'Down' : 'Unchanged'} ${formatPercentage(change)}`}
+            aria-label={`${isUp ? 'Up' : isDown ? 'Down' : 'Unchanged'} ${formatPercentageMagnitude(change)}`}
           >
             {formatPercentage(change)}
           </span>
         </div>
       )}
-      {sublabel && <p className="mt-1.5 text-xs text-text-muted">{sublabel}</p>}
+      {sublabel && <p className="mt-2 text-sm text-text-muted">{sublabel}</p>}
     </div>
   );
 }

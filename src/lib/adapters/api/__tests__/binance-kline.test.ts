@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchHistoricalKlines, BINANCE_KLINE_MAX_PER_REQUEST } from '../binance-kline';
+import {
+  fetchHistoricalKlines,
+  fetchKlineData,
+  BINANCE_KLINE_MAX_PER_REQUEST,
+} from '../binance-kline';
+import type { ChartTimeframe } from '@/types/chart';
 
 /**
  * Tests for the paginated kline fetcher.
@@ -48,16 +53,16 @@ afterEach(() => {
 
 describe('fetchHistoricalKlines', () => {
   it('uses a single fetch when total <= per-request cap', async () => {
-    const rows = Array.from({ length: 800 }, (_, i) => makeKlineRow(i * 1_800_000));
+    const rows = Array.from({ length: 1000 }, (_, i) => makeKlineRow(i * 1_800_000));
     const fetchMock: FetchMock = vi.fn().mockResolvedValue(jsonResponse(rows));
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
-    const out = await fetchHistoricalKlines('BTC', '30m', 800);
+    const out = await fetchHistoricalKlines('BTC', '30m', 1000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(out.length).toBe(800);
+    expect(out.length).toBe(1000);
 
     const url = new URL(fetchMock.mock.calls[0]![0] as string);
-    expect(url.searchParams.get('limit')).toBe('800');
+    expect(url.searchParams.get('limit')).toBe('1000');
     expect(url.searchParams.has('endTime')).toBe(false);
   });
 
@@ -125,5 +130,26 @@ describe('fetchHistoricalKlines', () => {
     await fetchHistoricalKlines('BTC', '30m', BINANCE_KLINE_MAX_PER_REQUEST);
     const url = new URL(fetchMock.mock.calls[0]![0] as string);
     expect(url.searchParams.get('limit')).toBe(String(BINANCE_KLINE_MAX_PER_REQUEST));
+  });
+});
+
+describe('fetchKlineData default limits', () => {
+  it.each([
+    ['5m', '1500'],
+    ['15m', '1500'],
+    ['30m', '1500'],
+    ['1H', '1000'],
+    ['4H', '1000'],
+    ['24H', '1000'],
+    ['7D', '1000'],
+    ['30D', '1000'],
+  ] satisfies Array<[ChartTimeframe, string]>)('requests %s with limit %s by default', async (timeframe, expectedLimit) => {
+    const fetchMock: FetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await fetchKlineData('BTC', timeframe);
+
+    const url = new URL(fetchMock.mock.calls[0]![0] as string);
+    expect(url.searchParams.get('limit')).toBe(expectedLimit);
   });
 });

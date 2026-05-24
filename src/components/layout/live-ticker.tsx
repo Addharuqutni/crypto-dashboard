@@ -2,8 +2,9 @@
 
 import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
 import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
-import { formatCurrency, formatPercentage, formatRelativeTime } from '@/lib/shared/formatting';
+import { formatCurrency, formatPercentage, formatPercentageMagnitude, formatRelativeTime } from '@/lib/shared/formatting';
 import { cn } from '@/lib/shared/utils';
 import { useMarketStore } from '@/stores/use-market-store';
 import type { ConnectionStatus, LivePrice } from '@/types/market';
@@ -141,14 +142,7 @@ function StatusDot({ status }: { status: ConnectionStatus }) {
 /** Converts connection state into concise user-facing copy for the pulse strip. */
 function ConnectionStatusLabel({ status }: { status: ConnectionStatus }) {
   return (
-    <span
-      className={cn(
-        'font-medium',
-        status === 'connected' && 'text-market-up',
-        status === 'reconnecting' && 'text-warning',
-        status === 'disconnected' && 'text-market-down'
-      )}
-    >
+    <span className="font-medium text-text-secondary">
       {status === 'connected' && 'Live'}
       {status === 'reconnecting' && 'Reconnecting'}
       {status === 'disconnected' && 'Offline'}
@@ -178,16 +172,16 @@ function PulseChip({
       {change != null && (
         <span
           className={cn(
-            'numeric font-medium',
+            'numeric inline-flex items-center gap-0.5 font-medium',
             isUp && 'text-market-up',
             isDown && 'text-market-down',
             !isUp && !isDown && 'text-market-neutral'
           )}
-          aria-label={`${symbol} is ${isUp ? 'up' : isDown ? 'down' : 'unchanged'} ${formatPercentage(change)}`}
+          aria-label={`${symbol} is ${isUp ? 'up' : isDown ? 'down' : 'unchanged'} ${formatPercentageMagnitude(change)}`}
         >
-          {isUp && '▲'}
-          {isDown && '▼'}
-          {!isUp && !isDown && '—'}
+          {isUp && <ArrowUp className="h-3 w-3" aria-hidden="true" />}
+          {isDown && <ArrowDown className="h-3 w-3" aria-hidden="true" />}
+          {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
           {formatPercentage(change)}
         </span>
       )}

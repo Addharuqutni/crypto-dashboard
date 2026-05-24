@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { cn } from '@/lib/shared/utils';
-import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { formatCurrency, formatPercentage, formatPercentageMagnitude } from '@/lib/shared/formatting';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { Star, TrendingUp, TrendingDown, Minus, ArrowLeft } from 'lucide-react';
 
@@ -92,7 +92,7 @@ export function CoinHeader({
                   isDown && 'text-market-down',
                   !isUp && !isDown && 'text-market-neutral'
                 )}
-                aria-label={`${coinName} is ${isUp ? 'up' : isDown ? 'down' : 'unchanged'} ${formatPercentage(change)} in the last 24 hours`}
+                aria-label={`${coinName} is ${isUp ? 'up' : isDown ? 'down' : 'unchanged'} ${formatPercentageMagnitude(change)} in the last 24 hours`}
               >
                 {isUp && <TrendingUp className="h-5 w-5" />}
                 {isDown && <TrendingDown className="h-5 w-5" />}

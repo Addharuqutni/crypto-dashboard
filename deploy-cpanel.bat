@@ -1,11 +1,28 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem Anchor working directory to the script's own folder so this never deletes
+rem files in the caller's cwd.
+pushd "%~dp0"
+
+rem Sanity check: refuse to run unless this looks like the crypto-dashboard repo.
+if not exist "package.json" (
+  echo Aborting: package.json not found in %CD%.
+  popd
+  exit /b 1
+)
+if not exist "next.config.ts" (
+  echo Aborting: next.config.ts not found in %CD%. This script must run from the project root.
+  popd
+  exit /b 1
+)
+
 echo [1/7] Building Next.js app...
 call npm run build
 if errorlevel 1 (
   echo.
   echo Build failed. Deployment package was not created.
+  popd
   exit /b 1
 )
 
@@ -21,6 +38,7 @@ xcopy ".next\standalone\*" "deploy-package\" /E /I /Y >nul
 if errorlevel 1 (
   echo.
   echo Failed to copy .next\standalone files.
+  popd
   exit /b 1
 )
 
@@ -30,6 +48,7 @@ xcopy ".next\static" "deploy-package\.next\static\" /E /I /Y >nul
 if errorlevel 1 (
   echo.
   echo Failed to copy .next\static files.
+  popd
   exit /b 1
 )
 
@@ -39,6 +58,7 @@ if exist "public" (
   if errorlevel 1 (
     echo.
     echo Failed to copy public folder.
+    popd
     exit /b 1
   )
 )
@@ -48,6 +68,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "Compress-Archive -Path '
 if errorlevel 1 (
   echo.
   echo Failed to create crypto-dashboard-deploy.zip.
+  popd
   exit /b 1
 )
 
@@ -56,4 +77,5 @@ echo Done: crypto-dashboard-deploy.zip is ready for cPanel upload.
 echo Startup file on cPanel: server.js
 echo Run command on server: node server.js
 
+popd
 endlocal

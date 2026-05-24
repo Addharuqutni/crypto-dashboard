@@ -19,6 +19,7 @@ import { DEFAULT_FUTURES_SIGNAL_CONFIG } from '@/types/futures-signal';
  *      than the configured freshness threshold for that timeframe).
  *   4. The setup timeframe is missing entirely.
  *   5. The 4H (macro) timeframe is missing entirely.
+ *   6. Candles are unsorted or contain duplicate/invalid timestamps.
  *
  * Funding rate and open interest are treated as *secondary* data:
  *   - Their absence does NOT force WAIT on its own.
@@ -126,8 +127,6 @@ export function evaluateDataHealth(
   if (!setup.ok && setup.reason) reasons.push(setup.reason);
 
   // --- Macro timeframe (4H) — required for directional authority ---
-  // Even if no explicit 4H candles are provided, the macro slot is still
-  // marked required so the gate emits a WAIT reason.
   const macroSeconds = 4 * HOURS;
   const macroMaxAgeSec = macroSeconds * config.freshnessMultiplier;
   const macroMin = Math.max(
@@ -185,12 +184,9 @@ export function evaluateDataHealth(
   };
 
   // --- Confidence cap ---
-  // The cap is a soft guard so the engine cannot publish a top-tier confidence
-  // when secondary context is missing/stale. Hard failures still force WAIT.
   let confidenceCap = 100;
   if (!funding.ok) confidenceCap = Math.min(confidenceCap, 80);
   if (!openInterest.ok) confidenceCap = Math.min(confidenceCap, 75);
-  // If both secondaries are missing the cap drops further.
   if (!funding.ok && !openInterest.ok) confidenceCap = Math.min(confidenceCap, 70);
 
   const ok = symbolValid && setup.ok && macro.ok && trigger.ok;
@@ -218,16 +214,15 @@ interface TfArgs {
 }
 
 /**
- * Evaluate a single timeframe slot for count + freshness.
+ * Evaluate a single timeframe slot for count, ordering, and freshness.
  *
- * Kept as a small helper so the main `evaluateDataHealth` body stays focused
- * on aggregation and reason ranking.
+ * Validates that candles have monotonically increasing `closeTime` and uses
+ * the maximum `closeTime` (not the last array element) for age calculation
+ * so unsorted input cannot silently pass the freshness check.
  */
 function evaluateTimeframe(args: TfArgs): FuturesTimeframeHealth {
   const candles = args.candles ?? [];
   const count = candles.length;
-  const last = count > 0 ? candles[count - 1] : null;
-  const lastAgeSec = last ? Math.max(0, Math.floor((args.nowMs - last.closeTime) / 1000)) : null;
 
   if (count === 0) {
     return {
@@ -241,7 +236,43 @@ function evaluateTimeframe(args: TfArgs): FuturesTimeframeHealth {
     };
   }
 
+  // Validate candle timestamps are finite and monotonically increasing.
+  let maxCloseTime = -Infinity;
+  let prevCloseTime = -Infinity;
+  let isMonotonic = true;
+
+  for (let i = 0; i < count; i++) {
+    const c = candles[i]!;
+    if (!Number.isFinite(c.closeTime) || !Number.isFinite(c.openTime)) {
+      return {
+        required: args.required,
+        candleCount: count,
+        minCandlesRequired: args.minRequired,
+        lastCandleAgeSec: null,
+        maxAgeSec: args.maxAgeSec,
+        ok: false,
+        reason: `${args.label}: candle at index ${i} has invalid timestamp.`,
+      };
+    }
+    if (c.closeTime <= prevCloseTime) isMonotonic = false;
+    if (c.closeTime > maxCloseTime) maxCloseTime = c.closeTime;
+    prevCloseTime = c.closeTime;
+  }
+
+  if (!isMonotonic) {
+    return {
+      required: args.required,
+      candleCount: count,
+      minCandlesRequired: args.minRequired,
+      lastCandleAgeSec: null,
+      maxAgeSec: args.maxAgeSec,
+      ok: false,
+      reason: `${args.label}: candles are not sorted by closeTime (unsorted or duplicates detected).`,
+    };
+  }
+
   if (count < args.minRequired) {
+    const lastAgeSec = Math.max(0, Math.floor((args.nowMs - maxCloseTime) / 1000));
     return {
       required: args.required,
       candleCount: count,
@@ -253,7 +284,10 @@ function evaluateTimeframe(args: TfArgs): FuturesTimeframeHealth {
     };
   }
 
-  if (lastAgeSec != null && lastAgeSec > args.maxAgeSec) {
+  // Use max closeTime for freshness — safe even if array were somehow unsorted.
+  const lastAgeSec = Math.max(0, Math.floor((args.nowMs - maxCloseTime) / 1000));
+
+  if (lastAgeSec > args.maxAgeSec) {
     return {
       required: args.required,
       candleCount: count,

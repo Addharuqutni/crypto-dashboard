@@ -15,8 +15,17 @@ import type { AiConfig, AiMessage, TechnicalContext } from '@/types/ai';
 import { sendStreamingChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
 import { buildSystemPrompt, buildUserMessage } from '@/lib/adapters/ai/ai-prompt-builder';
 
-/** Module-level abort controller — kept outside store to avoid non-serializable state */
+/**
+ * Module-level handles for the in-flight streaming request. Kept outside
+ * the store because both values are non-serializable and must survive any
+ * persisted-state rehydration.
+ *
+ * `activeRequestId` is paired with the controller so late-arriving callbacks
+ * (chunks, done, error) from a cancelled or replaced request can be ignored
+ * instead of mutating the wrong assistant message.
+ */
 let activeController: AbortController | null = null;
+let activeRequestId: string | null = null;
 
 /** Minimum interval between messages to prevent API credit burn (ms) */
 const MESSAGE_COOLDOWN_MS = 2000;
@@ -53,14 +62,7 @@ interface AiState {
   clearError: () => void;
 }
 
-/**
-
- * Membuat id berdasarkan input saat ini.
-
- * Dipakai agar proses pembentukan data tetap konsisten di satu tempat.
-
- */
-
+/** Generate a stable, locally-unique id for messages and request tags. */
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -79,13 +81,9 @@ export const useAiStore = create<AiState>()(
       technicalContext: null,
 
       /**
-
-       * Memperbarui data config yang sudah tersimpan.
-
-       * Dipakai agar mutation state tetap konsisten dan tidak tersebar di komponen.
-
+       * Merge config updates and recompute `isConfigured` so UI state can react
+       * without recomputing the boolean in every consumer.
        */
-
       updateConfig: (partial) => {
         const current = get().config;
         const updated = { ...current, ...partial };
@@ -93,45 +91,34 @@ export const useAiStore = create<AiState>()(
         set({ config: updated, isConfigured });
       },
 
-      /**
-
-       * Mengubah nilai remember key pada state aplikasi.
-
-       * Dipakai agar perubahan state tetap melalui satu jalur yang mudah dilacak.
-
-       */
-
+      /** Toggle whether the API key persists across reloads. */
       setRememberKey: (remember) => {
         set({ rememberKey: remember });
       },
 
-      /**
-
-       * Mengubah nilai technical context pada state aplikasi.
-
-       * Dipakai agar perubahan state tetap melalui satu jalur yang mudah dilacak.
-
-       */
-
+      /** Replace the technical context used to seed the system prompt. */
       setTechnicalContext: (context) => {
         set({ technicalContext: context });
       },
 
       /**
-
-       * Menjalankan logic send message.
-
-       * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
+       * Start a new streaming chat completion. Aborts any in-flight request
+       * and tags the new request with a unique id so late callbacks from the
+       * previous request can be detected and dropped.
        */
-
       sendMessage: (content) => {
         const state = get();
         if (!state.isConfigured || state.isStreaming) return;
 
-        // Rate limiting: prevent rapid-fire messages
+        // Rate limiting: prevent rapid-fire messages.
         const lastUserMsg = [...state.messages].reverse().find((m) => m.role === 'user');
         if (lastUserMsg && Date.now() - lastUserMsg.timestamp < MESSAGE_COOLDOWN_MS) return;
+
+        // Abort any leftover request before starting a new one.
+        if (activeController) {
+          activeController.abort();
+          activeController = null;
+        }
 
         const userMessage: AiMessage = {
           id: generateId(),
@@ -147,21 +134,20 @@ export const useAiStore = create<AiState>()(
           timestamp: Date.now(),
         };
 
+        const requestId = generateId();
+        activeRequestId = requestId;
+
         set((s) => ({
           messages: [...s.messages, userMessage, assistantMessage],
           isStreaming: true,
           error: null,
         }));
 
-        // Build messages array for API
         const systemPrompt = state.technicalContext
           ? buildSystemPrompt(state.technicalContext)
-          : buildSystemPrompt({
-              symbol: 'UNKNOWN',
-              timeframe: 'N/A',
-            });
+          : buildSystemPrompt({ symbol: 'UNKNOWN', timeframe: 'N/A' });
 
-        // Include recent conversation history, filter out empty messages
+        // Include recent conversation history, filter out empty messages.
         const recentMessages = [...state.messages, userMessage]
           .filter((m) => m.content.trim() !== '')
           .slice(-10);
@@ -171,45 +157,52 @@ export const useAiStore = create<AiState>()(
           ...recentMessages.map((m) => ({ role: m.role, content: m.content })),
         ];
 
+        const assistantId = assistantMessage.id;
+
         const controller = sendStreamingChatCompletion(
           state.config,
           apiMessages,
           {
             /**
-             * Menangani event chunk dari interaksi pengguna atau browser.
-             * Dipakai agar side effect dari event tetap jelas dan terlokalisasi.
+             * Append a streamed chunk to the specific assistant message tied to
+             * this request. Stale chunks from cancelled requests are ignored.
              */
             onChunk: (chunk) => {
+              if (activeRequestId !== requestId) return;
               set((s) => {
-                const msgs = [...s.messages];
-                const lastMsg = msgs[msgs.length - 1];
-                if (lastMsg && lastMsg.role === 'assistant') {
-                  msgs[msgs.length - 1] = { ...lastMsg, content: lastMsg.content + chunk };
-                }
+                const idx = s.messages.findIndex((m) => m.id === assistantId);
+                if (idx === -1) return {};
+                const target = s.messages[idx];
+                if (!target || target.role !== 'assistant') return {};
+                const msgs = s.messages.slice();
+                msgs[idx] = { ...target, content: target.content + chunk };
                 return { messages: msgs };
               });
             },
             /**
-             * Menangani event done dari interaksi pengguna atau browser.
-             * Dipakai agar side effect dari event tetap jelas dan terlokalisasi.
+             * Mark streaming finished only when the active request matches.
+             * Late `onDone` callbacks from previously cancelled requests are
+             * dropped so they cannot reset UI state.
              */
             onDone: () => {
+              if (activeRequestId !== requestId) return;
               activeController = null;
+              activeRequestId = null;
               set({ isStreaming: false });
             },
             /**
-             * Menangani event error dari interaksi pengguna atau browser.
-             * Dipakai agar side effect dari event tetap jelas dan terlokalisasi.
+             * Surface errors only for the active request. Aborts already
+             * skip this path inside the client, but late errors from a
+             * stale request must not leak into the visible state either.
              */
             onError: (error: AiClientError) => {
+              if (activeRequestId !== requestId) return;
               activeController = null;
+              activeRequestId = null;
               set((s) => {
-                // Remove empty assistant message on error
-                const msgs = [...s.messages];
-                const lastMsg = msgs[msgs.length - 1];
-                if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content === '') {
-                  msgs.pop();
-                }
+                const idx = s.messages.findIndex((m) => m.id === assistantId);
+                const msgs = s.messages.slice();
+                if (idx !== -1 && msgs[idx]?.content === '') msgs.splice(idx, 1);
                 return {
                   messages: msgs,
                   isStreaming: false,
@@ -223,46 +216,27 @@ export const useAiStore = create<AiState>()(
         activeController = controller;
       },
 
-      /**
-
-       * Menjalankan logic stop streaming.
-
-       * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-       */
-
+      /** Cancel the active stream and clear streaming state. */
       stopStreaming: () => {
         if (activeController) {
           activeController.abort();
-          activeController = null;
-          set({ isStreaming: false });
         }
+        activeController = null;
+        activeRequestId = null;
+        set({ isStreaming: false });
       },
 
-      /**
-
-       * Membersihkan data history dari state aplikasi.
-
-       * Dipakai untuk reset data lokal secara eksplisit sesuai aksi pengguna.
-
-       */
-
+      /** Clear conversation history and abort any in-flight request. */
       clearHistory: () => {
         if (activeController) {
           activeController.abort();
-          activeController = null;
         }
+        activeController = null;
+        activeRequestId = null;
         set({ messages: [], isStreaming: false, error: null });
       },
 
-      /**
-
-       * Membersihkan data error dari state aplikasi.
-
-       * Dipakai untuk reset data lokal secara eksplisit sesuai aksi pengguna.
-
-       */
-
+      /** Clear the visible error banner. */
       clearError: () => {
         set({ error: null });
       },
@@ -296,4 +270,3 @@ export const useAiStore = create<AiState>()(
     }
   )
 );
-

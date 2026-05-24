@@ -172,16 +172,20 @@ body {
   outline-offset: 2px;
 }
 
-/* Card base */
+/*
+ * Card base — refined dark, flat solid surface.
+ * Previously used a vertical gradient + heavy shadow. The new look pulls back
+ * decoration: one tone, hairline border, soft elevation. Hierarchy now comes
+ * from typography and spacing rather than the surface itself.
+ */
 .card {
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.92), rgba(11, 16, 32, 0.92));
+  background: var(--color-bg-surface);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-elev-3);
+  box-shadow: var(--shadow-elev-1);
   transition:
     border-color 0.2s var(--ease-out),
-    box-shadow 0.25s var(--ease-out),
-    transform 0.25s var(--ease-out);
+    box-shadow 0.2s var(--ease-out);
   /*
    * Subtle entrance for cards. Stagger is opt-in via `.card-stagger` parent
    * (see below) so we don't accidentally animate cards in error banners or
@@ -189,6 +193,17 @@ body {
    * before the animation triggers, avoiding a flash of unstyled content.
    */
   animation: enter 0.25s var(--ease-out) backwards;
+}
+
+/*
+ * Panel — flat, no elevation. Use for inline regions that don't need to
+ * stand out (sort/filter strips, in-card sub-sections, secondary surfaces).
+ * Pairs with `.card` when sections of a card need a softer inner block.
+ */
+.panel {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
 }
 
 /* ============================================
@@ -205,16 +220,19 @@ body {
  */
 .interactive {
   transition:
-    transform 0.2s var(--ease-out),
     border-color 0.2s var(--ease-out),
     box-shadow 0.25s var(--ease-out),
     background-color 0.2s var(--ease-out);
 }
 
 .interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(56, 189, 248, 0.08);
+  /*
+   * Calmer hover: keep position fixed, lift via border + a faint shadow.
+   * The previous treatment used a translate + cyan glow which fought with
+   * dense data layouts and made cards visually noisy.
+   */
   border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-elev-2);
 }
 
 /*
@@ -501,7 +519,7 @@ body {
   }
 
   .interactive:hover {
-    transform: none;
+    box-shadow: none;
   }
 
   .pressable:active {
