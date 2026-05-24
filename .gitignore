@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnp
+.antigravitycli
 .pnp.*
 .yarn/*
 !.yarn/patches
