@@ -35,13 +35,9 @@ export function FearGreedWidget() {
   if (isError || !data) {
     return (
       <div className="card px-5 py-5">
-        <p className="text-sm font-medium text-text-secondary">
-          Fear & Greed Index
-        </p>
+        <p className="text-sm font-medium text-text-secondary">Fear & Greed Index</p>
         <p className="mt-3 text-sm text-text-secondary">Sentiment data unavailable</p>
-        <p className="mt-1.5 text-sm text-text-muted">
-          Dashboard continues to function normally.
-        </p>
+        <p className="mt-1.5 text-sm text-text-muted">Dashboard continues to function normally.</p>
       </div>
     );
   }
@@ -51,28 +47,14 @@ export function FearGreedWidget() {
   return (
     <div className="card px-5 py-5">
       {/* Header */}
-      <p className="text-sm font-medium text-text-secondary">
-        Fear & Greed Index
-      </p>
+      <p className="text-sm font-medium text-text-secondary">Fear & Greed Index</p>
 
       {/* Value + Label */}
       <div className="mt-3 flex items-end gap-3">
-        <span
-          className={cn(
-            'numeric text-4xl font-semibold tracking-tight',
-            getLabelColor(label)
-          )}
-        >
+        <span className={cn('numeric text-4xl font-semibold tracking-tight', getLabelColor(label))}>
           {value}
         </span>
-        <span
-          className={cn(
-            'mb-1 text-sm font-semibold',
-            getLabelColor(label)
-          )}
-        >
-          {label}
-        </span>
+        <span className={cn('mb-1 text-sm font-semibold', getLabelColor(label))}>{label}</span>
       </div>
 
       {/* Gauge Bar */}
@@ -101,15 +83,13 @@ export function FearGreedWidget() {
       </div>
 
       {/* Last Updated */}
-      <p className="mt-3 text-xs text-text-muted">
-        Updated {formatRelativeTime(timestamp)}
-      </p>
+      <p className="mt-3 text-xs text-text-muted">Updated {formatRelativeTime(timestamp)}</p>
 
       {/* Accessible description */}
       <p className="sr-only">
-        The crypto Fear and Greed Index is currently at {value} out of 100, indicating {label}.
-        This index measures market sentiment based on volatility, momentum, social media, and
-        other factors.
+        The crypto Fear and Greed Index is currently at {value} out of 100, indicating {label}. This
+        index measures market sentiment based on volatility, momentum, social media, and other
+        factors.
       </p>
     </div>
   );
@@ -123,11 +103,11 @@ function getLabelColor(label: FearGreedLabel): string {
     case 'Extreme Fear':
       return 'text-market-down';
     case 'Fear':
-      return 'text-[#f97316]'; // orange
+      return 'text-fear';
     case 'Neutral':
       return 'text-accent-warm';
     case 'Greed':
-      return 'text-[#84cc16]'; // lime
+      return 'text-greed';
     case 'Extreme Greed':
       return 'text-market-up';
   }

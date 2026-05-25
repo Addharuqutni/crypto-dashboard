@@ -50,3 +50,17 @@ Thumbs.db
 
 # Worker runtime data (signals.jsonl, state.json)
 data/
+
+# AI agent / tooling artifacts (gstack, qa reports, design mockups, IDE assistants)
+.gstack/
+.context/
+.claude/
+.cursor/
+.aider*
+qa-reports/
+
+# Editor swap / backup
+*.swp
+*.swo
+*~
+.envrc

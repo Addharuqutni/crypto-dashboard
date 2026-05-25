@@ -4,7 +4,12 @@ import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
 import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
-import { formatCurrency, formatPercentage, formatPercentageMagnitude, formatRelativeTime } from '@/lib/shared/formatting';
+import {
+  formatCurrency,
+  formatPercentage,
+  formatPercentageMagnitude,
+  formatRelativeTime,
+} from '@/lib/shared/formatting';
 import { cn } from '@/lib/shared/utils';
 import { useMarketStore } from '@/stores/use-market-store';
 import type { ConnectionStatus, LivePrice } from '@/types/market';
@@ -110,9 +115,9 @@ export function FearGreedTicker() {
           className={cn(
             'numeric font-semibold',
             fearGreed.value <= 24 && 'text-market-down',
-            fearGreed.value > 24 && fearGreed.value <= 44 && 'text-[#f97316]',
+            fearGreed.value > 24 && fearGreed.value <= 44 && 'text-fear',
             fearGreed.value > 44 && fearGreed.value <= 55 && 'text-accent-warm',
-            fearGreed.value > 55 && fearGreed.value <= 74 && 'text-[#84cc16]',
+            fearGreed.value > 55 && fearGreed.value <= 74 && 'text-greed',
             fearGreed.value > 74 && 'text-market-up'
           )}
           aria-label={`Fear and Greed Index: ${fearGreed.value}, ${fearGreed.label}`}

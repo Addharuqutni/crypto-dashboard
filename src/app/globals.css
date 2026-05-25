@@ -31,6 +31,14 @@
   --color-market-down: #ef4444;
   --color-market-neutral: #94a3b8;
 
+  /*
+   * Fear & Greed Index gradient — 5 stops between market-down and market-up.
+   * Mid stops (fear/greed) bridge the red→amber→green ramp so the index reads
+   * as a continuous risk gradient rather than three discrete states.
+   */
+  --color-fear: #f97316;   /* Orange — "Fear" zone (25–44) */
+  --color-greed: #84cc16;  /* Lime  — "Greed" zone (56–74) */
+
   /* Semantic */
   --color-focus-ring: #7dd3fc;
   --color-danger: #ef4444;
