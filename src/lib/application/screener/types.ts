@@ -94,6 +94,8 @@ export interface ScreenerResult {
   macroTimeframe: BinanceInterval;
   evaluatedAt: number;
   candleCloseTime: number | null;
+  /** Last setup-candle close used as the market-price anchor for UI distance metrics. */
+  currentPrice: number | null;
   dataHealth: FuturesDataHealth;
   action: FuturesSignalAction;
   confidence: number;

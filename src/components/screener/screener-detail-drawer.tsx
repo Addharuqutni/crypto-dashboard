@@ -5,6 +5,7 @@ import { X, TrendingUp, TrendingDown, Pause, ShieldCheck, AlertTriangle, Databas
 import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 import { mapScreenerToJournal, describeJournalBlock } from '@/lib/application/screener/to-journal';
 import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
+import { PositionSizeCard } from '@/components/risk/position-size-card';
 import { cn } from '@/lib/shared/utils';
 
 interface ScreenerDetailDrawerProps {
@@ -157,6 +158,12 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
                 </div>
               )}
             </Section>
+
+            <PositionSizeCard
+              side={result.action}
+              entry={result.entry}
+              stopLoss={result.stopLoss}
+            />
 
             <Section title="Risk state" icon={<ShieldCheck className="h-4 w-4" />}>
               <div className="grid gap-3 sm:grid-cols-2">

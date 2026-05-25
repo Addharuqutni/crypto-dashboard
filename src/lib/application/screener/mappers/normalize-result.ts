@@ -58,6 +58,7 @@ export function normalizeResult({
     macroTimeframe: config.macroTimeframe,
     evaluatedAt,
     candleCloseTime: lastSetup?.closeTime ?? null,
+    currentPrice: lastSetup?.close ?? null,
     dataHealth: signal.dataHealth,
     action: signal.action,
     confidence: signal.confidence ?? signal.confidenceScore ?? 0,

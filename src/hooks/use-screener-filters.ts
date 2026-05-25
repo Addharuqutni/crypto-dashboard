@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import type { RankedScreenerResult } from '@/lib/application/screener/types';
+import type { RiskProfile } from '@/types/intelligence';
 import {
   DEFAULT_SCREENER_FILTERS,
   DEFAULT_SCREENER_SORT,
@@ -31,13 +32,13 @@ export type {
  * Hook managing filter and sort state for the screener table.
  * Pure client-side filtering/sorting of persisted results — no recomputation.
  */
-export function useScreenerFilters(results: RankedScreenerResult[]) {
+export function useScreenerFilters(results: RankedScreenerResult[], riskProfile?: RiskProfile) {
   const [filters, setFilters] = useState<ScreenerFilters>(DEFAULT_SCREENER_FILTERS);
   const [sort, setSort] = useState<ScreenerSort>(DEFAULT_SCREENER_SORT);
 
   const filtered = useMemo(
-    () => sortScreenerResults(filterScreenerResults(results, filters), sort),
-    [results, filters, sort]
+    () => sortScreenerResults(filterScreenerResults(results, filters, riskProfile), sort),
+    [results, filters, riskProfile, sort]
   );
 
   const updateFilter = useCallback(<K extends keyof ScreenerFilters>(

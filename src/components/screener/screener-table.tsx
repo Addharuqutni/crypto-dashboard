@@ -3,6 +3,7 @@
 import { TrendingUp, TrendingDown, Pause, CheckCircle2, XCircle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import type { RankedScreenerResult } from '@/lib/application/screener/types';
 import type { SortField, SortDirection } from '@/hooks/use-screener-filters';
+import { calculateDistanceToEntryPercent } from '@/lib/application/screener/table-utils';
 import { cn } from '@/lib/shared/utils';
 
 interface ScreenerTableProps {
@@ -50,6 +51,7 @@ export function ScreenerTable({ results, isLoading, sort, onSort, onRowClick }: 
                 <SortableHeader label="Grade" field="grade" sort={sort} onSort={onSort} />
                 <SortableHeader label="Score" field="rankingScore" sort={sort} onSort={onSort} />
                 <SortableHeader label="R:R" field="riskReward" sort={sort} onSort={onSort} />
+                <th className="px-4 py-3 font-medium">Entry dist.</th>
                 <th className="px-4 py-3 font-medium">Regime</th>
                 <SortableHeader label="Freshness" field="freshness" sort={sort} onSort={onSort} />
                 <th className="px-4 py-3 font-medium">Data</th>
@@ -168,6 +170,11 @@ function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () 
         {row.riskReward != null ? row.riskReward.toFixed(2) : '—'}
       </td>
 
+      {/* Entry distance */}
+      <td className="px-4 py-3">
+        <EntryDistanceBadge value={calculateDistanceToEntryPercent(row)} />
+      </td>
+
       {/* Regime */}
       <td className="px-4 py-3">
         <span className="text-xs text-text-secondary">{formatRegime(row.marketRegime)}</span>
@@ -243,6 +250,11 @@ function ScreenerMobileCard({ row, onClick }: { row: RankedScreenerResult; onCli
           value={row.riskReward != null ? row.riskReward.toFixed(2) : '—'}
         />
         <MobileMetric label="Score" value={row.rankingScore.toFixed(1)} />
+        <MobileMetric
+          label="Entry"
+          value={<EntryDistanceBadge value={calculateDistanceToEntryPercent(row)} />}
+          align="left"
+        />
         <MobileMetric
           label="Fresh"
           value={<FreshnessBadge ageSec={row.freshness.setupCandleAgeSec} />}
@@ -356,6 +368,20 @@ function FreshnessBadge({ ageSec }: { ageSec: number | null }) {
   const label = ageSec < 60 ? `${ageSec}s` : ageSec < 3600 ? `${Math.round(ageSec / 60)}m` : `${Math.round(ageSec / 3600)}h`;
   const tone = ageSec < 300 ? 'text-success' : ageSec < 1800 ? 'text-warning' : 'text-danger';
   return <span className={cn('text-xs font-medium tabular-nums', tone)}>{label}</span>;
+}
+
+function EntryDistanceBadge({ value }: { value: number | null }) {
+  if (value == null) return <span className="text-xs text-text-muted">—</span>;
+
+  const abs = Math.abs(value);
+  const tone = abs <= 0.5 ? 'text-success' : abs <= 1.5 ? 'text-warning' : 'text-text-muted';
+  const prefix = value > 0 ? '+' : '';
+
+  return (
+    <span className={cn('text-xs font-medium tabular-nums', tone)} title="Estimated distance to engine entry">
+      {prefix}{value.toFixed(2)}%
+    </span>
+  );
 }
 
 function formatRegime(regime: string): string {

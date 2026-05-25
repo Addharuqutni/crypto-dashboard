@@ -140,7 +140,18 @@ export function ScreenerFilterBar({
             onChange={(e) => onFilterChange('eligibleOnly', e.target.checked)}
             className="h-3.5 w-3.5 rounded border-border-strong accent-accent-primary"
           />
-          Eligible only
+          Alert eligible
+        </label>
+
+        {/* Profile eligible only */}
+        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-text-secondary">
+          <input
+            type="checkbox"
+            checked={filters.profileEligibleOnly}
+            onChange={(e) => onFilterChange('profileEligibleOnly', e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-border-strong accent-accent-primary"
+          />
+          Profile eligible
         </label>
 
         {/* Spacer + results count + reset */}

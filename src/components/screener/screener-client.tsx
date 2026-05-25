@@ -13,6 +13,8 @@ import { ScreenerDetailDrawer } from './screener-detail-drawer';
 import { AlertRulesPanel } from './alert-rules-panel';
 import { AlertHistoryPanel } from './alert-history-panel';
 import { AlertSummaryBadge } from './alert-summary-badge';
+import { RiskProfilePicker } from '@/components/intelligence/risk-profile-picker';
+import { useRiskProfileStore } from '@/stores/use-risk-profile-store';
 import type { RankedScreenerResult } from '@/lib/application/screener/types';
 
 /**
@@ -22,6 +24,7 @@ import type { RankedScreenerResult } from '@/lib/application/screener/types';
  */
 export function ScreenerClient() {
   const { data, isLoading, error } = useScreenerData();
+  const riskProfile = useRiskProfileStore((s) => s.getProfile());
   const [selectedResult, setSelectedResult] = useState<RankedScreenerResult | null>(null);
 
   const latest = data?.latest ?? null;
@@ -39,7 +42,7 @@ export function ScreenerClient() {
     updateFilter,
     toggleSort,
     resetFilters,
-  } = useScreenerFilters(results);
+  } = useScreenerFilters(results, riskProfile);
 
   // Browser notifications for triggered alerts (optional, safe).
   const triggeredAlerts = useMemo(
@@ -75,6 +78,7 @@ export function ScreenerClient() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <RiskProfilePicker />
           <AlertSummaryBadge
             alerts={recentAlerts}
             alertsEnabled={settings?.enabled ?? false}

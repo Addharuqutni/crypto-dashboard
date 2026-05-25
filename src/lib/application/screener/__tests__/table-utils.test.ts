@@ -5,6 +5,8 @@ import {
   countActiveScreenerFilters,
   DEFAULT_SCREENER_FILTERS,
   DEFAULT_SCREENER_SORT,
+  calculateDistanceToEntryPercent,
+  isProfileEligible,
 } from '../table-utils';
 import type { RankedScreenerResult } from '../types';
 import type { ScreenerFilters, ScreenerSort } from '../table-utils';
@@ -20,6 +22,7 @@ function makeResult(overrides: Partial<RankedScreenerResult> = {}): RankedScreen
     macroTimeframe: '4h',
     evaluatedAt: Date.now(),
     candleCloseTime: Date.now(),
+    currentPrice: 104000,
     dataHealth: {
       ok: true,
       symbol: { provided: true, valid: true, reason: null },
@@ -128,11 +131,31 @@ describe('filterScreenerResults', () => {
       grade: 'ALL',
       minConfidence: 80,
       eligibleOnly: true,
+      profileEligibleOnly: false,
       dataFilter: 'healthy',
     };
     const filtered = filterScreenerResults(results, filters);
     expect(filtered).toHaveLength(1);
     expect(filtered[0]!.symbol).toBe('BTCUSDT');
+  });
+
+  it('filters by selected risk profile eligibility', () => {
+    const filtered = filterScreenerResults(
+      results,
+      { ...DEFAULT_SCREENER_FILTERS, profileEligibleOnly: true },
+      {
+        id: 'swing',
+        label: 'Swing',
+        description: 'Strict swing profile',
+        minConfidence: 70,
+        minRiskReward: 3,
+        maxLeverage: 3,
+        allowCountertrend: false,
+        cooldownMultiplier: 2,
+      }
+    );
+
+    expect(filtered).toHaveLength(0);
   });
 });
 
@@ -202,5 +225,44 @@ describe('countActiveScreenerFilters', () => {
     expect(countActiveScreenerFilters({ ...DEFAULT_SCREENER_FILTERS, action: 'LONG' })).toBe(1);
     expect(countActiveScreenerFilters({ ...DEFAULT_SCREENER_FILTERS, action: 'LONG', grade: 'A' })).toBe(2);
     expect(countActiveScreenerFilters({ ...DEFAULT_SCREENER_FILTERS, minConfidence: 50, eligibleOnly: true, dataFilter: 'healthy' })).toBe(3);
+    expect(countActiveScreenerFilters({ ...DEFAULT_SCREENER_FILTERS, profileEligibleOnly: true })).toBe(1);
+  });
+});
+
+describe('isProfileEligible', () => {
+  const balanced = {
+    id: 'balanced' as const,
+    label: 'Balanced',
+    description: 'Balanced profile',
+    minConfidence: 65,
+    minRiskReward: 2,
+    maxLeverage: 5,
+    allowCountertrend: false,
+    cooldownMultiplier: 1,
+  };
+
+  it('accepts clean setups that satisfy profile confidence and RR floors', () => {
+    expect(isProfileEligible(makeResult({ confidence: 70, riskReward: 2.1 }), balanced)).toBe(true);
+  });
+
+  it('rejects WAIT and degraded setups', () => {
+    expect(isProfileEligible(makeResult({ action: 'WAIT' }), balanced)).toBe(false);
+    expect(isProfileEligible(makeResult({ dataHealth: { ...makeResult().dataHealth, ok: false } }), balanced)).toBe(false);
+  });
+
+  it('rejects setups that conflict with trade permission when the profile disallows countertrend', () => {
+    expect(isProfileEligible(makeResult({ action: 'LONG', tradePermission: 'short_only' }), balanced)).toBe(false);
+  });
+});
+
+describe('calculateDistanceToEntryPercent', () => {
+  it('returns the signed percentage distance from current price to engine entry', () => {
+    const distance = calculateDistanceToEntryPercent(makeResult({ entry: 105, currentPrice: 100 }));
+    expect(distance).toBeCloseTo(5, 2);
+  });
+
+  it('returns null without a valid entry or current price', () => {
+    expect(calculateDistanceToEntryPercent(makeResult({ entry: null }))).toBeNull();
+    expect(calculateDistanceToEntryPercent(makeResult({ currentPrice: null }))).toBeNull();
   });
 });

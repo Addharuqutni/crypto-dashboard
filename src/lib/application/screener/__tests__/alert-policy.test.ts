@@ -17,6 +17,7 @@ function makeRanked(overrides: Partial<RankedScreenerResult> = {}): RankedScreen
     macroTimeframe: '4h',
     evaluatedAt: Date.now(),
     candleCloseTime: Date.now(),
+    currentPrice: 104000,
     dataHealth: {
       ok: true,
       symbol: { provided: true, valid: true, reason: null },
