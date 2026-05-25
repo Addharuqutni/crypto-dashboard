@@ -58,8 +58,8 @@ data/
 .cursor/
 .aider*
 qa-reports/
-.CLAUDE.md
-.DESIGN.md
+CLAUDE.md
+DESIGN.md
 
 # Editor swap / backup
 *.swp
