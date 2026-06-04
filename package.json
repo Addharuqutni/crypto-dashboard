@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "worker": "tsx scripts/worker/start.ts",
-    "screener": "tsx scripts/screener/start.ts"
+    "screener": "tsx scripts/screener/start.ts",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "start:prod": "NODE_ENV=production DISABLE_SCREENER_SCHEDULER=${DISABLE_SCREENER_SCHEDULER:-1} node server.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",
@@ -45,5 +47,9 @@
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.2",
     "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   }
 }
