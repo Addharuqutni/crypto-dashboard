@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "src/app/api/screener/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
