@@ -35,8 +35,8 @@ async function runOnDemandScreener() {
     const config = {
       ...DEFAULT_SCREENER_CONFIG,
       symbols: getVercelUniverse(),
-      maxConcurrentSymbols: getEnvInt('SCREENER_MAX_CONCURRENT_SYMBOLS', 2, 1, 5),
-      candleLimit: getEnvInt('SCREENER_CANDLE_LIMIT', 180, 80, 300),
+      maxConcurrentSymbols: getEnvInt('SCREENER_MAX_CONCURRENT_SYMBOLS', 1, 1, 3),
+      candleLimit: getEnvInt('SCREENER_CANDLE_LIMIT', 120, 60, 200),
       alertSettings: settings,
     };
 
@@ -108,7 +108,7 @@ async function readFromFileStore() {
 
 function getVercelUniverse() {
   const raw = process.env.SCREENER_SYMBOLS;
-  const fallback = DEFAULT_SCREENER_CONFIG.symbols.slice(0, 8);
+  const fallback = DEFAULT_SCREENER_CONFIG.symbols.slice(0, 4);
   if (!raw?.trim()) return fallback;
 
   const allowed = new Map(getDefaultUniverse().map((coin) => [coin.symbol, coin]));
