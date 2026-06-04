@@ -329,7 +329,7 @@ export interface FuturesSignalInput {
 
 /**
  * Tunable thresholds. All defaults match the specification but can be
- * overridden for backtesting or per-symbol calibration.
+ * overridden for historical validation or per-symbol calibration.
  */
 export interface FuturesSignalConfig {
   minRiskReward: number;

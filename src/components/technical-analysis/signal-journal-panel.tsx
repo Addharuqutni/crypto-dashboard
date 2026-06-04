@@ -218,7 +218,6 @@ export function SignalJournalPanel() {
             { value: 'all', label: 'All' },
             { value: 'manual', label: 'Manual' },
             { value: 'paper', label: 'Paper' },
-            { value: 'backtest', label: 'BT' },
           ]}
         />
 
@@ -356,7 +355,6 @@ function MetricsRow({ metrics: m }: { metrics: SignalJournalMetrics }) {
         />
         <DistroItem label="Manual" value={m.manualCount.toString()} accent="manual entries" tone="neutral" />
         <DistroItem label="Paper" value={m.paperCount.toString()} accent="paper trades" tone="neutral" />
-        <DistroItem label="Backtest" value={m.backtestCount.toString()} accent="from backtest" tone="neutral" />
         <DistroItem
           label="Avg Conf"
           value={m.total > 0 ? m.averageConfidence.toFixed(0) : '—'}
@@ -497,7 +495,7 @@ function EmptyState() {
       <BookOpen className="mx-auto h-6 w-6 text-text-muted" />
       <p className="mt-2 text-sm font-medium text-text-secondary">No saved signals yet.</p>
       <p className="mt-1 text-xs text-text-muted">
-        Save a setup from the Futures Signal panel, or run a paper trade from the backtest page.
+        Save a setup from the Futures Signal panel, or run a paper trade from the journal workflow.
       </p>
     </div>
   );
@@ -826,10 +824,6 @@ function SourceBadge({ source }: { source: SignalJournalSource }) {
     paper: {
       label: 'Paper',
       className: 'border-accent-primary/40 bg-accent-primary/10 text-accent-primary',
-    },
-    backtest: {
-      label: 'BT',
-      className: 'border-accent-secondary/40 bg-accent-secondary/10 text-accent-secondary',
     },
   };
   const c = map[source];

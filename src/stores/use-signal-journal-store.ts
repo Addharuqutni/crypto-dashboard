@@ -321,7 +321,6 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
 
     // Per-source counts.
     const paperCount = entries.filter((e) => e.source === 'paper').length;
-    const backtestCount = entries.filter((e) => e.source === 'backtest').length;
     const manualCount = entries.filter(
       (e) => e.source === undefined || e.source === 'manual'
     ).length;
@@ -380,7 +379,6 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
       expired,
       paperCount,
       manualCount,
-      backtestCount,
       closedR: round4(closedR),
       averageR: round4(averageR),
       openR: round4(openR),
@@ -474,7 +472,7 @@ function hasReachedTp(isLong: boolean, latest: number, tp: number): boolean {
  * Compute the realised R-multiple for a closed journal entry using the
  * canonical level for that status. Returns null when entry/SL data is
  * insufficient. Costs (fees/slippage) are not applied here — the journal
- * records gross R; the backtest module owns the net-of-cost number.
+ * records gross R; automated simulation modules can own net-of-cost numbers.
  */
 export function computeFinalR(
   entry: SignalJournalEntry,
@@ -539,7 +537,6 @@ function emptyMetrics(): SignalJournalMetrics {
     expired: 0,
     paperCount: 0,
     manualCount: 0,
-    backtestCount: 0,
     closedR: 0,
     averageR: 0,
     openR: 0,

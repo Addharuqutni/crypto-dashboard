@@ -2,7 +2,7 @@
  * Futures Signal Engine V2 — Public API.
  *
  * This module is the canonical entry point used by consumers throughout the
- * app (coin detail page, worker runner, backtest runner, tests). It
+ * app (coin detail page, worker runner, historical validation runner, tests). It
  * re-exports `generateFuturesSignal` from the decomposed pipeline so that
  * all existing `import { generateFuturesSignal } from '…/futures-signal-engine'`
  * statements continue working without modification.

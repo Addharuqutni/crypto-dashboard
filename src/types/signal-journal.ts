@@ -25,10 +25,10 @@ export type SignalJournalStatus =
   | 'CANCELLED';
 
 /**
- * Where a journal entry came from. Used to filter "real" paper-traded
- * signals from manually saved or imported entries when computing edge.
+ * Where a journal entry came from. Used to filter paper-traded
+ * signals from manually saved entries when computing edge.
  */
-export type SignalJournalSource = 'manual' | 'paper' | 'backtest';
+export type SignalJournalSource = 'manual' | 'paper';
 
 /**
  * One saved futures signal. Only fields actually verifiable from price data
@@ -119,7 +119,6 @@ export interface SignalJournalMetrics {
   /** Source breakdown. */
   paperCount: number;
   manualCount: number;
-  backtestCount: number;
   /** Sum of finalR across closed entries. */
   closedR: number;
   /** Mean finalR across closed entries. */

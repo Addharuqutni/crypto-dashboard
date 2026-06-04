@@ -14,7 +14,7 @@ export const BINANCE_KLINE_MAX_PER_REQUEST = 1500;
  * Default kline counts per timeframe for the live charts. Short intraday
  * TFs fetch 1500 candles for maximum Binance single-request depth, while
  * higher TFs keep 1000 candles so indicators and S/R have enough history to
- * stabilize on first paint. Backtest paths still pass an explicit `limit`
+ * stabilize on first paint. Historical validation paths still pass an explicit `limit`
  * override when they need deeper history.
  *
  * Binance's per-request cap is 1500, so all defaults stay a single round-trip.
@@ -167,7 +167,7 @@ function normalizeKline(kline: BinanceKlineRaw, symbol: string, binanceSymbol: s
  *
  * Why this exists:
  *   The single-call `fetchKlineData` is capped by Binance at 1500 candles per
- *   request. Backtests routinely want more (e.g. 2000–5000 30m bars for a
+ *   request. Historical validation routinely wants more (e.g. 2000–5000 30m bars for a
  *   week-plus replay), so we walk the window backward in 1500-bar chunks
  *   using each chunk's earliest `openTime - 1ms` as the next `endTime`.
  *
