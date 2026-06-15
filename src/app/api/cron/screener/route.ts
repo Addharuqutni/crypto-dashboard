@@ -7,6 +7,7 @@ import { auditTopCandidates, AuditCache } from '@/lib/application/screener/ai-au
 import { aiValidationOptionsFromSettings } from '@/lib/application/screener/ai-level-validator';
 import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
 import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
+import { getDefaultUniverse } from '@/lib/application/screener/universe';
 import type { ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 
 export const runtime = 'nodejs';
@@ -40,9 +41,12 @@ export async function GET(request: Request) {
   const startedAt = Date.now();
 
   try {
-    console.info("[cron.screener] cycle start");
+    const config = buildCronScreenerConfig();
+    console.info(
+      `[cron.screener] cycle start symbols=${config.symbols.length} candleLimit=${config.candleLimit} concurrency=${config.maxConcurrentSymbols}`
+    );
 
-    const run = await runScreenerCycle(DEFAULT_SCREENER_CONFIG);
+    const run = await runScreenerCycle(config);
     const settings = await store.readSettings();
     const ranked = rankScreenerResults(run.results, settings);
 
@@ -71,11 +75,11 @@ export async function GET(request: Request) {
       health: run.health,
       results: ranked,
       timeframes: {
-        setup: DEFAULT_SCREENER_CONFIG.setupTimeframe,
-        trigger: DEFAULT_SCREENER_CONFIG.triggerTimeframe,
-        macro: DEFAULT_SCREENER_CONFIG.macroTimeframe,
+        setup: config.setupTimeframe,
+        trigger: config.triggerTimeframe,
+        macro: config.macroTimeframe,
       },
-      universeSize: DEFAULT_SCREENER_CONFIG.symbols.length,
+      universeSize: config.symbols.length,
       audits,
     });
 
@@ -143,4 +147,37 @@ function shouldPersistAlertRecord(status: string): boolean {
     status === 'suppressed_cooldown' ||
     status === 'suppressed_hourly_cap'
   );
+}
+
+function buildCronScreenerConfig() {
+  return {
+    ...DEFAULT_SCREENER_CONFIG,
+    symbols: getCronUniverse(),
+    maxConcurrentSymbols: getEnvInt('SCREENER_MAX_CONCURRENT_SYMBOLS', 1, 1, 3),
+    candleLimit: getEnvInt('SCREENER_CANDLE_LIMIT', 120, 60, 200),
+  };
+}
+
+function getCronUniverse() {
+  const raw = process.env.SCREENER_SYMBOLS;
+  const fallback = DEFAULT_SCREENER_CONFIG.symbols.slice(0, 4);
+  if (!raw?.trim()) return fallback;
+
+  const allowed = new Map(getDefaultUniverse().map((coin) => [coin.symbol, coin]));
+  const selected = raw
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean)
+    .map((symbol) => allowed.get(symbol))
+    .filter((coin): coin is NonNullable<typeof coin> => Boolean(coin))
+    .slice(0, getEnvInt('SCREENER_MAX_SYMBOLS', 4, 1, 20));
+
+  return selected.length > 0 ? selected : fallback;
+}
+
+function getEnvInt(name: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[name];
+  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
 }
