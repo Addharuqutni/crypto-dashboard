@@ -29,11 +29,14 @@ const auditCache = new AuditCache();
  */
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
+  const cronSecret = process.env.CRON_SECRET?.trim();
 
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (!cronSecret) {
+    console.error('[cron.screener] CRON_SECRET is required for this endpoint.');
+    return NextResponse.json({ error: "Cron secret is not configured" }, { status: 500 });
+  }
+
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

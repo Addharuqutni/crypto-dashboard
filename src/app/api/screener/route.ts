@@ -91,7 +91,7 @@ async function readFromFileStore() {
       store.readRecentAlerts(50),
     ]);
 
-    if (!latest && process.env.SCREENER_FILE_MODE_STRICT !== '1') {
+    if (!latest && shouldFallbackToOnDemand()) {
       return runOnDemandScreener();
     }
 
@@ -104,7 +104,7 @@ async function readFromFileStore() {
     });
   } catch (err: unknown) {
     console.error('[api/screener] failed to read screener data:', err);
-    if (process.env.SCREENER_FILE_MODE_STRICT !== '1') {
+    if (shouldFallbackToOnDemand()) {
       return runOnDemandScreener();
     }
     return NextResponse.json(
@@ -144,7 +144,25 @@ const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 export function resolveScreenerStorageMode(): 'file' | 'on-demand' {
   const raw = process.env.SCREENER_STORAGE_MODE?.trim();
   if (raw === 'file' || raw === 'on-demand') return raw;
+  if (isServerlessRuntime()) return 'file';
   return process.env.NODE_ENV === 'production' ? 'file' : 'on-demand';
+}
+
+function shouldFallbackToOnDemand(): boolean {
+  if (process.env.SCREENER_FILE_MODE_STRICT === '1') return false;
+  if (process.env.SCREENER_REQUIRE_DATABASE === '1') return false;
+  if (isServerlessRuntime()) return false;
+  return true;
+}
+
+function isServerlessRuntime(): boolean {
+  return (
+    process.env.VERCEL === '1' ||
+    process.env.VERCEL === 'true' ||
+    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
+    process.env.LAMBDA_TASK_ROOT === '/var/task' ||
+    Boolean(process.env.NOW_REGION)
+  );
 }
 
 export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
