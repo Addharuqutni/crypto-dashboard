@@ -7,14 +7,6 @@
 import type { AiConfig, AiChatCompletionRequest, AiChatCompletionResponse, AiStreamChunk, AiMessageRole } from '@/types/ai';
 
 const OPENAI_COMPATIBLE_PATH = '/chat/completions';
-const ALLOWED_REMOTE_HOSTS = new Set([
-  'api.openai.com',
-  'api.groq.com',
-  'api.together.xyz',
-  'openrouter.ai',
-  // Anthropic uses /v1/messages and an `x-api-key` header, not the OpenAI shape
-  // this client speaks. Add it back only after a dedicated adapter exists.
-]);
 const LOCAL_AI_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
 export class AiClientError extends Error {
@@ -181,20 +173,13 @@ export async function testConnection(config: AiConfig): Promise<{ success: boole
 }
 
 /**
- * Builds a provider URL only when the destination is safe for browser-held keys.
- * This prevents `Authorization: Bearer ...` from being exfiltrated to arbitrary
- * user-supplied remote hosts.
+ * Builds a provider URL for any OpenAI-compatible endpoint.
+ * Local endpoints may use HTTP. Remote endpoints must use HTTPS so browser-held
+ * API keys are not sent over plaintext transport.
  */
 function buildSafeProviderUrl(baseUrl: string, path: string): string {
   const parsed = parseProviderBaseUrl(baseUrl);
   const isLocal = LOCAL_AI_HOSTS.has(parsed.hostname);
-  const isAllowedRemote = parsed.protocol === 'https:' && ALLOWED_REMOTE_HOSTS.has(parsed.hostname);
-
-  if (!isLocal && !isAllowedRemote) {
-    throw new AiClientError(
-      'AI Base URL is not allowed. Use a known HTTPS provider or a local endpoint such as http://localhost:11434.'
-    );
-  }
 
   if (!isLocal && parsed.protocol !== 'https:') {
     throw new AiClientError('Remote AI providers must use HTTPS.');

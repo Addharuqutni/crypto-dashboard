@@ -19,7 +19,7 @@ import { ScreenerStore } from './store';
 import { evaluateAlertPolicy } from './alert-policy';
 import { auditTopCandidates, AuditCache } from './ai-auditor';
 import { aiValidationOptionsFromSettings } from './ai-level-validator';
-import type { AiConfig } from '@/types/ai';
+import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
 import type { ScreenerAiAuditSummary } from './types';
 
 let started = false;
@@ -27,15 +27,6 @@ let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
 const store = new ScreenerStore();
 const auditCache = new AuditCache();
-
-/** Read optional AI config from env. Missing values disable AI cleanly. */
-function readAiConfig(): AiConfig | null {
-  const baseUrl = process.env.AI_BASE_URL;
-  const apiKey = process.env.AI_API_KEY;
-  const model = process.env.AI_MODEL;
-  if (!baseUrl || !apiKey || !model) return null;
-  return { baseUrl, apiKey, model };
-}
 
 /**
  * Start the background screener loop. Safe to call multiple times —
@@ -84,7 +75,7 @@ async function runCycle(): Promise<void> {
 
     // Optional AI audit (fail-soft).
     let audits: Record<string, ScreenerAiAuditSummary> | undefined;
-    const aiConfig = readAiConfig();
+    const aiConfig = readAiConfigFromEnv();
     if (aiConfig) {
       try {
         const auditMap = await auditTopCandidates(ranked, aiConfig, {

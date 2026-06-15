@@ -15,7 +15,9 @@
     "test:watch": "vitest",
     "worker": "tsx scripts/worker/start.ts",
     "screener": "tsx scripts/screener/start.ts",
+    "agent": "tsx scripts/agent/start.ts",
     "check": "npm run typecheck && npm run lint && npm run test",
+    "audit:prod": "npm audit --omit=dev",
     "start:prod": "NODE_ENV=production DISABLE_SCREENER_SCHEDULER=${DISABLE_SCREENER_SCHEDULER:-1} node server.js"
   },
   "dependencies": {
@@ -36,7 +38,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@tailwindcss/postcss": "^4.3.0",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^4.1.9",
     "autoprefixer": "^10.5.0",
     "eslint": "^10.4.0",
     "eslint-config-next": "^16.2.6",
@@ -45,11 +47,11 @@
     "postcss": "^8.5.14",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
-    "tsx": "^4.22.2",
-    "vitest": "^3.2.4"
+    "tsx": "^4.22.4",
+    "vitest": "^4.1.9"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "npm": ">=10.0.0"
   }
 }

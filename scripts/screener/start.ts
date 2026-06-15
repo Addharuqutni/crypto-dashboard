@@ -20,6 +20,7 @@ import { auditTopCandidates, AuditCache } from '@/lib/application/screener/ai-au
 import { aiValidationOptionsFromSettings } from '@/lib/application/screener/ai-level-validator';
 import { cleanupScreenerStorage, DEFAULT_RETENTION_CONFIG } from '@/lib/application/screener/maintenance';
 import type { AiConfig } from '@/types/ai';
+import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
 import * as path from 'node:path';
 
 interface CliArgs {
@@ -253,28 +254,6 @@ function sleep(ms: number): Promise<void> {
   }).finally(() => {
     sleepController = null;
   });
-}
-
-/** Read optional AI config from env. Missing or unsafe values disable AI cleanly. */
-function readAiConfigFromEnv(): AiConfig | null {
-  const baseUrl = process.env.AI_BASE_URL?.trim();
-  const apiKey = process.env.AI_API_KEY?.trim();
-  const model = process.env.AI_MODEL?.trim();
-  if (!baseUrl || !apiKey || !model) return null;
-
-  try {
-    const url = new URL(baseUrl);
-    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1';
-    if (!isLocal && url.protocol !== 'https:') {
-      throw new Error('remote AI base URL must use HTTPS');
-    }
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('[screener] invalid AI_BASE_URL, AI audit disabled:', err instanceof Error ? err.message : err);
-    return null;
-  }
-
-  return { baseUrl, apiKey, model };
 }
 
 /** Run storage retention cleanup for JSONL files. Preserves latest/settings. */

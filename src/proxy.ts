@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  * Keep it disabled for public dashboards, Vercel preview links, or local dev.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (process.env.BASIC_AUTH_ENABLED !== '1') {
     return NextResponse.next();
   }
@@ -21,6 +21,7 @@ export function middleware(request: NextRequest) {
   if (!expectedUser || !expectedPassword) {
     return new NextResponse('Basic auth is enabled but credentials are not configured.', {
       status: 500,
+      headers: { 'Cache-Control': 'no-store' },
     });
   }
 
