@@ -115,17 +115,7 @@ export class ScreenerStore {
   async readRecentHistory(limit = 100): Promise<ScreenerHistoryEntry[]> {
     try {
       const raw = await fs.readFile(this.historyFile, 'utf8');
-      const lines = raw.split('\n').filter(Boolean);
-      const entries: ScreenerHistoryEntry[] = [];
-      for (const line of lines) {
-        try {
-          entries.push(JSON.parse(line) as ScreenerHistoryEntry);
-        } catch {
-          // Tolerate corrupt lines silently — append-only logs may have
-          // a partial last line if the process was killed mid-write.
-        }
-      }
-      return entries.slice(-limit);
+      return parseJsonl<ScreenerHistoryEntry>(raw).slice(-limit);
     } catch (err: unknown) {
       const code = (err as NodeJS.ErrnoException)?.code;
       if (code === 'ENOENT') return [];
@@ -172,16 +162,7 @@ export class ScreenerStore {
   async readRecentAlerts(limit = 50): Promise<ScreenerAlertRecord[]> {
     try {
       const raw = await fs.readFile(this.alertsFile, 'utf8');
-      const lines = raw.split('\n').filter(Boolean);
-      const records: ScreenerAlertRecord[] = [];
-      for (const line of lines) {
-        try {
-          records.push(JSON.parse(line) as ScreenerAlertRecord);
-        } catch {
-          // tolerate bad line
-        }
-      }
-      return records.slice(-limit);
+      return parseJsonl<ScreenerAlertRecord>(raw).slice(-limit);
     } catch (err: unknown) {
       const code = (err as NodeJS.ErrnoException)?.code;
       if (code === 'ENOENT') return [];
@@ -189,6 +170,19 @@ export class ScreenerStore {
       return [];
     }
   }
+}
+
+function parseJsonl<T>(raw: string): T[] {
+  const records: T[] = [];
+  for (const line of raw.split('\n')) {
+    if (!line) continue;
+    try {
+      records.push(JSON.parse(line) as T);
+    } catch {
+      // Tolerate corrupt/truncated append-only lines.
+    }
+  }
+  return records;
 }
 
 /** Write JSON atomically via unique sibling tmp file + rename. */

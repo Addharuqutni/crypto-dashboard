@@ -40,6 +40,14 @@ describe('screener hardening', () => {
     expect(resolveScreenerStorageMode()).toBe('on-demand');
   });
 
+  it('uses file mode as a production preference, not a hard failure mode', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('SCREENER_STORAGE_MODE', 'file');
+
+    expect(resolveScreenerStorageMode()).toBe('file');
+    expect(process.env.SCREENER_FILE_MODE_STRICT).toBeUndefined();
+  });
+
   it('rate limits repeated screener API requests per client', () => {
     vi.stubEnv('SCREENER_API_RATE_LIMIT_PER_MINUTE', '2');
     const request = new Request('http://localhost/api/screener', {

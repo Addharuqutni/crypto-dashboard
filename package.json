@@ -18,7 +18,7 @@
     "agent": "tsx scripts/agent/start.ts",
     "check": "npm run typecheck && npm run lint && npm run test",
     "audit:prod": "npm audit --omit=dev",
-    "start:prod": "NODE_ENV=production DISABLE_SCREENER_SCHEDULER=${DISABLE_SCREENER_SCHEDULER:-1} node server.js"
+    "start:prod": "NODE_ENV=production DISABLE_SCREENER_SCHEDULER=${DISABLE_SCREENER_SCHEDULER:-1} node .next/standalone/server.js"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.100.10",

@@ -13,20 +13,14 @@ export const revalidate = 0;
  * GET /api/screener — serves screener data to the UI.
  *
  * Vercel/serverless compatibility:
- * - Default mode runs an on-demand read-only screener cycle and returns the
- *   result directly. No filesystem write or background scheduler is required.
- * - File mode remains available for cPanel/VPS workers by setting
- *   SCREENER_STORAGE_MODE=file.
+ * - Production defaults to file mode so the API serves persisted worker output.
+ * - Development defaults to on-demand mode for easier local setup.
+ * - Explicit SCREENER_STORAGE_MODE=file|on-demand always wins.
  */
 export async function GET(request: Request) {
   const mode = resolveScreenerStorageMode();
 
-  if (!allowScreenerRequest(request)) {
-    return NextResponse.json(
-      { ok: false, error: 'Too many screener requests' },
-      { status: 429, headers: { 'Retry-After': '60' } }
-    );
-  }
+  if (!allowScreenerRequest(request)) return rateLimitResponse();
 
   if (mode === 'file') {
     return readFromFileStore();
@@ -97,6 +91,10 @@ async function readFromFileStore() {
       store.readRecentAlerts(50),
     ]);
 
+    if (!latest && process.env.SCREENER_FILE_MODE_STRICT !== '1') {
+      return runOnDemandScreener();
+    }
+
     return NextResponse.json({
       ok: true,
       mode: 'file',
@@ -106,6 +104,9 @@ async function readFromFileStore() {
     });
   } catch (err: unknown) {
     console.error('[api/screener] failed to read screener data:', err);
+    if (process.env.SCREENER_FILE_MODE_STRICT !== '1') {
+      return runOnDemandScreener();
+    }
     return NextResponse.json(
       { ok: false, error: 'Failed to read screener data' },
       { status: 500 }
@@ -137,6 +138,7 @@ function getEnvInt(name: string, fallback: number, min: number, max: number): nu
   return Math.min(max, Math.max(min, parsed));
 }
 
+const RATE_LIMIT_WINDOW_MS = 60_000;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export function resolveScreenerStorageMode(): 'file' | 'on-demand' {
@@ -151,12 +153,28 @@ export function allowScreenerRequest(request: Request, now = Date.now()): boolea
   const key = forwarded || request.headers.get('x-real-ip') || 'local';
   const bucket = rateLimitBuckets.get(key);
 
+  pruneExpiredRateLimitBuckets(now);
+
   if (!bucket || bucket.resetAt <= now) {
-    rateLimitBuckets.set(key, { count: 1, resetAt: now + 60_000 });
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
 
   if (bucket.count >= limit) return false;
   bucket.count += 1;
   return true;
+}
+
+function rateLimitResponse() {
+  return NextResponse.json(
+    { ok: false, error: 'Too many screener requests' },
+    { status: 429, headers: { 'Retry-After': '60' } }
+  );
+}
+
+function pruneExpiredRateLimitBuckets(now: number): void {
+  if (rateLimitBuckets.size < 1_000) return;
+  for (const [key, bucket] of rateLimitBuckets) {
+    if (bucket.resetAt <= now) rateLimitBuckets.delete(key);
+  }
 }

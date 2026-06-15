@@ -28,7 +28,9 @@ export async function runAgentOnLatest(
     return { generatedAt: Date.now(), decisions };
   }
 
-  const enriched = await Promise.all(decisions.map((decision, index) => enrichDecision(decision, contexts[index], aiConfig)));
+  const enriched = await Promise.all(
+    decisions.map((decision, index) => enrichDecision(decision, contexts[index], aiConfig))
+  );
   return { generatedAt: Date.now(), decisions: enriched };
 }
 
@@ -63,7 +65,6 @@ async function enrichDecision(
   }
 }
 
-
 const FORBIDDEN_SUMMARY_PATTERNS = [
   /leverage/i,
   /all[-\s]?in/i,
@@ -82,7 +83,8 @@ export function sanitizeAgentSummary(content: string): string | null {
     .trim();
 
   if (!summary) return null;
-  if (FORBIDDEN_SUMMARY_PATTERNS.some((pattern) => pattern.test(summary))) return null;
+  const hasForbiddenClaim = FORBIDDEN_SUMMARY_PATTERNS.some((pattern) => pattern.test(summary));
+  if (hasForbiddenClaim) return null;
 
   return summary.slice(0, 500);
 }
