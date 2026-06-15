@@ -1,0 +1,36 @@
+import { NextResponse } from "next/server";
+import { screenerService } from "@/lib/application/screener/screener-service";
+
+// Vercel Cron Secret check (opsional tapi disarankan untuk keamanan)
+export async function GET(request: Request) {
+  const authHeader = request.headers.get("authorization");
+
+  if (
+    process.env.CRON_SECRET &&
+    authHeader !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    console.log("[Cron] Memulai screener cycle...");
+    await screenerService.runScreenerCycle();
+    console.log("[Cron] Screener cycle selesai.");
+
+    return NextResponse.json({
+      success: true,
+      message: "Screener cycle executed successfully",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("[Cron] Gagal menjalankan screener:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    );
+  }
+}

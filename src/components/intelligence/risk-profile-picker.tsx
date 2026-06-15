@@ -3,8 +3,11 @@
 import { Shield, ChevronDown } from 'lucide-react';
 import { useState, useId } from 'react';
 import { useRiskProfileStore } from '@/stores/use-risk-profile-store';
+import { RISK_PROFILES } from '@/lib/domain/intelligence/risk-profile';
 import { cn } from '@/lib/shared/utils';
 import type { RiskProfile } from '@/types/intelligence';
+
+const ALL_RISK_PROFILES = Object.values(RISK_PROFILES);
 
 /**
  * Risk Profile picker.
@@ -19,11 +22,10 @@ import type { RiskProfile } from '@/types/intelligence';
 export function RiskProfilePicker({ className }: { className?: string }) {
   const profileId = useRiskProfileStore((s) => s.profileId);
   const setProfile = useRiskProfileStore((s) => s.setProfile);
-  const allProfiles = useRiskProfileStore((s) => s.allProfiles());
   const [open, setOpen] = useState(false);
   const id = useId();
 
-  const current = allProfiles.find((p) => p.id === profileId) ?? allProfiles[0]!;
+  const current = ALL_RISK_PROFILES.find((p) => p.id === profileId) ?? ALL_RISK_PROFILES[0]!;
 
   return (
     <div className={cn('relative inline-block text-left', className)}>
@@ -55,7 +57,7 @@ export function RiskProfilePicker({ className }: { className?: string }) {
             role="listbox"
             className="absolute right-0 z-20 mt-1 w-72 overflow-hidden rounded-lg border border-border-subtle bg-bg-surface-raised shadow-xl"
           >
-            {allProfiles.map((p) => (
+            {ALL_RISK_PROFILES.map((p) => (
               <li key={p.id}>
                 <button
                   type="button"

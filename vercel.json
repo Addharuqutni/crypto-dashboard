@@ -1,7 +1,8 @@
 {
-  "functions": {
-    "src/app/api/screener/route.ts": {
-      "maxDuration": 30
+  "crons": [
+    {
+      "path": "/api/cron/screener",
+      "schedule": "*/15 * * * *"
     }
-  }
+  ]
 }
