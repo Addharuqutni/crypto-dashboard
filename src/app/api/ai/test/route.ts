@@ -30,7 +30,10 @@ export async function POST(request: Request) {
     }
 
     const result = await testConnection(config);
-    return NextResponse.json(result, { status: result.success ? 200 : 400 });
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
+      headers: { 'Cache-Control': 'no-store' },
+    });
   } catch (error) {
     return NextResponse.json(
       {

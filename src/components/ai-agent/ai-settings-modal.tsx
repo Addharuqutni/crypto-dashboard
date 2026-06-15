@@ -19,12 +19,25 @@ async function testAiConnectionViaApi(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
+      cache: 'no-store',
     });
 
-    const data = (await response.json()) as Partial<{ success: boolean; message: string }>;
+    const text = await response.text();
+    let data: Partial<{ success: boolean; message: string }> = {};
+    try {
+      data = text ? (JSON.parse(text) as Partial<{ success: boolean; message: string }>) : {};
+    } catch {
+      return {
+        success: false,
+        message: `AI test API returned non-JSON response (${response.status}). ${text.slice(0, 120)}`,
+      };
+    }
+
     return {
       success: Boolean(data.success),
-      message: data.message ?? (response.ok ? 'Connected.' : 'Connection failed'),
+      message:
+        data.message ??
+        (response.ok ? 'Connected.' : `Connection failed via /api/ai/test (${response.status}).`),
     };
   } catch (error) {
     return {
