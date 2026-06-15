@@ -8,6 +8,7 @@ import type {
   ScreenerHealth,
 } from './types';
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from './config';
+import type { ScreenerStorage } from './storage';
 
 /**
  * Screener storage layer.
@@ -61,7 +62,7 @@ export interface ScreenerHistoryEntry {
   topScore: number | null;
 }
 
-export class ScreenerStore {
+export class ScreenerStore implements ScreenerStorage {
   private readonly dataDir: string;
   private readonly latestFile: string;
   private readonly historyFile: string;

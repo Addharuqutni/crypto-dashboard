@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { DEFAULT_SCREENER_CONFIG, DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { runScreenerCycle } from '@/lib/application/screener/runner';
 import { rankScreenerResults } from '@/lib/application/screener/ranker';
-import { defaultScreenerStore } from '@/lib/application/screener/store';
+import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
 import { getDefaultUniverse } from '@/lib/application/screener/universe';
 
 export const runtime = 'nodejs';
@@ -84,7 +84,7 @@ async function runOnDemandScreener() {
 
 async function readFromFileStore() {
   try {
-    const store = defaultScreenerStore();
+    const store = getScreenerStorage();
     const [latest, settings, recentAlerts] = await Promise.all([
       store.readLatest(),
       store.readSettings(),
