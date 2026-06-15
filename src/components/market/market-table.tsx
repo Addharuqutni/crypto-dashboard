@@ -41,7 +41,10 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const visibleRows = sorted.slice(pageStart, pageStart + PAGE_SIZE);
+  const visibleRows = useMemo(
+    () => sorted.slice(pageStart, pageStart + PAGE_SIZE),
+    [sorted, pageStart]
+  );
   const pageEnd = Math.min(pageStart + visibleRows.length, sorted.length);
 
   // Reset page when sort changes

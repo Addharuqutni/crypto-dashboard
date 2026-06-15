@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useDeferredValue, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { MarketOverviewCards } from '@/components/market/market-overview-cards';
 import { MarketTable } from '@/components/market/market-table';
@@ -74,21 +74,28 @@ export function DashboardClient() {
   const prices = useMarketStore((s) => s.prices);
   const trackedSymbolCount = useMarketStore((s) => s.trackedSymbolCount);
 
+  // High-frequency WebSocket updates can arrive several times per second.
+  // Deferring the large price map keeps typing, sorting, and navigation responsive
+  // while still rendering fresh market data shortly after each batch flush.
+  const deferredPrices = useDeferredValue(prices);
+
+  const metadataMap = useMemo(() => {
+    return coinGeckoData && coinGeckoData.length > 0
+      ? buildMetadataMap(coinGeckoData)
+      : null;
+  }, [coinGeckoData]);
+
   // Build market rows from ALL live prices in the store.
   // This includes every coin received from !miniTicker@arr (200+ Futures pairs).
   // Registry metadata and CoinGecko data are merged when available.
   const marketData: MarketRow[] = useMemo(() => {
-    const metadataMap = coinGeckoData && coinGeckoData.length > 0
-      ? buildMetadataMap(coinGeckoData)
-      : null;
-
-    const priceEntries = Object.values(prices);
+    const priceEntries = Object.values(deferredPrices);
 
     return priceEntries
       .filter((p) => p.binanceSymbol.endsWith('USDT'))
       .map((price) => livePriceToMarketRow(price, metadataMap))
       .sort((a, b) => (b.marketCap ?? 0) - (a.marketCap ?? 0) || (b.price ?? 0) - (a.price ?? 0));
-  }, [prices, coinGeckoData]);
+  }, [deferredPrices, metadataMap]);
 
   if (!watchlistHydrated) {
     return <DashboardSkeleton />;

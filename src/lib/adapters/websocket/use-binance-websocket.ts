@@ -39,7 +39,7 @@ const STALE_WATCHDOG_TIMEOUT = 60_000;
  * Collects incoming tickers and flushes to store periodically
  * to reduce re-renders when receiving hundreds of updates per second.
  */
-const BATCH_FLUSH_INTERVAL = 100;
+const BATCH_FLUSH_INTERVAL = 250;
 
 /**
  * REST snapshot resync interval.
