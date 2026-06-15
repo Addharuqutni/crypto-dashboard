@@ -191,11 +191,21 @@ export class ScreenerStore {
   }
 }
 
-/** Write JSON atomically via tmp file + rename. */
+/** Write JSON atomically via unique sibling tmp file + rename. */
 async function atomicWriteJson(target: string, payload: unknown): Promise<void> {
-  const tmp = `${target}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(payload, null, 2), 'utf8');
-  await fs.rename(tmp, target);
+  const tmp = makeAtomicTmpPath(target);
+  try {
+    await fs.writeFile(tmp, JSON.stringify(payload, null, 2), 'utf8');
+    await fs.rename(tmp, target);
+  } catch (err) {
+    await fs.rm(tmp, { force: true }).catch(() => undefined);
+    throw err;
+  }
+}
+
+export function makeAtomicTmpPath(target: string): string {
+  const nonce = `${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+  return `${target}.${nonce}.tmp`;
 }
 
 /** Default singleton path used by API/UI server-side reads. */

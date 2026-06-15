@@ -24,6 +24,7 @@ import type { ScreenerAiAuditSummary } from './types';
 
 let started = false;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
+let cycleRunning = false;
 
 const store = new ScreenerStore();
 const auditCache = new AuditCache();
@@ -66,6 +67,13 @@ export async function startScreenerScheduler(): Promise<void> {
  * Errors are caught and logged — never propagated to crash the server.
  */
 async function runCycle(): Promise<void> {
+  if (cycleRunning) {
+    console.warn('[screener.scheduler] previous cycle still running; skipping tick');
+    return;
+  }
+
+  cycleRunning = true;
+
   try {
     console.info('[screener.scheduler] cycle start');
 
@@ -136,6 +144,8 @@ async function runCycle(): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'unknown error';
     console.error('[screener.scheduler] cycle error:', msg);
+  } finally {
+    cycleRunning = false;
   }
 }
 

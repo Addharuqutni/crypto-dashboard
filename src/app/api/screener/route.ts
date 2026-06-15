@@ -18,8 +18,15 @@ export const revalidate = 0;
  * - File mode remains available for cPanel/VPS workers by setting
  *   SCREENER_STORAGE_MODE=file.
  */
-export async function GET() {
-  const mode = process.env.SCREENER_STORAGE_MODE ?? 'on-demand';
+export async function GET(request: Request) {
+  const mode = resolveScreenerStorageMode();
+
+  if (!allowScreenerRequest(request)) {
+    return NextResponse.json(
+      { ok: false, error: 'Too many screener requests' },
+      { status: 429, headers: { 'Retry-After': '60' } }
+    );
+  }
 
   if (mode === 'file') {
     return readFromFileStore();
@@ -128,4 +135,28 @@ function getEnvInt(name: string, fallback: number, min: number, max: number): nu
   const parsed = raw ? Number.parseInt(raw, 10) : fallback;
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, parsed));
+}
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+export function resolveScreenerStorageMode(): 'file' | 'on-demand' {
+  const raw = process.env.SCREENER_STORAGE_MODE?.trim();
+  if (raw === 'file' || raw === 'on-demand') return raw;
+  return process.env.NODE_ENV === 'production' ? 'file' : 'on-demand';
+}
+
+export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
+  const limit = getEnvInt('SCREENER_API_RATE_LIMIT_PER_MINUTE', 30, 1, 300);
+  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const key = forwarded || request.headers.get('x-real-ip') || 'local';
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+
+  if (bucket.count >= limit) return false;
+  bucket.count += 1;
+  return true;
 }

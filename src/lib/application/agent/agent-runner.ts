@@ -12,7 +12,8 @@ Rules:
 2. Do not execute trades, mention leverage, or request exchange API keys.
 3. Do not invent levels outside the provided JSON.
 4. Return concise Indonesian text only.
-5. If context is weak, stale, or conflicting, prefer waiting.`;
+5. If context is weak, stale, or conflicting, prefer waiting.
+6. Do not use phrases about guaranteed profit, all-in sizing, leverage, or API keys.`;
 
 export async function runAgentOnLatest(
   latest: ScreenerLatestRun,
@@ -49,9 +50,9 @@ async function enrichDecision(
       { temperature: 0.2, maxTokens: 260 }
     );
 
-    const summary = content.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+    const summary = sanitizeAgentSummary(content);
     if (!summary) return decision;
-    return { ...decision, summary: summary.slice(0, 500) };
+    return { ...decision, summary };
   } catch (err) {
     if (err instanceof AiClientError) {
       console.warn('[agent] AI enrichment failed:', err.message);
@@ -60,4 +61,28 @@ async function enrichDecision(
     }
     return decision;
   }
+}
+
+
+const FORBIDDEN_SUMMARY_PATTERNS = [
+  /leverage/i,
+  /all[-\s]?in/i,
+  /api\s*key/i,
+  /guaranteed\s+profit/i,
+  /profit\s+terjamin/i,
+  /pasti\s+(profit|untung)/i,
+];
+
+export function sanitizeAgentSummary(content: string): string | null {
+  const summary = content
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/```\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!summary) return null;
+  if (FORBIDDEN_SUMMARY_PATTERNS.some((pattern) => pattern.test(summary))) return null;
+
+  return summary.slice(0, 500);
 }
