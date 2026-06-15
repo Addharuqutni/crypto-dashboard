@@ -26,13 +26,35 @@ export function getScreenerStorage(): ScreenerStorage {
 
 function resolveBackend(): ScreenerStorage {
   const explicit = process.env.SCREENER_STORAGE_BACKEND?.trim().toLowerCase();
+  const requireDatabase = process.env.SCREENER_REQUIRE_DATABASE === '1';
 
-  if (explicit === 'supabase') return new SupabaseScreenerStore();
-  if (explicit === 'file') return new ScreenerStore();
+  if (explicit === 'supabase') {
+    if (!isSupabaseConfigured()) throwMissingDatabaseConfig();
+    return new SupabaseScreenerStore();
+  }
+
+  if (explicit === 'file') {
+    if (requireDatabase) throwDatabaseRequiredButFileSelected();
+    return new ScreenerStore();
+  }
 
   if (isSupabaseConfigured()) return new SupabaseScreenerStore();
 
+  if (requireDatabase) throwMissingDatabaseConfig();
+
   return new ScreenerStore();
+}
+
+function throwMissingDatabaseConfig(): never {
+  throw new Error(
+    '[screener.storage] Database storage is required but Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
+  );
+}
+
+function throwDatabaseRequiredButFileSelected(): never {
+  throw new Error(
+    '[screener.storage] SCREENER_REQUIRE_DATABASE=1 forbids file storage. Set SCREENER_STORAGE_BACKEND=supabase.'
+  );
 }
 
 /** Reset the cached backend — test helper only. */

@@ -19,18 +19,20 @@
  *   never crash the server with an unhandled rejection (exit 128).
  */
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-
-  // Serverless platforms (Vercel) have a read-only filesystem and no
-  // long-running process. Running the scheduler there crashes startup with
-  // ENOENT mkdir '/var/task/data'. Skip it entirely.
-  if (process.env.VERCEL || process.env.VERCEL === '1') {
-    console.info('[screener.scheduler] disabled on Vercel/serverless runtime');
-    return;
-  }
+  // In some Next.js builds this is undefined during instrumentation bootstrap.
+  // Only skip when it is explicitly non-node.
+  if (process.env.NEXT_RUNTIME && process.env.NEXT_RUNTIME !== 'nodejs') return;
 
   if (process.env.DISABLE_SCREENER_SCHEDULER === '1') {
     console.info('[screener.scheduler] disabled via DISABLE_SCREENER_SCHEDULER=1');
+    return;
+  }
+
+  // Serverless platforms have a read-only deployment filesystem and no
+  // long-running process. Running an in-process scheduler there crashes startup
+  // with ENOENT/EROFS around /var/task/data. Use /api/cron/screener instead.
+  if (isServerlessRuntime()) {
+    console.info('[screener.scheduler] disabled on serverless runtime');
     return;
   }
 
@@ -44,4 +46,12 @@ export async function register() {
       err instanceof Error ? err.message : err
     );
   }
+}
+
+function isServerlessRuntime(): boolean {
+  if (process.env.VERCEL === '1' || process.env.VERCEL === 'true') return true;
+  if (process.env.AWS_LAMBDA_FUNCTION_NAME) return true;
+  if (process.env.LAMBDA_TASK_ROOT === '/var/task') return true;
+  if (process.env.NOW_REGION) return true;
+  return false;
 }

@@ -15,7 +15,7 @@
 import { DEFAULT_SCREENER_CONFIG } from './config';
 import { runScreenerCycle } from './runner';
 import { rankScreenerResults } from './ranker';
-import { ScreenerStore } from './store';
+import { getScreenerStorage } from './storage-factory';
 import { evaluateAlertPolicy } from './alert-policy';
 import { auditTopCandidates, AuditCache } from './ai-auditor';
 import { aiValidationOptionsFromSettings } from './ai-level-validator';
@@ -26,7 +26,7 @@ let started = false;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 let cycleRunning = false;
 
-const store = new ScreenerStore();
+const store = getScreenerStorage();
 const auditCache = new AuditCache();
 
 /**
