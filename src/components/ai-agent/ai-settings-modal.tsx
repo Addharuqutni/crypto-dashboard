@@ -2,13 +2,36 @@
 
 import { useState, useEffect } from 'react';
 import { useAiStore } from '@/stores/use-ai-store';
-import { testConnection } from '@/lib/adapters/ai/ai-client';
+import type { AiConfig } from '@/types/ai';
 import { cn } from '@/lib/shared/utils';
 import { X, Loader2, CheckCircle2, XCircle, Settings2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
 interface AiSettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+async function testAiConnectionViaApi(
+  config: AiConfig
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch('/api/ai/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
+    });
+
+    const data = (await response.json()) as Partial<{ success: boolean; message: string }>;
+    return {
+      success: Boolean(data.success),
+      message: data.message ?? (response.ok ? 'Connected.' : 'Connection failed'),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
 }
 
 /**
@@ -73,7 +96,11 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
     setTesting(true);
     setTestResult(null);
 
-    const result = await testConnection({ baseUrl: baseUrl.trim(), apiKey: apiKey.trim(), model: model.trim() });
+    const result = await testAiConnectionViaApi({
+      baseUrl: baseUrl.trim(),
+      apiKey: apiKey.trim(),
+      model: model.trim(),
+    });
     setTestResult(result);
     setTesting(false);
   };
