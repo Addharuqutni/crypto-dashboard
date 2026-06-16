@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Star, Wallet, Bell, BookOpen, Crosshair, Menu, X } from 'lucide-react';
+import { BarChart3, Star, Wallet, Bell, BookOpen, Crosshair, Menu, X, Bot } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/shared/utils';
 import { SearchCoin } from '@/components/search/search-coin';
@@ -10,6 +10,7 @@ import { SearchCoin } from '@/components/search/search-coin';
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
   { href: '/screener', label: 'Screener', icon: Crosshair },
+  { href: '/agent', label: 'Agent', icon: Bot },
   { href: '/watchlist', label: 'Watchlist', icon: Star },
   { href: '/portfolio', label: 'Portfolio', icon: Wallet },
   { href: '/alerts', label: 'Alerts', icon: Bell },
