@@ -4,6 +4,7 @@ import { runScreenerCycle } from '@/lib/application/screener/runner';
 import { rankScreenerResults } from '@/lib/application/screener/ranker';
 import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
 import { getScreenerUniverseFromEnv } from '@/lib/application/screener/universe';
+import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,6 +63,8 @@ async function runOnDemandScreener() {
         },
         settings,
         recentAlerts: [],
+        recentActionCalls: [],
+        recentJournalEntries: [],
         meta: {
           durationMs: completedAt - startedAt,
           storage: 'memory',
@@ -91,6 +94,7 @@ async function readFromFileStore() {
       store.readRecentAlerts(50),
       store.readRecentActionCalls(200),
     ]);
+    const recentJournalEntries = readRecentJournalEntries(100);
 
     if (!latest && shouldFallbackToOnDemand()) {
       return runOnDemandScreener();
@@ -103,6 +107,7 @@ async function readFromFileStore() {
       settings,
       recentAlerts,
       recentActionCalls,
+      recentJournalEntries,
     });
   } catch (err: unknown) {
     console.error('[api/screener] failed to read screener data:', err);

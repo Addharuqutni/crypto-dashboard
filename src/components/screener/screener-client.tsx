@@ -30,6 +30,7 @@ export function ScreenerClient() {
   const latest = data?.latest ?? null;
   const settings = data?.settings ?? null;
   const recentAlerts = useMemo(() => data?.recentAlerts ?? [], [data?.recentAlerts]);
+  // recentActionCalls and recentJournalEntries available via data?.recentActionCalls / data?.recentJournalEntries
   const results = useMemo(() => latest?.results ?? [], [latest?.results]);
 
   const {

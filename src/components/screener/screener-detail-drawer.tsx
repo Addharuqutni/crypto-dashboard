@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { X, TrendingUp, TrendingDown, Pause, ShieldCheck, AlertTriangle, Database, BookmarkPlus, Check } from 'lucide-react';
+import Link from 'next/link';
+import { X, TrendingUp, TrendingDown, Pause, ShieldCheck, AlertTriangle, Database, BookmarkPlus, Check, ExternalLink } from 'lucide-react';
 import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 import { mapScreenerToJournal, describeJournalBlock } from '@/lib/application/screener/to-journal';
 import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
@@ -219,6 +220,14 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
               <><BookmarkPlus className="h-4 w-4" /> Save to Journal</>
             )}
           </button>
+          <Link
+            href={`/coin/${result.baseAsset}`}
+            className="pressable inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-2 text-sm font-semibold text-text-secondary transition-all hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            aria-label={`View ${result.baseAsset} chart and analysis`}
+          >
+            <ExternalLink className="h-4 w-4" />
+            View Chart
+          </Link>
           {saveState === 'blocked' && blockReasons.length > 0 && (
             <ul className="text-xs text-warning">
               {blockReasons.map((r) => <li key={r}>{r}</li>)}

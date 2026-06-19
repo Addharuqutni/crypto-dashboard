@@ -19,6 +19,12 @@ import type { RankedScreenerResult, ScreenerActionCallRecord, ScreenerConfig } f
 import { auditTopCandidates, AuditCache } from '@/lib/application/screener/ai-auditor';
 import { aiValidationOptionsFromSettings } from '@/lib/application/screener/ai-level-validator';
 import { cleanupScreenerStorage, DEFAULT_RETENTION_CONFIG } from '@/lib/application/screener/maintenance';
+import {
+  screenerResultToJournalEntry,
+  appendJournalEntries,
+  readRecentJournalEntries,
+  isAlreadyJournaled,
+} from '@/lib/application/screener/journal-store';
 import type { AiConfig } from '@/types/ai';
 import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
 import * as path from 'node:path';
@@ -186,25 +192,40 @@ async function executeOnceUnsafe(
   const actionCalls = buildActionCallRecords(ranked, now);
   await store.appendActionCalls(actionCalls);
 
-  // 8. Evaluate alert policy.
+  // 8. Auto-save qualifying action calls to signal journal (paper trades).
+  // Deduplicates by dataSnapshot so the same candle close is never journaled twice.
+  const recentJournal = readRecentJournalEntries(200);
+  const journalEntries = actionCalls
+    .map((ac) => {
+      const match = ranked.find((r) => r.symbol === ac.symbol);
+      if (!match) return null;
+      const entry = screenerResultToJournalEntry(match, now);
+      if (!entry) return null;
+      if (isAlreadyJournaled(entry.dataSnapshot ?? '', recentJournal)) return null;
+      return entry;
+    })
+    .filter((e): e is NonNullable<typeof e> => e != null);
+  appendJournalEntries(journalEntries);
+
+  // 9. Evaluate alert policy.
   const recentAlerts = await store.readRecentAlerts(100);
   const decisions = evaluateAlertPolicy(ranked, { settings, recentAlerts, now });
 
-  // 9. Persist only useful local alert records; skip neutral/low-quality spam.
+  // 10. Persist only useful local alert records; skip neutral/low-quality spam.
   for (const decision of decisions) {
     if (shouldPersistAlertRecord(decision.record.status)) {
       await store.appendAlert(decision.record);
     }
   }
 
-  // 10. Print results.
+  // 11. Print results.
   for (const row of ranked) {
     printResult(row);
   }
 
   const alertsTriggered = decisions.filter((d) => d.shouldAlert).length;
   // eslint-disable-next-line no-console
-  console.log(`[screener] completed status=${run.health.status} evaluated=${run.health.evaluatedSymbols} failed=${run.health.failedSymbols} action_calls=${actionCalls.length} alerts_triggered=${alertsTriggered}`);
+  console.log(`[screener] completed status=${run.health.status} evaluated=${run.health.evaluatedSymbols} failed=${run.health.failedSymbols} action_calls=${actionCalls.length} journal_saved=${journalEntries.length} alerts_triggered=${alertsTriggered}`);
 
   for (const error of run.health.errors) {
     // eslint-disable-next-line no-console

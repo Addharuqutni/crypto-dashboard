@@ -3,15 +3,19 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ScreenerLatestRun } from '@/lib/application/screener/store';
 import type {
+  ScreenerActionCallRecord,
   ScreenerAlertRecord,
   ScreenerAlertSettings,
 } from '@/lib/application/screener/types';
+import type { SignalJournalEntry } from '@/types/signal-journal';
 
 export interface ScreenerApiPayload {
   ok: boolean;
   latest: ScreenerLatestRun | null;
   settings: ScreenerAlertSettings;
   recentAlerts: ScreenerAlertRecord[];
+  recentActionCalls: ScreenerActionCallRecord[];
+  recentJournalEntries: SignalJournalEntry[];
   error?: string;
 }
 
