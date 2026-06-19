@@ -1,5 +1,6 @@
 import type { MarketContext, NoTradeExplanation } from '@/types/intelligence';
 import type { FuturesSignal } from '@/types/futures-signal';
+import { formatCurrency } from '@/lib/shared/formatting';
 
 /**
  * Phase 4 — No-trade intelligence.
@@ -148,17 +149,10 @@ function classifyDataHealth(signal: FuturesSignal): NoTradeExplanation {
  */
 function extractLevelToWatch(signal: FuturesSignal): string | null {
   if (signal.stopLoss != null) {
-    return `Reclaim or rejection of ${formatPrice(signal.stopLoss)} (engine SL anchor).`;
+    return `Reclaim or rejection of ${formatCurrency(signal.stopLoss)} (engine SL anchor).`;
   }
   if (signal.entryZone?.min != null) {
-    return `Reaction at ${formatPrice(signal.entryZone.min)}.`;
+    return `Reaction at ${formatCurrency(signal.entryZone.min)}.`;
   }
   return null;
-}
-
-function formatPrice(n: number): string {
-  if (!Number.isFinite(n)) return '—';
-  if (Math.abs(n) >= 1) return n.toFixed(2);
-  if (Math.abs(n) >= 0.01) return n.toFixed(4);
-  return n.toFixed(8);
 }

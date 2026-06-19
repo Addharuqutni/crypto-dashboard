@@ -24,8 +24,7 @@ import type { RankedScreenerResult } from '@/lib/application/screener/types';
  */
 export function ScreenerClient() {
   const { data, isLoading, error } = useScreenerData();
-  const profileId = useRiskProfileStore((s) => s.profileId);
-  const riskProfile = useMemo(() => useRiskProfileStore.getState().getProfile(), [profileId]);
+  const riskProfile = useRiskProfileStore((s) => s.getProfile());
   const [selectedResult, setSelectedResult] = useState<RankedScreenerResult | null>(null);
 
   const latest = data?.latest ?? null;

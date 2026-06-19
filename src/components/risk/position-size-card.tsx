@@ -257,7 +257,7 @@ function Stat({
  */
 function formatQty(qty: number): string {
   if (!Number.isFinite(qty)) return '—';
-  if (qty >= 1000) return qty.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (qty >= 1000) return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(qty);
   if (qty >= 1) return qty.toFixed(4);
   return qty.toFixed(8).replace(/0+$/, '').replace(/\.$/, '');
 }

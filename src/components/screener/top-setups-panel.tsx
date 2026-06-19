@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Minus, Shield } from 'lucide-react';
 import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 import { cn } from '@/lib/shared/utils';
 import { AiAuditBadge } from './ai-audit-badge';
+import { formatCurrency } from '@/lib/shared/formatting';
 
 interface TopSetupsPanelProps {
   results: RankedScreenerResult[];
@@ -107,20 +108,20 @@ function SetupCard({
         <MetricRow label="R:R" value={rr} />
         <MetricRow label="Score" value={result.rankingScore.toFixed(1)} />
         {result.entry != null && (
-          <MetricRow label="Entry" value={formatPrice(result.entry)} />
+          <MetricRow label="Entry" value={formatCurrency(result.entry)} />
         )}
         {result.stopLoss != null && (
-          <MetricRow label="Stop Loss" value={formatPrice(result.stopLoss)} tone="danger" />
+          <MetricRow label="Stop Loss" value={formatCurrency(result.stopLoss)} tone="danger" />
         )}
         {tps.length > 0 && (
           <MetricRow
             label={`TP${tps.length > 1 ? '1' : ''}`}
-            value={formatPrice(tps[0]!)}
+            value={formatCurrency(tps[0]!)}
             tone="success"
           />
         )}
         {tps.length > 1 && (
-          <MetricRow label="TP2" value={formatPrice(tps[1]!)} tone="success" />
+          <MetricRow label="TP2" value={formatCurrency(tps[1]!)} tone="success" />
         )}
       </div>
 
@@ -198,9 +199,3 @@ function TopSetupsSkeleton() {
   );
 }
 
-/** Format a price with appropriate precision. */
-function formatPrice(price: number): string {
-  if (price >= 1000) return price.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  if (price >= 1) return price.toFixed(4);
-  return price.toFixed(6);
-}

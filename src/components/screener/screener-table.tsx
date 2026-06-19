@@ -1,10 +1,11 @@
 'use client';
 
-import { TrendingUp, TrendingDown, Pause, CheckCircle2, XCircle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Pause, CheckCircle2, XCircle, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import type { RankedScreenerResult } from '@/lib/application/screener/types';
 import type { SortField, SortDirection } from '@/hooks/use-screener-filters';
 import { calculateDistanceToEntryPercent } from '@/lib/application/screener/table-utils';
 import { cn } from '@/lib/shared/utils';
+import { ActionBadge, GradeBadge } from '@/components/shared/badges';
 
 interface ScreenerTableProps {
   results: RankedScreenerResult[];
@@ -147,7 +148,7 @@ function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () 
 
       {/* Action */}
       <td className="px-4 py-3">
-        <ActionBadge action={row.action} />
+        <ActionBadge action={row.action} showIcon />
       </td>
 
       {/* Confidence */}
@@ -235,7 +236,7 @@ function ScreenerMobileCard({ row, onClick }: { row: RankedScreenerResult; onCli
           </span>
           <span className="text-xs text-text-muted">#{row.marketCapRank ?? '—'}</span>
         </div>
-        <ActionBadge action={row.action} />
+        <ActionBadge action={row.action} showIcon />
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-xs">
@@ -311,31 +312,6 @@ function MobileMetric({
   );
 }
 
-function ActionBadge({ action }: { action: string }) {
-  if (action === 'LONG') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-market-up/10 px-2 py-0.5 text-xs font-semibold text-market-up">
-        <TrendingUp className="h-3 w-3" />
-        LONG
-      </span>
-    );
-  }
-  if (action === 'SHORT') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-market-down/10 px-2 py-0.5 text-xs font-semibold text-market-down">
-        <TrendingDown className="h-3 w-3" />
-        SHORT
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-market-neutral/10 px-2 py-0.5 text-xs font-semibold text-market-neutral">
-      <Pause className="h-3 w-3" />
-      WAIT
-    </span>
-  );
-}
-
 function ConfidenceBar({ value }: { value: number }) {
   const width = Math.min(100, Math.max(0, value));
   const color =
@@ -347,19 +323,6 @@ function ConfidenceBar({ value }: { value: number }) {
       </div>
       <span className="text-xs text-text-primary">{value}</span>
     </div>
-  );
-}
-
-function GradeBadge({ grade }: { grade: string }) {
-  const color =
-    grade === 'A' ? 'text-success bg-success/10' :
-    grade === 'B' ? 'text-accent-primary bg-accent-primary/10' :
-    grade === 'C' ? 'text-warning bg-warning/10' :
-    'text-text-muted bg-bg-surface-raised';
-  return (
-    <span className={cn('inline-flex h-5 w-5 items-center justify-center rounded text-xs font-bold', color)}>
-      {grade}
-    </span>
   );
 }
 

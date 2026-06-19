@@ -2,6 +2,7 @@
 
 import { Activity, AlertTriangle, CheckCircle2, Clock, Loader2 } from 'lucide-react';
 import type { ScreenerLatestRun } from '@/lib/application/screener/store';
+import { formatDateTime, formatRelativeTime } from '@/lib/shared/formatting';
 import { cn } from '@/lib/shared/utils';
 
 interface ScreenerStatusCardProps {
@@ -23,9 +24,8 @@ export function ScreenerStatusCard({ latest, isLoading }: ScreenerStatusCardProp
     return <StatusEmpty />;
   }
 
-  const lastRun = new Date(latest.completedAt);
   const lastRunStr = formatRelativeTime(latest.completedAt);
-  const lastRunFull = lastRun.toLocaleString();
+  const lastRunFull = formatDateTime(latest.completedAt);
 
   const healthy = latest.health.status === 'completed';
   const partial = latest.health.status === 'completed_with_errors';
@@ -160,15 +160,3 @@ function StatusEmpty() {
   );
 }
 
-/** Format a unix ms timestamp as a relative-time string. */
-function formatRelativeTime(ts: number): string {
-  const diff = Date.now() - ts;
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return 'Just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}

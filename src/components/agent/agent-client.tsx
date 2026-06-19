@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Bot, RefreshCw, ShieldAlert } from 'lucide-react';
 import type { AgentRunResult } from '@/lib/application/agent/agent-types';
+import { formatDateTime } from '@/lib/shared/formatting';
 
 type AgentApiResponse = {
   ok: boolean;
@@ -73,7 +74,7 @@ export function AgentClient() {
       <section className="grid gap-4 md:grid-cols-3">
         <InfoCard label="AI enrichment" value={data?.source?.aiEnabled ? 'Enabled' : 'Deterministic only'} />
         <InfoCard label="Universe" value={data?.source ? `${data.source.universeSize} symbols` : '-'} />
-        <InfoCard label="Last screener run" value={data?.source ? new Date(data.source.screenerCompletedAt).toLocaleString() : '-'} />
+        <InfoCard label="Last screener run" value={data?.source ? formatDateTime(data.source.screenerCompletedAt) : '-'} />
       </section>
 
       {error && (

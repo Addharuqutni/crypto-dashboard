@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useAlertStore } from '@/stores/use-alert-store';
 import { useMarketStore } from '@/stores/use-market-store';
+import { formatCurrency } from '@/lib/shared/formatting';
 
 /**
  * Alert evaluator hook — checks active alerts against live prices.
@@ -57,7 +58,7 @@ function sendNotification(
 
   const conditionText = condition === 'greater_than' ? 'above' : 'below';
   const title = `${symbol} Price Alert`;
-  const body = `${symbol} is now ${conditionText} $${targetPrice.toLocaleString()} (current: $${currentPrice.toLocaleString()})`;
+  const body = `${symbol} is now ${conditionText} ${formatCurrency(targetPrice)} (current: ${formatCurrency(currentPrice)})`;
 
   try {
     new Notification(title, {

@@ -3,6 +3,7 @@
 import { cn } from '@/lib/shared/utils';
 import { Bot, User } from 'lucide-react';
 import type { AiMessage } from '@/types/ai';
+import { formatDateTime } from '@/lib/shared/formatting';
 
 interface AiMessageBubbleProps {
   message: AiMessage;
@@ -60,7 +61,7 @@ export function AiMessageBubble({ message, isStreaming }: AiMessageBubbleProps) 
           'mt-1.5 text-[10px]',
           isUser ? 'text-accent-primary/50 text-right' : 'text-text-muted/50'
         )}>
-          {formatTime(message.timestamp)}
+          {formatDateTime(message.timestamp)}
         </p>
       </div>
     </div>
@@ -197,6 +198,3 @@ function formatInline(text: string): React.ReactNode {
 
  */
 
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
