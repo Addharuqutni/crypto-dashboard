@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getRiskProfile, RISK_PROFILES } from '@/lib/domain/intelligence/risk-profile';
+
+const RISK_PROFILES_LIST = Object.values(RISK_PROFILES);
 import type { RiskProfile, RiskProfileId } from '@/types/intelligence';
 
 /**
@@ -32,7 +34,7 @@ export const useRiskProfileStore = create<RiskProfileState>()(
       hydrated: false,
       setProfile: (id) => set({ profileId: id }),
       getProfile: () => getRiskProfile(get().profileId),
-      allProfiles: () => Object.values(RISK_PROFILES),
+      allProfiles: () => RISK_PROFILES_LIST,
     }),
     {
       name: 'crypto-risk-profile',

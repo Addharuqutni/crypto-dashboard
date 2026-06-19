@@ -24,7 +24,8 @@ import type { RankedScreenerResult } from '@/lib/application/screener/types';
  */
 export function ScreenerClient() {
   const { data, isLoading, error } = useScreenerData();
-  const riskProfile = useRiskProfileStore((s) => s.getProfile());
+  const profileId = useRiskProfileStore((s) => s.profileId);
+  const riskProfile = useMemo(() => useRiskProfileStore.getState().getProfile(), [profileId]);
   const [selectedResult, setSelectedResult] = useState<RankedScreenerResult | null>(null);
 
   const latest = data?.latest ?? null;
@@ -107,7 +108,8 @@ export function ScreenerClient() {
           <TopSetupsPanel
             results={results}
             isLoading={isLoading}
-            audits={latest?.audits ?? {}}
+            audits={latest?.audits}
+            onRowClick={setSelectedResult}
           />
         </div>
         <div>

@@ -9,6 +9,7 @@ interface TopSetupsPanelProps {
   results: RankedScreenerResult[];
   isLoading: boolean;
   audits?: Record<string, ScreenerAiAuditSummary>;
+  onRowClick?: (result: RankedScreenerResult) => void;
 }
 
 /**
@@ -16,7 +17,7 @@ interface TopSetupsPanelProps {
  * trade context. WAIT results are excluded from this panel (they appear
  * in the full table below).
  */
-export function TopSetupsPanel({ results, isLoading, audits = {} }: TopSetupsPanelProps) {
+export function TopSetupsPanel({ results, isLoading, audits = {}, onRowClick }: TopSetupsPanelProps) {
   const eligible = results.filter((r) => r.alertEligible).slice(0, 5);
 
   if (isLoading && results.length === 0) {
@@ -50,7 +51,7 @@ export function TopSetupsPanel({ results, isLoading, audits = {} }: TopSetupsPan
       </h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {eligible.map((result) => (
-          <SetupCard key={result.symbol} result={result} audit={audits[result.symbol]} />
+          <SetupCard key={result.symbol} result={result} audit={audits[result.symbol]} onClick={() => onRowClick?.(result)} />
         ))}
       </div>
     </section>
@@ -60,9 +61,11 @@ export function TopSetupsPanel({ results, isLoading, audits = {} }: TopSetupsPan
 function SetupCard({
   result,
   audit,
+  onClick,
 }: {
   result: RankedScreenerResult;
   audit?: ScreenerAiAuditSummary;
+  onClick?: () => void;
 }) {
   const isLong = result.action === 'LONG';
   const ActionIcon = isLong ? TrendingUp : TrendingDown;
@@ -73,7 +76,13 @@ function SetupCard({
   const tps = result.takeProfits.filter((tp): tp is number => tp != null);
 
   return (
-    <div className="group relative rounded-xl border border-border-subtle bg-bg-surface-soft p-4 transition-all hover:border-border-strong hover:shadow-lg">
+    <div 
+      className="group relative cursor-pointer rounded-xl border border-border-subtle bg-bg-surface-soft p-4 transition-all hover:border-border-strong hover:shadow-lg"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
+    >
       {/* Rank badge */}
       <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent-primary text-xs font-bold text-bg-app">
         #{result.rank}
