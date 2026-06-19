@@ -76,7 +76,7 @@ export function CoinAnalysisSection({
 
       {/* Technical Mode CTA when in Clean Mode */}
       {chartMode === 'clean' && (
-        <div className="card interactive flex items-center justify-between px-4 py-4">
+        <div className="card interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring flex items-center justify-between px-4 py-4">
           <div>
             <p className="text-sm font-medium text-text-secondary">Technical Analysis</p>
             <p className="mt-0.5 text-xs text-text-muted">

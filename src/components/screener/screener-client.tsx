@@ -89,7 +89,7 @@ export function ScreenerClient() {
           {permission !== 'granted' && permission !== 'unsupported' && (
             <button
               onClick={() => void requestPermission()}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface-soft px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-bg-surface-raised hover:text-text-primary"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface-soft px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               aria-label="Enable browser notifications for local alerts"
             >
               <Bell className="h-3.5 w-3.5" />

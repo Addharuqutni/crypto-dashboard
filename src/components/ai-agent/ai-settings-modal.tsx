@@ -184,7 +184,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.openai.com/v1"
-              className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none"
+              className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             />
             <p className="text-[10px] text-text-muted">
               Include /v1 if your provider requires it
@@ -205,12 +205,12 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
                 placeholder="sk-..."
                 autoComplete="off"
                 spellCheck={false}
-                className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 pr-10 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none"
+                className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 pr-10 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               />
               <button
                 type="button"
                 onClick={() => setShowKey(!showKey)}
-                className="pressable absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary"
+                className="pressable absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 aria-label={showKey ? 'Hide API key' : 'Show API key'}
               >
                 {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -253,7 +253,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
               value={model}
               onChange={(e) => setModel(e.target.value)}
               placeholder="gpt-4o"
-              className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none"
+              className="glow-on-focus w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             />
             <p className="text-[10px] text-text-muted">
               e.g. gpt-4o, gpt-3.5-turbo, llama-3.1-70b, mixtral-8x7b
@@ -302,7 +302,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="pressable rounded-lg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="pressable rounded-lg px-3 py-2 text-xs font-medium text-text-muted transition-colors hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               Cancel
             </button>

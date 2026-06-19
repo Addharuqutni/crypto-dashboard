@@ -119,7 +119,7 @@ function SortableHeader({
 function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () => void }) {
   return (
     <tr
-      className="cursor-pointer border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-raised/50"
+      className="cursor-pointer border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-raised/50 focus-within:bg-bg-surface-raised/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
       onClick={onClick}
       role="button"
       tabIndex={0}

@@ -77,7 +77,7 @@ function SetupCard({
 
   return (
     <div 
-      className="group relative cursor-pointer rounded-xl border border-border-subtle bg-bg-surface-soft p-4 transition-all hover:border-border-strong hover:shadow-lg"
+      className="group relative cursor-pointer rounded-xl border border-border-subtle bg-bg-surface-soft p-4 transition-all hover:border-border-strong hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
       onClick={onClick}
       role="button"
       tabIndex={0}

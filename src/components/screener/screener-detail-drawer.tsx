@@ -54,7 +54,7 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
 
   return (
     <div className="fixed inset-0 z-overlay flex justify-end bg-black/45 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="screener-detail-title">
-      <button className="absolute inset-0 cursor-default" onClick={onClose} aria-label="Close details" />
+      <button className="absolute inset-0 cursor-default focus-visible:outline-none" onClick={onClose} aria-label="Close details" />
       <aside className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-border-subtle bg-bg-surface shadow-2xl animate-slide-up sm:rounded-l-2xl">
         {/* Header */}
         <div className="border-b border-border-subtle bg-bg-surface-soft/70 px-5 py-4">
@@ -67,7 +67,7 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
             </div>
             <button
               onClick={onClose}
-              className="rounded-full p-2 text-text-muted transition-colors hover:bg-bg-surface-raised hover:text-text-primary"
+              className="rounded-full p-2 text-text-muted transition-colors hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
               aria-label="Close setup details"
             >
               <X className="h-5 w-5" />
@@ -222,7 +222,7 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
           </button>
           <Link
             href={`/coin/${result.baseAsset}`}
-            className="pressable inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-2 text-sm font-semibold text-text-secondary transition-all hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="pressable inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-2 text-sm font-semibold text-text-secondary transition-all hover:bg-bg-surface-raised hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label={`View ${result.baseAsset} chart and analysis`}
           >
             <ExternalLink className="h-4 w-4" />

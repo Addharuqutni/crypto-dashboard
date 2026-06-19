@@ -291,7 +291,7 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
                     </div>
                     <button
                       onClick={clearError}
-                      className="pressable shrink-0 rounded p-0.5 text-danger/60 transition-colors hover:text-danger"
+                      className="pressable shrink-0 rounded p-0.5 text-danger/60 transition-colors hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                       aria-label="Dismiss error"
                     >
                       <X className="h-3 w-3" />
@@ -310,7 +310,7 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
                       onKeyDown={handleKeyDown}
                       placeholder={isStreaming ? 'AI is thinking...' : 'Ask about technical analysis...'}
                       disabled={isStreaming}
-                      className="glow-on-focus flex-1 rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus:border-accent-secondary focus:outline-none disabled:opacity-50"
+                      className="glow-on-focus flex-1 rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
                     />
 
                     {isStreaming ? (

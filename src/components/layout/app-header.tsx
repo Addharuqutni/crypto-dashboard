@@ -34,7 +34,7 @@ export function AppHeader() {
           className="group flex items-center gap-2.5 rounded-xl pr-1 font-[family-name:var(--font-display)] text-lg font-bold tracking-tight text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           aria-label="Go to CryptoHawk dashboard"
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border-subtle bg-bg-surface text-accent-primary transition-colors group-hover:border-border-strong">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-border-subtle bg-bg-surface text-accent-primary transition-colors group-hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
             <BarChart3 className="h-4 w-4" aria-hidden="true" />
           </span>
           <span className="hidden sm:inline">CryptoHawk</span>

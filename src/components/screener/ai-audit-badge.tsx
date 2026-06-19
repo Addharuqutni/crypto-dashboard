@@ -34,7 +34,7 @@ export function AiAuditBadge({ audit }: AiAuditBadgeProps) {
       {/* Header — always visible */}
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-bg-surface-raised/50"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-bg-surface-raised/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         aria-expanded={expanded}
         aria-label={`AI Audit: ${audit.verdict}`}
       >

@@ -151,7 +151,7 @@ export function SignalJournalPanel() {
           <button
             onClick={handleExport}
             disabled={filtered.length === 0}
-            className="pressable inline-flex items-center gap-1 rounded-md border border-border-subtle bg-bg-surface-raised px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="pressable inline-flex items-center gap-1 rounded-md border border-border-subtle bg-bg-surface-raised px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Export filtered entries as CSV"
           >
             <Download className="h-3 w-3" />
@@ -234,7 +234,7 @@ export function SignalJournalPanel() {
 
         <button
           onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
-          className="pressable inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className="pressable inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           aria-label={`Toggle sort direction (currently ${sortDir})`}
         >
           {sortDir === 'desc' ? (
@@ -276,7 +276,7 @@ export function SignalJournalPanel() {
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                className="pressable inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                className="pressable inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 aria-label="Previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -287,7 +287,7 @@ export function SignalJournalPanel() {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                className="pressable inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                className="pressable inline-flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 aria-label="Next page"
               >
                 <ChevronRight className="h-4 w-4" />
@@ -479,7 +479,7 @@ function SegmentedControl<T extends string>({
             'pressable inline-flex h-7 items-center rounded-sm px-2 text-[10px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
             value === o.value
               ? 'bg-accent-primary/15 text-accent-primary'
-              : 'text-text-muted hover:text-text-primary'
+              : 'text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
           )}
         >
           {o.label}
@@ -657,7 +657,7 @@ const JournalCard = memo(function JournalCard({
           </button>
           <button
             onClick={() => onCancel(entry.id)}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle bg-bg-surface-raised text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Cancel signal"
             title="Cancel"
           >
@@ -727,7 +727,7 @@ function ManualClosePopover({
         </p>
         <button
           onClick={onCancel}
-          className="text-text-muted hover:text-text-primary"
+          className="text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           aria-label="Cancel manual close"
         >
           <X className="h-3.5 w-3.5" />
@@ -743,7 +743,7 @@ function ManualClosePopover({
               'pressable rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider transition-colors',
               status === s
                 ? 'border-accent-primary/60 bg-accent-primary/15 text-accent-primary'
-                : 'border-border-subtle bg-bg-surface-raised text-text-muted hover:text-text-primary'
+                : 'border-border-subtle bg-bg-surface-raised text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
             )}
           >
             {s}
@@ -775,14 +775,14 @@ function ManualClosePopover({
       <div className="flex justify-end gap-1">
         <button
           onClick={onCancel}
-          className="rounded-md border border-border-subtle bg-bg-surface-raised px-2 py-1 text-[10px] font-medium text-text-muted transition-colors hover:text-text-primary"
+          className="rounded-md border border-border-subtle bg-bg-surface-raised px-2 py-1 text-[10px] font-medium text-text-muted transition-colors hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
           Cancel
         </button>
         <button
           disabled={exitInvalid}
           onClick={() => onSubmit(status, exitNum)}
-          className="pressable inline-flex items-center gap-1 rounded-md border border-accent-primary/40 bg-accent-primary/10 px-2 py-1 text-[10px] font-semibold text-accent-primary transition-colors hover:bg-accent-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          className="pressable inline-flex items-center gap-1 rounded-md border border-accent-primary/40 bg-accent-primary/10 px-2 py-1 text-[10px] font-semibold text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Check className="h-3 w-3" />
           Confirm

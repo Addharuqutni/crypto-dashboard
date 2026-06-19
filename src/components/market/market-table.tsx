@@ -364,7 +364,7 @@ const MarketTableRow = memo(function MarketTableRow({ row }: { row: MarketRow })
   const displayRow = useLiveMarketRow(row, now);
 
   return (
-    <tr className="border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50">
+    <tr className="border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring -outline-offset-1">
       <td className="px-4 py-3">
         <Link
           href={`/coin/${displayRow.symbol.toLowerCase()}`}
