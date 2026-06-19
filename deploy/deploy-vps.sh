@@ -27,6 +27,14 @@ npm run check
 npm run build
 npm run screener -- --once
 
+if [ -d "agent" ]; then
+  echo "Setting up Python agent..."
+  if [ ! -d "agent/.venv" ]; then
+    python3 -m venv agent/.venv
+  fi
+  agent/.venv/bin/pip install -r agent/requirements.txt
+fi
+
 if command -v pm2 >/dev/null 2>&1; then
   pm2 startOrReload ecosystem.config.cjs --update-env
   pm2 save

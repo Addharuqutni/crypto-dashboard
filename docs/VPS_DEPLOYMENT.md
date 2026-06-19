@@ -6,9 +6,9 @@ Target: Ubuntu VPS, Node.js 22+, PM2, Nginx reverse proxy, local file storage fo
 
 ```bash
 sudo apt update
-sudo apt install -y git curl nginx ufw
+sudo apt install -y git curl nginx ufw python3-venv python3-pip
+
 # Download the NodeSource setup script, inspect it if required, then run it.
-curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource_setup.sh
 sudo bash /tmp/nodesource_setup.sh
 sudo apt install -y nodejs
 sudo npm install -g pm2

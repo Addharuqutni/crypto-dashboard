@@ -1,3 +1,5 @@
+const path = require('path');
+
 module.exports = {
   apps: [
     {
@@ -47,6 +49,20 @@ module.exports = {
       time: true,
       out_file: './logs/pm2-screener-out.log',
       error_file: './logs/pm2-screener-error.log',
+      merge_logs: true,
+    },
+    {
+      name: 'crypto-ai-agent',
+      cwd: path.join(__dirname, 'agent'),
+      script: 'main.py',
+      interpreter: '.venv/bin/python',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_memory_restart: '512M',
+      time: true,
+      out_file: '../logs/pm2-agent-out.log',
+      error_file: '../logs/pm2-agent-error.log',
       merge_logs: true,
     },
   ],
