@@ -9,6 +9,7 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
+        NODE_OPTIONS: '--max-old-space-size=512',
         PORT: process.env.PORT || '3000',
         HOSTNAME: process.env.HOSTNAME || '127.0.0.1',
         DISABLE_SCREENER_SCHEDULER: '1',
@@ -33,6 +34,7 @@ module.exports = {
       autorestart: true,
       env: {
         NODE_ENV: 'production',
+        NODE_OPTIONS: '--max-old-space-size=384',
         SCREENER_STORAGE_MODE: 'file',
         SCREENER_STORAGE_BACKEND: 'file',
         SCREENER_REQUIRE_DATABASE: '0',

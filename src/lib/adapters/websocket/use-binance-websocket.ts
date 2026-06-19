@@ -78,7 +78,7 @@ const PARSE_ERROR_LOG_INTERVAL = 30_000;
  * - Retryable exchangeInfo loading with degraded mode fallback
  * - Throttled parse error observability
  */
-export function useBinanceWebSocket() {
+export function useBinanceWebSocket(enabled = true) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectionAgeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -387,6 +387,12 @@ export function useBinanceWebSocket() {
 
   /** Initialize: load valid symbols, seed prices, connect WebSocket */
   useEffect(() => {
+    if (!enabled) {
+      mountedRef.current = false;
+      setConnectionStatus('disconnected');
+      return;
+    }
+
     mountedRef.current = true;
 
     // Load valid symbols first, then seed prices and connect
@@ -451,20 +457,20 @@ export function useBinanceWebSocket() {
         wsRef.current = null;
       }
     };
-  // The market socket is intentionally mounted once. Mutable refs keep the
-  // latest callbacks/configuration available without recreating the connection
-  // on every store or callback identity change, which would cause reconnect
-  // storms under React StrictMode and high-frequency ticker updates.
+  // The market socket is intentionally stable while enabled. Mutable refs keep
+  // callbacks/configuration available without reconnecting on every store or
+  // callback identity change, which would cause reconnect storms under React
+  // StrictMode and high-frequency ticker updates.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled]);
 
   // Re-seed when watchlist changes (to get snapshot for newly added coins)
   useEffect(() => {
-    if (watchlistItems.length > 0) {
+    if (enabled && watchlistItems.length > 0) {
       void seedInitialPrices();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchlistItems]);
+  }, [enabled, watchlistItems]);
 }
 
 /** Returns true when the browser tab is visible, and defaults to true outside the DOM. */
