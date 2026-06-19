@@ -49,9 +49,9 @@ Usage:
   npm run screener -- --cleanup # run retention cleanup, exits when done
 
 Defaults:
-  universe: BTC, ETH, BNB, SOL, XRP, ADA, DOGE, AVAX, TRX, LINK
+  universe: top 100 large-cap Binance USDT perpetuals
   timeframes: setup=30m macro=4h trigger=15m
-  interval: 15m
+  interval: 5m
   maxConcurrentSymbols: 3
   persistence: ./data/screener/
   retention: history=${DEFAULT_RETENTION_CONFIG.historyRetentionDays}d alerts=${DEFAULT_RETENTION_CONFIG.alertRetentionDays}d

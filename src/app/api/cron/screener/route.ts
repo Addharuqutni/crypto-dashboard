@@ -7,7 +7,7 @@ import { auditTopCandidates, AuditCache } from '@/lib/application/screener/ai-au
 import { aiValidationOptionsFromSettings } from '@/lib/application/screener/ai-level-validator';
 import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
 import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
-import { getDefaultUniverse } from '@/lib/application/screener/universe';
+import { getScreenerUniverseFromEnv } from '@/lib/application/screener/universe';
 import type { ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 
 export const runtime = 'nodejs';
@@ -162,20 +162,7 @@ function buildCronScreenerConfig() {
 }
 
 function getCronUniverse() {
-  const raw = process.env.SCREENER_SYMBOLS;
-  const fallback = DEFAULT_SCREENER_CONFIG.symbols.slice(0, 4);
-  if (!raw?.trim()) return fallback;
-
-  const allowed = new Map(getDefaultUniverse().map((coin) => [coin.symbol, coin]));
-  const selected = raw
-    .split(',')
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean)
-    .map((symbol) => allowed.get(symbol))
-    .filter((coin): coin is NonNullable<typeof coin> => Boolean(coin))
-    .slice(0, getEnvInt('SCREENER_MAX_SYMBOLS', 4, 1, 20));
-
-  return selected.length > 0 ? selected : fallback;
+  return getScreenerUniverseFromEnv(100);
 }
 
 function getEnvInt(name: string, fallback: number, min: number, max: number): number {

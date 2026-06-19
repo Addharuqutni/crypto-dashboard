@@ -18,7 +18,8 @@
     "agent": "tsx scripts/agent/start.ts",
     "check": "npm run typecheck && npm run lint && npm run test",
     "audit:prod": "npm audit --omit=dev",
-    "start:prod": "node scripts/start-prod.mjs"
+    "start:prod": "node scripts/start-prod.mjs",
+    "deploy:vps": "bash deploy/deploy-vps.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
