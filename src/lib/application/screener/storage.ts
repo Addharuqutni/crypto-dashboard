@@ -1,5 +1,6 @@
 import type {
   ScreenerAlertRecord,
+  ScreenerActionCallRecord,
   ScreenerAlertSettings,
 } from './types';
 import type { ScreenerLatestRun, ScreenerHistoryEntry } from './store';
@@ -26,4 +27,7 @@ export interface ScreenerStorage {
 
   appendAlert(record: ScreenerAlertRecord): Promise<void>;
   readRecentAlerts(limit?: number): Promise<ScreenerAlertRecord[]>;
+
+  appendActionCalls(records: ScreenerActionCallRecord[]): Promise<void>;
+  readRecentActionCalls(limit?: number): Promise<ScreenerActionCallRecord[]>;
 }

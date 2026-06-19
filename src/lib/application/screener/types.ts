@@ -137,6 +137,46 @@ export interface ScreenerAlertRecord {
   createdAt: number;
 }
 
+/**
+ * Append-only snapshot of screener setups that passed action-call gates.
+ * Stored separately from alerts so cooldown/hourly caps do not hide valid
+ * algorithm evaluation samples.
+ */
+export interface ScreenerActionCallRecord {
+  id: string;
+  runCompletedAt: number;
+  capturedAt: number;
+  symbol: string;
+  baseAsset: string;
+  quoteAsset: string;
+  action: Exclude<FuturesSignalAction, 'WAIT'>;
+  rank: number;
+  rankingScore: number;
+  confidence: number;
+  grade: FuturesGrade;
+  entry: number | null;
+  stopLoss: number | null;
+  takeProfits: Array<number | null>;
+  riskReward: number | null;
+  currentPrice: number | null;
+  candleCloseTime: number | null;
+  setupTimeframe: BinanceInterval;
+  triggerTimeframe: BinanceInterval;
+  macroTimeframe: BinanceInterval;
+  marketRegime: FuturesMarketRegimeId;
+  tradePermission: FuturesTradePermission;
+  dataHealth: FuturesDataHealth;
+  fundingRate: number | null;
+  openInterestChangePercent: number | null;
+  mtfAlignmentScore: number | null;
+  marketCapRank?: number;
+  reasons: string[];
+  noTradeReasons: string[];
+  warnings: string[];
+  rankReason: string[];
+  alertBlockReasons: string[];
+}
+
 export interface ScreenerAiAuditSummary {
   symbol: string;
   verdict: 'VALID' | 'WEAK' | 'WAIT_PREFERRED';

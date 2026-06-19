@@ -3,6 +3,7 @@ import * as path from 'node:path';
 import type {
   RankedScreenerResult,
   ScreenerAiAuditSummary,
+  ScreenerActionCallRecord,
   ScreenerAlertRecord,
   ScreenerAlertSettings,
   ScreenerHealth,
@@ -19,6 +20,7 @@ import type { ScreenerStorage } from './storage';
  *     latest.json     — most recent run snapshot, atomically rewritten
  *     history.jsonl   — append-only run summaries
  *     alerts.jsonl    — append-only local alert event records
+ *     action-calls.jsonl — append-only eligible action-call evaluation samples
  *     settings.json   — alert/rank settings, atomically rewritten
  *
  * Atomic semantics for `latest.json` and `settings.json`: write to a sibling
@@ -67,6 +69,7 @@ export class ScreenerStore implements ScreenerStorage {
   private readonly latestFile: string;
   private readonly historyFile: string;
   private readonly alertsFile: string;
+  private readonly actionCallsFile: string;
   private readonly settingsFile: string;
 
   constructor(dataDir = path.join(process.cwd(), 'data', 'screener')) {
@@ -74,6 +77,7 @@ export class ScreenerStore implements ScreenerStorage {
     this.latestFile = path.join(dataDir, 'latest.json');
     this.historyFile = path.join(dataDir, 'history.jsonl');
     this.alertsFile = path.join(dataDir, 'alerts.jsonl');
+    this.actionCallsFile = path.join(dataDir, 'action-calls.jsonl');
     this.settingsFile = path.join(dataDir, 'settings.json');
   }
 
@@ -168,6 +172,29 @@ export class ScreenerStore implements ScreenerStorage {
       const code = (err as NodeJS.ErrnoException)?.code;
       if (code === 'ENOENT') return [];
       console.warn('[screener.store] Failed to read alerts:', err);
+      return [];
+    }
+  }
+
+  // ─── Action Calls (append-only evaluation samples) ─────────────────────
+
+  /** Append action-call samples that passed ranking/quality gates. */
+  async appendActionCalls(records: ScreenerActionCallRecord[]): Promise<void> {
+    if (records.length === 0) return;
+    await this.init();
+    const payload = records.map((record) => JSON.stringify(record)).join('\n') + '\n';
+    await fs.appendFile(this.actionCallsFile, payload, 'utf8');
+  }
+
+  /** Read the most recent N action-call samples in chronological order. */
+  async readRecentActionCalls(limit = 500): Promise<ScreenerActionCallRecord[]> {
+    try {
+      const raw = await fs.readFile(this.actionCallsFile, 'utf8');
+      return parseJsonl<ScreenerActionCallRecord>(raw).slice(-limit);
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException)?.code;
+      if (code === 'ENOENT') return [];
+      console.warn('[screener.store] Failed to read action calls:', err);
       return [];
     }
   }

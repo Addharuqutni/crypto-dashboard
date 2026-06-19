@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from '@/lib/adapters/supabase/server-client';
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from './config';
 import type {
   ScreenerAlertRecord,
+  ScreenerActionCallRecord,
   ScreenerAlertSettings,
 } from './types';
 import type { ScreenerLatestRun, ScreenerHistoryEntry } from './store';
@@ -154,6 +155,37 @@ export class SupabaseScreenerStore implements ScreenerStorage {
       .map((row) => row.record as ScreenerAlertRecord)
       .reverse();
   }
+
+  // ─── Action Calls (append-only evaluation samples) ─────────────────────
+
+  async appendActionCalls(records: ScreenerActionCallRecord[]): Promise<void> {
+    if (records.length === 0) return;
+    const client = requireClient();
+    const { error } = await client
+      .from('screener_action_calls')
+      .insert(records.map((record) => ({ ts: record.capturedAt, record })));
+    if (error) throw new Error(`[screener.supabase] appendActionCalls: ${error.message}`);
+  }
+
+  async readRecentActionCalls(limit = 500): Promise<ScreenerActionCallRecord[]> {
+    const client = getSupabaseAdmin();
+    if (!client) return [];
+
+    const { data, error } = await client
+      .from('screener_action_calls')
+      .select('record')
+      .order('ts', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.warn('[screener.supabase] readRecentActionCalls failed:', error.message);
+      return [];
+    }
+    return (data ?? [])
+      .map((row) => row.record as ScreenerActionCallRecord)
+      .reverse();
+  }
+
 }
 
 function requireClient() {

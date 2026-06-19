@@ -85,10 +85,11 @@ async function runOnDemandScreener() {
 async function readFromFileStore() {
   try {
     const store = getScreenerStorage();
-    const [latest, settings, recentAlerts] = await Promise.all([
+    const [latest, settings, recentAlerts, recentActionCalls] = await Promise.all([
       store.readLatest(),
       store.readSettings(),
       store.readRecentAlerts(50),
+      store.readRecentActionCalls(200),
     ]);
 
     if (!latest && shouldFallbackToOnDemand()) {
@@ -101,6 +102,7 @@ async function readFromFileStore() {
       latest,
       settings,
       recentAlerts,
+      recentActionCalls,
     });
   } catch (err: unknown) {
     console.error('[api/screener] failed to read screener data:', err);

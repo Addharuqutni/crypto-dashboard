@@ -15,7 +15,7 @@ import { runScreenerCycle } from '@/lib/application/screener/runner';
 import { ScreenerStore } from '@/lib/application/screener/store';
 import type { ScreenerLatestRun, ScreenerHistoryEntry } from '@/lib/application/screener/store';
 import { evaluateAlertPolicy } from '@/lib/application/screener/alert-policy';
-import type { RankedScreenerResult, ScreenerConfig } from '@/lib/application/screener/types';
+import type { RankedScreenerResult, ScreenerActionCallRecord, ScreenerConfig } from '@/lib/application/screener/types';
 import { auditTopCandidates, AuditCache } from '@/lib/application/screener/ai-auditor';
 import { aiValidationOptionsFromSettings } from '@/lib/application/screener/ai-level-validator';
 import { cleanupScreenerStorage, DEFAULT_RETENTION_CONFIG } from '@/lib/application/screener/maintenance';
@@ -181,30 +181,84 @@ async function executeOnceUnsafe(
   };
   await store.appendHistory(historyEntry);
 
-  // 7. Evaluate alert policy.
+  // 7. Persist every qualifying action call for algorithm evaluation.
+  // This is independent from alert cooldown/hourly caps, so valid samples are never hidden.
+  const actionCalls = buildActionCallRecords(ranked, now);
+  await store.appendActionCalls(actionCalls);
+
+  // 8. Evaluate alert policy.
   const recentAlerts = await store.readRecentAlerts(100);
   const decisions = evaluateAlertPolicy(ranked, { settings, recentAlerts, now });
 
-  // 8. Persist only useful local alert records; skip neutral/low-quality spam.
+  // 9. Persist only useful local alert records; skip neutral/low-quality spam.
   for (const decision of decisions) {
     if (shouldPersistAlertRecord(decision.record.status)) {
       await store.appendAlert(decision.record);
     }
   }
 
-  // 9. Print results.
+  // 10. Print results.
   for (const row of ranked) {
     printResult(row);
   }
 
   const alertsTriggered = decisions.filter((d) => d.shouldAlert).length;
   // eslint-disable-next-line no-console
-  console.log(`[screener] completed status=${run.health.status} evaluated=${run.health.evaluatedSymbols} failed=${run.health.failedSymbols} alerts_triggered=${alertsTriggered}`);
+  console.log(`[screener] completed status=${run.health.status} evaluated=${run.health.evaluatedSymbols} failed=${run.health.failedSymbols} action_calls=${actionCalls.length} alerts_triggered=${alertsTriggered}`);
 
   for (const error of run.health.errors) {
     // eslint-disable-next-line no-console
     console.warn(`[screener] ${error.symbol} failed: ${error.message}`);
   }
+}
+
+
+function buildActionCallRecords(
+  ranked: RankedScreenerResult[],
+  runCompletedAt: number
+): ScreenerActionCallRecord[] {
+  return ranked
+    .filter(isActionCallCandidate)
+    .map((row) => ({
+      id: `${runCompletedAt}:${row.symbol}:${row.action}`,
+      runCompletedAt,
+      capturedAt: Date.now(),
+      symbol: row.symbol,
+      baseAsset: row.baseAsset,
+      quoteAsset: row.quoteAsset,
+      action: row.action,
+      rank: row.rank,
+      rankingScore: row.rankingScore,
+      confidence: row.confidence,
+      grade: row.grade,
+      entry: row.entry,
+      stopLoss: row.stopLoss,
+      takeProfits: row.takeProfits,
+      riskReward: row.riskReward,
+      currentPrice: row.currentPrice,
+      candleCloseTime: row.candleCloseTime,
+      setupTimeframe: row.setupTimeframe,
+      triggerTimeframe: row.triggerTimeframe,
+      macroTimeframe: row.macroTimeframe,
+      marketRegime: row.marketRegime,
+      tradePermission: row.tradePermission,
+      dataHealth: row.dataHealth,
+      fundingRate: row.fundingRate,
+      openInterestChangePercent: row.openInterestChangePercent,
+      mtfAlignmentScore: row.mtfAlignmentScore,
+      marketCapRank: row.marketCapRank,
+      reasons: row.reasons,
+      noTradeReasons: row.noTradeReasons,
+      warnings: row.warnings,
+      rankReason: row.rankReason,
+      alertBlockReasons: row.alertBlockReasons,
+    }));
+}
+
+function isActionCallCandidate(
+  row: RankedScreenerResult
+): row is RankedScreenerResult & { action: 'LONG' | 'SHORT' } {
+  return row.alertEligible && (row.action === 'LONG' || row.action === 'SHORT');
 }
 
 function printResult(row: RankedScreenerResult): void {
