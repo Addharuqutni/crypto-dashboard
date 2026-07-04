@@ -34,9 +34,7 @@ export interface FundingRateSnapshot {
  * Fetch the latest funding rate for one Binance Futures symbol.
  * Returns `null` on any failure — callers degrade gracefully.
  */
-export async function fetchFundingRate(
-  binanceSymbol: string
-): Promise<FundingRateSnapshot | null> {
+export async function fetchFundingRate(binanceSymbol: string): Promise<FundingRateSnapshot | null> {
   if (!binanceSymbol) return null;
 
   const url = `${BASE}/premiumIndex?symbol=${encodeURIComponent(binanceSymbol)}`;
@@ -52,7 +50,11 @@ export async function fetchFundingRate(
       lastFundingRate: rate,
       nextFundingTime: typeof data.nextFundingTime === 'number' ? data.nextFundingTime : 0,
     };
-  } catch {
+  } catch (error) {
+    console.warn(
+      '[binance-funding-rate] fetch failed:',
+      error instanceof Error ? error.message : error
+    );
     return null;
   }
 }

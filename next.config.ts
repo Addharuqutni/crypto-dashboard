@@ -37,7 +37,27 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=(self)',
+            value:
+              'camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=(self)',
+          },
+          // ponytail: 'unsafe-inline' in script-src/style-src is a ceiling —
+          // Next.js 16 inline runtime needs it until a nonce-based CSP pass is
+          // added. connect-src is strict allowlist: only the data providers the
+          // app actually calls + user-supplied AI base URL (browser-side).
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "base-uri 'self'",
+              "object-src 'none'",
+              "frame-ancestors 'none'",
+              "script-src 'self' 'unsafe-inline'",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self'",
+              "connect-src 'self' https://fapi.binance.com https://api.coingecko.com https://api.alternative.me wss://fstream.binance.com https:",
+              "frame-src 'none'",
+            ].join('; '),
           },
         ],
       },

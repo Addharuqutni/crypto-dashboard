@@ -77,7 +77,11 @@ export async function fetchOpenInterestSnapshot(
       changePercent,
       period,
     };
-  } catch {
+  } catch (error) {
+    console.warn(
+      '[binance-open-interest] fetch failed:',
+      error instanceof Error ? error.message : error
+    );
     return null;
   }
 }
