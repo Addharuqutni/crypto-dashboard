@@ -18,6 +18,8 @@ build/
 .vercel/
 dist/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 
 # Local deploy artefacts (produced by deploy-cpanel.bat)

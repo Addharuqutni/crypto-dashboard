@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { createContext, useState, useCallback, useRef, useEffect } from 'react';
 import { cn } from '@/lib/shared/utils';
 import { CheckCircle2, AlertTriangle, X, Info } from 'lucide-react';
 
@@ -23,14 +23,6 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue>({ toast: () => {} });
 
 const DEFAULT_DURATION_MS = 3000;
-
-/**
- * Hook untuk mengakses fungsi toast() dari mana pun di pohon komponen.
- * Aman dipanggil saat provider belum siap; akan jadi no-op.
- */
-export function useToast() {
-  return useContext(ToastContext);
-}
 
 /**
  * Toast provider — premium notification surface dengan:
@@ -160,9 +152,7 @@ function ToastItem({ toast: t, onDismiss, onPause, onResume }: ToastItemProps) {
       <span className={cn('shrink-0', accent.icon)}>{ICON_BY_TYPE[t.type]}</span>
 
       {/* Message */}
-      <span className="flex-1 text-sm font-medium leading-snug text-text-primary">
-        {t.message}
-      </span>
+      <span className="flex-1 text-sm font-medium leading-snug text-text-primary">{t.message}</span>
 
       {/* Dismiss */}
       <button

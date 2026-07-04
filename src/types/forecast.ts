@@ -8,14 +8,9 @@
 
 export type ForecastDirection = 'up' | 'down' | 'flat' | 'uncertain';
 
-export type ForecastAlignment =
-  | 'aligned'
-  | 'conflicting'
-  | 'neutral'
-  | 'invalid'
-  | 'unavailable';
+export type ForecastAlignment = 'aligned' | 'conflicting' | 'neutral' | 'invalid' | 'unavailable';
 
-export type ForecastProvider = 'kronos';
+type ForecastProvider = 'kronos';
 
 /**
  * Summary of a single forecast from a provider.

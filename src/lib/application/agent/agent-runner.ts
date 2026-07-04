@@ -3,9 +3,9 @@ import { sendChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
 import type { ScreenerLatestRun } from '@/lib/application/screener/store';
 import { buildSignalContexts } from './signal-context-builder';
 import { decideSignal } from './decision-policy';
-import type { AgentRunResult, AgentSignalDecision } from './agent-types';
+import type { AgentRunResult, AgentSignalDecision, AgentSignalContext } from './agent-types';
 
-export const AGENT_SYSTEM_PROMPT = `You are a read-only crypto signal agent.
+const AGENT_SYSTEM_PROMPT = `You are a read-only crypto signal agent.
 
 Rules:
 1. Do not change LONG/SHORT/WAIT from the deterministic engine.
@@ -29,14 +29,14 @@ export async function runAgentOnLatest(
   }
 
   const enriched = await Promise.all(
-    decisions.map((decision, index) => enrichDecision(decision, contexts[index], aiConfig))
+    decisions.map((decision, index) => enrichDecision(decision, contexts[index]!, aiConfig))
   );
   return { generatedAt: Date.now(), decisions: enriched };
 }
 
 async function enrichDecision(
   decision: AgentSignalDecision,
-  context: unknown,
+  context: AgentSignalContext,
   aiConfig: AiConfig
 ): Promise<AgentSignalDecision> {
   try {

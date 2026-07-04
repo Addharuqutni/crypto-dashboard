@@ -1,5 +1,5 @@
 import type { Candle } from '@/types/chart';
-import type { FuturesLiquiditySweep, FuturesLiquiditySweepType } from '@/types/futures-signal';
+import type { FuturesLiquiditySweep } from '@/types/futures-signal';
 
 /**
  * Liquidity Sweep Detector.
@@ -168,6 +168,3 @@ function clamp(v: number, min: number, max: number): number {
   if (!Number.isFinite(v)) return min;
   return Math.max(min, Math.min(max, v));
 }
-
-/** Convenience type re-export so callers can ignore internal details. */
-export type { FuturesLiquiditySweepType };

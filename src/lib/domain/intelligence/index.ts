@@ -8,37 +8,9 @@
  * it.
  */
 
-export {
-  buildMarketContext,
-  type BuildMarketContextInput,
-} from './market-context';
-export { rankSetup, type SetupRankingInput } from './setup-ranking';
-export {
-  RISK_PROFILES,
-  getRiskProfile,
-  applyProfile,
-  type DisciplineThresholds,
-} from './risk-profile';
+export { buildMarketContext } from './market-context';
+export { rankSetup } from './setup-ranking';
+export { applyProfile, getRiskProfile } from './risk-profile';
 export { explainNoTrade } from './no-trade';
-export {
-  AUDITOR_SYSTEM_PROMPT,
-  buildAuditorUserPrompt,
-  parseAuditorResponse,
-  AiAuditorParseError,
-} from './ai-auditor';
-
-export type {
-  AiAuditorInput,
-  AiAuditorReport,
-  FundingRegime,
-  MarketContext,
-  MarketRiskMode,
-  NoTradeExplanation,
-  OpenInterestRegime,
-  RiskProfile,
-  RiskProfileId,
-  SetupGrade,
-  SetupRanking,
-  SetupRankingBreakdown,
-  VolatilityRegime,
-} from '@/types/intelligence';
+export { buildAuditorUserPrompt, parseAuditorResponse } from './ai-auditor';
+export type { AiAuditorInput } from '@/types/intelligence';

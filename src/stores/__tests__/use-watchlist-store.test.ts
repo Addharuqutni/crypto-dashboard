@@ -16,7 +16,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const safeGetItem = vi.fn();
 const safeSetItem = vi.fn();
-const safeRemoveItem = vi.fn();
 
 vi.mock('@/lib/adapters/storage', () => ({
   STORAGE_KEYS: {
@@ -28,7 +27,6 @@ vi.mock('@/lib/adapters/storage', () => ({
   },
   safeGetItem: (...args: unknown[]) => safeGetItem(...args),
   safeSetItem: (...args: unknown[]) => safeSetItem(...args),
-  safeRemoveItem: (...args: unknown[]) => safeRemoveItem(...args),
 }));
 
 // Import AFTER vi.mock so the mocked module is used.
@@ -39,7 +37,6 @@ const WATCHLIST_KEY = 'crypto-dashboard.watchlist.v1';
 function resetStore() {
   safeGetItem.mockReset();
   safeSetItem.mockReset();
-  safeRemoveItem.mockReset();
   useWatchlistStore.setState({ items: [], hydrated: false });
 }
 

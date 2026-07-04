@@ -18,6 +18,8 @@
  * - Never throws: any bootstrap failure is logged and swallowed so it can
  *   never crash the server with an unhandled rejection (exit 128).
  */
+import { isServerlessRuntime } from '@/lib/shared/runtime/is-serverless';
+
 export async function register() {
   // In some Next.js builds this is undefined during instrumentation bootstrap.
   // Only skip when it is explicitly non-node.
@@ -46,12 +48,4 @@ export async function register() {
       err instanceof Error ? err.message : err
     );
   }
-}
-
-function isServerlessRuntime(): boolean {
-  if (process.env.VERCEL === '1' || process.env.VERCEL === 'true') return true;
-  if (process.env.AWS_LAMBDA_FUNCTION_NAME) return true;
-  if (process.env.LAMBDA_TASK_ROOT === '/var/task') return true;
-  if (process.env.NOW_REGION) return true;
-  return false;
 }
