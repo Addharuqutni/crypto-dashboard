@@ -5,7 +5,7 @@ import type { SignalJournalEntry } from '@/types/signal-journal';
  * Shape that the journal store expects for `add()` (without the fields it generates).
  * Mirrors the public Omit<...> in `useSignalJournalStore`.
  */
-export type JournalAddPayload = Omit<
+type JournalAddPayload = Omit<
   SignalJournalEntry,
   'id' | 'createdAt' | 'status' | 'maxFavorableExcursion' | 'maxAdverseExcursion'
 > & { createdAt?: number };
@@ -16,10 +16,7 @@ export type JournalAddPayload = Omit<
  * with an explanation instead of failing silently.
  */
 export type JournalSaveBlock =
-  | 'action_is_wait'
-  | 'missing_entry'
-  | 'missing_stop_loss'
-  | 'missing_take_profit';
+  'action_is_wait' | 'missing_entry' | 'missing_stop_loss' | 'missing_take_profit';
 
 export interface MapResult {
   payload: JournalAddPayload | null;

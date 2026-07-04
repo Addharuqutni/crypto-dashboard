@@ -900,7 +900,7 @@ interface FilterArgs {
  * Pure filter+sort. Extracted so it can be unit-tested separately and so
  * the panel keeps a single useMemo with stable deps.
  */
-export function filterAndSort(
+function filterAndSort(
   entries: SignalJournalEntry[],
   args: FilterArgs
 ): SignalJournalEntry[] {

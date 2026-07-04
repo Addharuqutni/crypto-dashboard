@@ -22,11 +22,7 @@ import type { ForecastAlignment, ForecastDirection, ForecastSummary } from '@/ty
 export type FuturesSignalAction = 'LONG' | 'SHORT' | 'WAIT';
 
 export type FuturesMarketRegime =
-  | 'BULLISH_TREND'
-  | 'BEARISH_TREND'
-  | 'RANGE'
-  | 'CHOP_HIGH_RISK'
-  | 'INSUFFICIENT_DATA';
+  'BULLISH_TREND' | 'BEARISH_TREND' | 'RANGE' | 'CHOP_HIGH_RISK' | 'INSUFFICIENT_DATA';
 
 export type FuturesRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'NO_TRADE';
 
@@ -44,22 +40,13 @@ export type FuturesGrade = 'A' | 'B' | 'C' | 'D';
  * keep working while new consumers can rely on the spec's vocabulary.
  */
 export type FuturesMarketRegimeId =
-  | 'bullish_trend'
-  | 'bearish_trend'
-  | 'range'
-  | 'choppy'
-  | 'volatile'
-  | 'unknown';
+  'bullish_trend' | 'bearish_trend' | 'range' | 'choppy' | 'volatile' | 'unknown';
 
 /**
  * Trade permission derived from the 4H (macro) market regime.
  * The engine refuses any side that contradicts this permission.
  */
-export type FuturesTradePermission =
-  | 'long_only'
-  | 'short_only'
-  | 'both'
-  | 'no_trade';
+export type FuturesTradePermission = 'long_only' | 'short_only' | 'both' | 'no_trade';
 
 /**
  * Entry trigger lifecycle for the strict pipeline:
@@ -128,12 +115,7 @@ export interface FuturesMtfConfirmation {
 }
 
 export type FuturesFundingBias =
-  | 'SUPPORTS_LONG'
-  | 'SUPPORTS_SHORT'
-  | 'CROWDED_LONG'
-  | 'CROWDED_SHORT'
-  | 'NEUTRAL'
-  | 'UNAVAILABLE';
+  'SUPPORTS_LONG' | 'SUPPORTS_SHORT' | 'CROWDED_LONG' | 'CROWDED_SHORT' | 'NEUTRAL' | 'UNAVAILABLE';
 
 export type FuturesOpenInterestBias =
   | 'BULLISH_CONTINUATION'
@@ -150,7 +132,7 @@ export interface FuturesPositioning {
   openInterestBias: FuturesOpenInterestBias;
 }
 
-export type FuturesLiquiditySweepType = 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'NONE';
+type FuturesLiquiditySweepType = 'BULLISH_SWEEP' | 'BEARISH_SWEEP' | 'NONE';
 
 export interface FuturesLiquiditySweep {
   type: FuturesLiquiditySweepType;

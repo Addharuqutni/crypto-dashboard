@@ -125,7 +125,7 @@ export interface EvaluationResult {
   log: WorkerSignalLogEntry;
 }
 
-export type AlertDecisionReason =
+type AlertDecisionReason =
   | 'cooldown'
   | 'no_change'
   | 'wait_disabled'
