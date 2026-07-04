@@ -14,13 +14,13 @@ import type { generateFuturesSignal } from '@/lib/domain/analysis/futures-signal
  * that implement them.
  */
 
-export type FuturesKlinesPort = typeof fetchKlines;
-export type FundingRatePort = typeof fetchFundingRate;
-export type OpenInterestPort = typeof fetchOpenInterestSnapshot;
-export type SignalEnginePort = typeof generateFuturesSignal;
+type FuturesKlinesPort = typeof fetchKlines;
+type FundingRatePort = typeof fetchFundingRate;
+type OpenInterestPort = typeof fetchOpenInterestSnapshot;
+type SignalEnginePort = typeof generateFuturesSignal;
 
 /** Trivial clock port. Kept narrow on purpose so tests can pin time. */
-export type ClockPort = () => number;
+type ClockPort = () => number;
 
 /**
  * Aggregated dependencies a `RunScreenerCycle` use case needs.

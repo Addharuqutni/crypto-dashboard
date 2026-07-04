@@ -40,10 +40,7 @@ export async function fetchFuturesSymbols(): Promise<BinanceExchangeInfoSymbol[]
   const data = (await response.json()) as BinanceExchangeInfoResponse;
 
   return data.symbols.filter(
-    (s) =>
-      s.status === 'TRADING' &&
-      s.contractType === 'PERPETUAL' &&
-      s.quoteAsset === 'USDT'
+    (s) => s.status === 'TRADING' && s.contractType === 'PERPETUAL' && s.quoteAsset === 'USDT'
   );
 }
 
@@ -67,29 +64,6 @@ export async function fetchAllTickerSnapshot(): Promise<LivePrice[]> {
 }
 
 /**
- * Fetches 24hr ticker snapshot for specific symbols only.
- * More efficient when tracking a small watchlist.
- */
-export async function fetchTickerSnapshotForSymbols(
-  binanceSymbols: string[]
-): Promise<LivePrice[]> {
-  if (binanceSymbols.length === 0) return [];
-
-  // Binance Futures supports batch symbol query via JSON array
-  const symbolsParam = JSON.stringify(binanceSymbols);
-  const url = `${BINANCE_FUTURES_REST_BASE}/ticker/24hr?symbols=${encodeURIComponent(symbolsParam)}`;
-
-  const response = await fetchWithRetry(url, MAX_RETRIES);
-  if (!response || !response.ok) return [];
-
-  const data = (await response.json()) as BinanceRestTickerItem[];
-
-  return data
-    .map((item) => normalizeRestTicker(item))
-    .filter((item): item is LivePrice => item !== null);
-}
-
-/**
  * Fetches raw 24hr ticker stats for a single Futures symbol.
  * Returns high, low, volume, quoteVolume for coin detail page.
  * Works for ANY Futures USDT pair — not limited to registry.
@@ -105,7 +79,6 @@ export async function fetchSingleTicker24hr(
   const data = (await response.json()) as BinanceRestTickerItem;
   return data;
 }
-
 
 // --- Internal Helpers ---
 
@@ -132,10 +105,7 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
  * Does NOT retry on rate limit (429/418) — returns null immediately.
  * Backoff: 200ms → 400ms → 800ms.
  */
-async function fetchWithRetry(
-  url: string,
-  maxRetries: number
-): Promise<Response | null> {
+async function fetchWithRetry(url: string, maxRetries: number): Promise<Response | null> {
   let lastResponse: Response | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -144,9 +114,7 @@ async function fetchWithRetry(
 
       // Rate limited — do not retry, back off
       if (RATE_LIMIT_STATUS_CODES.has(response.status)) {
-        console.warn(
-          `[binance-futures-client] Rate limited (${response.status}). Backing off.`
-        );
+        console.warn(`[binance-futures-client] Rate limited (${response.status}). Backing off.`);
         return null;
       }
 

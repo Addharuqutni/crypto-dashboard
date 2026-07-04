@@ -39,16 +39,3 @@ export function safeSetItem<T>(key: string, value: T): void {
     console.warn(`[Storage] Failed to write key "${key}":`, error);
   }
 }
-
-/**
- * Remove item from localStorage safely.
- */
-export function safeRemoveItem(key: string): void {
-  if (typeof window === 'undefined') return;
-
-  try {
-    localStorage.removeItem(key);
-  } catch {
-    console.warn(`[Storage] Failed to remove key "${key}".`);
-  }
-}

@@ -1,5 +1,5 @@
 import type { FuturesSignalAction } from '@/types/futures-signal';
-import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/application/screener/types';
+import type { ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 
 export type AgentDecision = 'WATCH' | 'AVOID' | 'WAIT_CONFIRMATION' | 'HIGH_RISK';
 export type AgentRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -48,5 +48,3 @@ export interface AgentRunResult {
   generatedAt: number;
   decisions: AgentSignalDecision[];
 }
-
-export type AgentInput = RankedScreenerResult;

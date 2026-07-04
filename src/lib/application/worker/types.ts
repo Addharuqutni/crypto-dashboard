@@ -19,15 +19,6 @@ import type { BinanceInterval } from '@/lib/adapters/binance/intervals';
  * without custom encoders.
  */
 
-/**
- * Backwards-compat alias for the canonical `BinanceInterval`.
- *
- * @deprecated Import `BinanceInterval` from `@/lib/adapters/binance` instead.
- * Kept here so callers using `WorkerInterval` keep working during the
- * transition.
- */
-export type WorkerInterval = BinanceInterval;
-
 /** Per-symbol cycle configuration. The worker runs every `intervalMinutes`. */
 export interface WorkerConfig {
   /** Symbols to monitor. Defaults to ['BTCUSDT']. */
@@ -134,7 +125,7 @@ export interface EvaluationResult {
   log: WorkerSignalLogEntry;
 }
 
-export type AlertDecisionReason =
+type AlertDecisionReason =
   | 'cooldown'
   | 'no_change'
   | 'wait_disabled'

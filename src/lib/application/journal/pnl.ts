@@ -33,24 +33,6 @@ export interface JournalPnl {
   realized: boolean;
 }
 
-/**
- * Compute the PnL percentage for a journal entry.
- *
- * Order of preference:
- *   1. WAIT signals or CANCELLED entries → null.
- *   2. EXPIRED → 0% (matches finalR=0 semantics).
- *   3. Closed entry with `finalR` and `stopLoss` available → derive % from R.
- *   4. Closed entry without `finalR` → fall back to canonical TP/SL level.
- *   5. PENDING with live price → unrealised mark vs live.
- *   6. Anything else → null.
- */
-export function computeJournalPnlPercent(
-  entry: SignalJournalEntry,
-  livePrice: number | undefined
-): number | null {
-  return computeJournalPnl(entry, livePrice).percent;
-}
-
 export function computeJournalPnl(
   entry: SignalJournalEntry,
   livePrice: number | undefined

@@ -1,5 +1,4 @@
 import type {
-  FuturesEntryTrigger,
   FuturesMarketRegimeId,
   FuturesSignal,
   FuturesSignalAction,
@@ -125,12 +124,7 @@ export interface SetupRanking {
 }
 
 /** User-selected discipline preset. */
-export type RiskProfileId =
-  | 'conservative'
-  | 'balanced'
-  | 'aggressive'
-  | 'scalper'
-  | 'swing';
+export type RiskProfileId = 'conservative' | 'balanced' | 'aggressive' | 'scalper' | 'swing';
 
 export interface RiskProfile {
   id: RiskProfileId;
@@ -218,6 +212,3 @@ export interface NoTradeExplanation {
   /** Suggested timeframe for re-evaluation. */
   reevaluateInMinutes: number;
 }
-
-/** Convenience export for downstream consumers. */
-export type { FuturesEntryTrigger };

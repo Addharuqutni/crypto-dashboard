@@ -4,10 +4,18 @@
  * API keys from being sent to arbitrary remote hosts.
  */
 
-import type { AiConfig, AiChatCompletionRequest, AiChatCompletionResponse, AiStreamChunk, AiMessageRole } from '@/types/ai';
+import type {
+  AiConfig,
+  AiChatCompletionRequest,
+  AiChatCompletionResponse,
+  AiStreamChunk,
+  AiMessageRole,
+} from '@/types/ai';
 
 const OPENAI_COMPATIBLE_PATH = '/chat/completions';
 const LOCAL_AI_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const DEFAULT_TEMPERATURE = 0.7;
+const DEFAULT_MAX_TOKENS = 2048;
 
 export class AiClientError extends Error {
   constructor(
@@ -35,8 +43,8 @@ export async function sendChatCompletion(
     model: validateRequiredText(config.model, 'Model'),
     messages,
     stream: false,
-    temperature: options?.temperature ?? 0.7,
-    max_tokens: options?.maxTokens ?? 2048,
+    temperature: options?.temperature ?? DEFAULT_TEMPERATURE,
+    max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
   };
 
   const response = await fetch(url, {
@@ -79,7 +87,9 @@ export function sendStreamingChatCompletion(
     validateRequiredText(config.apiKey, 'API key');
   } catch (error) {
     queueMicrotask(() => {
-      callbacks.onError(error instanceof AiClientError ? error : new AiClientError('Invalid AI configuration'));
+      callbacks.onError(
+        error instanceof AiClientError ? error : new AiClientError('Invalid AI configuration')
+      );
     });
     return controller;
   }
@@ -88,8 +98,8 @@ export function sendStreamingChatCompletion(
     model,
     messages,
     stream: true,
-    temperature: options?.temperature ?? 0.7,
-    max_tokens: options?.maxTokens ?? 2048,
+    temperature: options?.temperature ?? DEFAULT_TEMPERATURE,
+    max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
   };
 
   (async () => {
@@ -157,11 +167,15 @@ export function sendStreamingChatCompletion(
  * Tests the connection to the configured AI provider.
  * Sends a minimal request to verify credentials and endpoint.
  */
-export async function testConnection(config: AiConfig): Promise<{ success: boolean; message: string }> {
+export async function testConnection(
+  config: AiConfig
+): Promise<{ success: boolean; message: string }> {
   try {
-    const content = await sendChatCompletion(config, [
-      { role: 'user', content: 'Reply with "ok" only.' },
-    ], { maxTokens: 10 });
+    const content = await sendChatCompletion(
+      config,
+      [{ role: 'user', content: 'Reply with "ok" only.' }],
+      { maxTokens: 10 }
+    );
 
     return { success: true, message: `Connected. Response: "${content.slice(0, 50)}"` };
   } catch (error) {
