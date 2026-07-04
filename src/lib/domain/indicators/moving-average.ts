@@ -25,18 +25,3 @@ export function calculateSMA(
 
   return result;
 }
-
-/**
- * Calculate all three MA lines (7, 25, 99) at once.
- */
-export function calculateAllMAs(candles: Candle[]): {
-  ma7: { time: number; value: number }[];
-  ma25: { time: number; value: number }[];
-  ma99: { time: number; value: number }[];
-} {
-  return {
-    ma7: calculateSMA(candles, 7),
-    ma25: calculateSMA(candles, 25),
-    ma99: calculateSMA(candles, 99),
-  };
-}

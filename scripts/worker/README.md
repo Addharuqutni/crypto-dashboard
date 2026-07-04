@@ -11,7 +11,7 @@ and pushes disciplined Telegram notifications.
 npm install
 
 # 2. configure
-cp .env.worker.example .env.local
+cp .env.example .env.local
 # edit .env.local and fill TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID
 
 # 3. run a single evaluation

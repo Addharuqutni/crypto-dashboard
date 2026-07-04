@@ -57,23 +57,9 @@ export function calculateLatestEMA(values: number[], period: number): number | n
 }
 
 /**
- * Calculate EMA from candle close prices.
- */
-export function calculateEMAFromCandles(candles: Candle[], period: number): number[] | null {
-  if (candles.length === 0) return null;
-  return calculateEMA(
-    candles.map((c) => c.close),
-    period
-  );
-}
-
-/**
  * Latest EMA value from candle close prices, or `null` when insufficient.
  */
-export function calculateLatestEMAFromCandles(
-  candles: Candle[],
-  period: number
-): number | null {
+export function calculateLatestEMAFromCandles(candles: Candle[], period: number): number | null {
   if (candles.length === 0) return null;
   return calculateLatestEMA(
     candles.map((c) => c.close),

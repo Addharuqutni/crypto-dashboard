@@ -19,14 +19,6 @@ export type Candle = {
 export type ChartTimeframe = '5m' | '15m' | '30m' | '1H' | '4H' | '24H' | '7D' | '30D';
 
 /**
- * Chart data point for line chart rendering.
- */
-export type ChartDataPoint = {
-  time: number;
-  value: number;
-};
-
-/**
  * Pre-computed technical analysis result.
  * Calculated once in the parent and shared across TechnicalPanel and AiChatPanel.
  */

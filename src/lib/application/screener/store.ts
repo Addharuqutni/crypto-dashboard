@@ -229,8 +229,3 @@ export function makeAtomicTmpPath(target: string): string {
   const nonce = `${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
   return `${target}.${nonce}.tmp`;
 }
-
-/** Default singleton path used by API/UI server-side reads. */
-export function defaultScreenerStore(): ScreenerStore {
-  return new ScreenerStore();
-}
