@@ -18,7 +18,7 @@
  *  10. no entry trigger
  */
 
-export type NoTradeSeverity =
+type NoTradeSeverity =
   | 'INSUFFICIENT_DATA'
   | 'RISK_NO_TRADE'
   | 'RR_BELOW_MIN'

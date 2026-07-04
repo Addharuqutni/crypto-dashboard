@@ -23,7 +23,7 @@ import { sendChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
 import type { RankedScreenerResult, AiProposedLevels, ScreenerAiAuditSummary } from './types';
 import { validateAiProposedLevels, type AiLevelValidationOptions, DEFAULT_AI_LEVEL_VALIDATION_OPTIONS } from './ai-level-validator';
 
-export type AuditVerdict = 'VALID' | 'WEAK' | 'WAIT_PREFERRED';
+type AuditVerdict = 'VALID' | 'WEAK' | 'WAIT_PREFERRED';
 
 export interface ScreenerAuditResult {
   symbol: string;

@@ -1,6 +1,6 @@
 import type { Candle } from '@/types/chart';
 
-export type FibonacciLevel = {
+type FibonacciLevel = {
   level: number;
   label: string;
   price: number;

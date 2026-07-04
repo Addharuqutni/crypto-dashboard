@@ -1,6 +1,7 @@
 import { ScreenerStore } from './store';
 import { SupabaseScreenerStore } from './supabase-store';
 import { isSupabaseConfigured } from '@/lib/adapters/supabase/server-client';
+import { isServerlessRuntime } from '@/lib/shared/runtime/is-serverless';
 import type { ScreenerStorage } from './storage';
 
 /**
@@ -63,16 +64,6 @@ function throwDatabaseRequiredButFileSelected(): never {
 function throwFileStorageUnavailableOnServerless(): never {
   throw new Error(
     '[screener.storage] File storage is unavailable on Vercel/serverless. Configure Supabase storage for screener.'
-  );
-}
-
-function isServerlessRuntime(): boolean {
-  return (
-    process.env.VERCEL === '1' ||
-    process.env.VERCEL === 'true' ||
-    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-    process.env.LAMBDA_TASK_ROOT === '/var/task' ||
-    Boolean(process.env.NOW_REGION)
   );
 }
 

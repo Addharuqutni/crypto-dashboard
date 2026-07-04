@@ -7,7 +7,7 @@ import type {
 } from '@/types/futures-signal';
 import type { BinanceInterval } from '@/lib/adapters/binance/intervals';
 
-export type ScreenerRunStatus = 'idle' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
+type ScreenerRunStatus = 'idle' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
 
 export interface ScreenerAlertSettings {
   enabled: boolean;

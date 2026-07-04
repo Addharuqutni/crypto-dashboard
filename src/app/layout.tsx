@@ -38,7 +38,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${spaceGrotesk.variable}`}>
-      <body className="min-h-screen bg-bg-app text-text-primary antialiased">
+      <body
+        suppressHydrationWarning
+        className="min-h-screen bg-bg-app text-text-primary antialiased"
+      >
         <QueryProvider>
           <DataProvider>
             <ToastProvider>
@@ -50,4 +53,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

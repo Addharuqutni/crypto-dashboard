@@ -17,7 +17,7 @@ export type AdxResult = {
   minusDi: number;
 };
 
-export type AdxPoint = AdxResult & { time: number };
+type AdxPoint = AdxResult & { time: number };
 
 /**
  * Compute the full ADX series with +DI / -DI.

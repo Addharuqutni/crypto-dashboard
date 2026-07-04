@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
-import { DEFAULT_SCREENER_CONFIG, DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
+import {
+  DEFAULT_SCREENER_CONFIG,
+  DEFAULT_SCREENER_ALERT_SETTINGS,
+} from '@/lib/application/screener/config';
 import { runScreenerCycle } from '@/lib/application/screener/runner';
 import { rankScreenerResults } from '@/lib/application/screener/ranker';
 import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
 import { getScreenerUniverseFromEnv } from '@/lib/application/screener/universe';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
+import { isServerlessRuntime } from '@/lib/shared/runtime/is-serverless';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -78,10 +82,7 @@ async function runOnDemandScreener() {
     );
   } catch (err: unknown) {
     console.error('[api/screener] on-demand run failed:', err);
-    return NextResponse.json(
-      { ok: false, error: 'Failed to run screener' },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: 'Failed to run screener' }, { status: 500 });
   }
 }
 
@@ -114,10 +115,7 @@ async function readFromFileStore() {
     if (shouldFallbackToOnDemand()) {
       return runOnDemandScreener();
     }
-    return NextResponse.json(
-      { ok: false, error: 'Failed to read screener data' },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: 'Failed to read screener data' }, { status: 500 });
   }
 }
 
@@ -147,16 +145,6 @@ function shouldFallbackToOnDemand(): boolean {
   if (process.env.SCREENER_REQUIRE_DATABASE === '1') return false;
   if (isServerlessRuntime()) return false;
   return true;
-}
-
-function isServerlessRuntime(): boolean {
-  return (
-    process.env.VERCEL === '1' ||
-    process.env.VERCEL === 'true' ||
-    Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME) ||
-    process.env.LAMBDA_TASK_ROOT === '/var/task' ||
-    Boolean(process.env.NOW_REGION)
-  );
 }
 
 export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
