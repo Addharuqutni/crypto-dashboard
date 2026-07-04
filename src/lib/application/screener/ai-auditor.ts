@@ -21,7 +21,11 @@
 import type { AiConfig } from '@/types/ai';
 import { sendChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
 import type { RankedScreenerResult, AiProposedLevels, ScreenerAiAuditSummary } from './types';
-import { validateAiProposedLevels, type AiLevelValidationOptions, DEFAULT_AI_LEVEL_VALIDATION_OPTIONS } from './ai-level-validator';
+import {
+  validateAiProposedLevels,
+  type AiLevelValidationOptions,
+  DEFAULT_AI_LEVEL_VALIDATION_OPTIONS,
+} from './ai-level-validator';
 
 type AuditVerdict = 'VALID' | 'WEAK' | 'WAIT_PREFERRED';
 
@@ -97,27 +101,31 @@ Respond with ONLY the JSON object. No prose before or after.`;
  * Excludes raw secrets, environment data, and any fields the AI must not see.
  */
 export function buildAuditUserMessage(result: RankedScreenerResult): string {
-  return JSON.stringify({
-    symbol: result.symbol,
-    action: result.action,
-    confidence: result.confidence,
-    grade: result.grade,
-    rankingScore: result.rankingScore,
-    marketRegime: result.marketRegime,
-    tradePermission: result.tradePermission,
-    mtfAlignmentScore: result.mtfAlignmentScore,
-    riskReward: result.riskReward,
-    entry: result.entry,
-    stopLoss: result.stopLoss,
-    dataHealth: {
-      ok: result.dataHealth.ok,
-      reasons: result.dataHealth.reasons,
-      confidenceCap: result.dataHealth.confidenceCap,
+  return JSON.stringify(
+    {
+      symbol: result.symbol,
+      action: result.action,
+      confidence: result.confidence,
+      grade: result.grade,
+      rankingScore: result.rankingScore,
+      marketRegime: result.marketRegime,
+      tradePermission: result.tradePermission,
+      mtfAlignmentScore: result.mtfAlignmentScore,
+      riskReward: result.riskReward,
+      entry: result.entry,
+      stopLoss: result.stopLoss,
+      dataHealth: {
+        ok: result.dataHealth.ok,
+        reasons: result.dataHealth.reasons,
+        confidenceCap: result.dataHealth.confidenceCap,
+      },
+      reasons: result.reasons.slice(0, 5),
+      warnings: result.warnings.slice(0, 5),
+      noTradeReasons: result.noTradeReasons.slice(0, 5),
     },
-    reasons: result.reasons.slice(0, 5),
-    warnings: result.warnings.slice(0, 5),
-    noTradeReasons: result.noTradeReasons.slice(0, 5),
-  }, null, 2);
+    null,
+    2
+  );
 }
 
 /**
@@ -128,7 +136,10 @@ export function parseAuditResult(raw: string, expectedSymbol: string): ScreenerA
   let json: unknown;
   try {
     // Strip code fences if the model added them despite instructions.
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+    const cleaned = raw
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/```\s*$/, '')
+      .trim();
     json = JSON.parse(cleaned);
   } catch {
     return null;
@@ -140,9 +151,12 @@ export function parseAuditResult(raw: string, expectedSymbol: string): ScreenerA
   if (typeof o.symbol !== 'string') return null;
   if (o.symbol !== expectedSymbol) return null;
   if (o.verdict !== 'VALID' && o.verdict !== 'WEAK' && o.verdict !== 'WAIT_PREFERRED') return null;
-  if (typeof o.summary !== 'string' || o.summary.length === 0 || o.summary.length > 240) return null;
-  if (typeof o.mainRisk !== 'string' || o.mainRisk.length === 0 || o.mainRisk.length > 200) return null;
-  if (typeof o.nextStep !== 'string' || o.nextStep.length === 0 || o.nextStep.length > 200) return null;
+  if (typeof o.summary !== 'string' || o.summary.length === 0 || o.summary.length > 240)
+    return null;
+  if (typeof o.mainRisk !== 'string' || o.mainRisk.length === 0 || o.mainRisk.length > 200)
+    return null;
+  if (typeof o.nextStep !== 'string' || o.nextStep.length === 0 || o.nextStep.length > 200)
+    return null;
   if (!Array.isArray(o.caveats)) return null;
   if (o.caveats.length > 6) return null;
   if (!o.caveats.every((c) => typeof c === 'string' && c.length <= 160)) return null;
