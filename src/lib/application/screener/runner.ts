@@ -11,7 +11,4 @@
  *
  * See `architecture-assessment.md` for the rationale (Phase 2 / F2).
  */
-export {
-  runScreenerCycle,
-  type ScreenerRunResult,
-} from './use-cases/run-screener-cycle';
+export { runScreenerCycle } from './use-cases/run-screener-cycle';

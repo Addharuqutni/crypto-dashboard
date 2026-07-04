@@ -6,7 +6,7 @@ export type RsiResult = {
   period: number;
 };
 
-export type RsiPoint = {
+type RsiPoint = {
   time: number;
   value: number;
 };

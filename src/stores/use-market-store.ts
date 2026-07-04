@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { LivePrice, ConnectionStatus } from '@/types/market';
 
 /** Status of the exchangeInfo symbol validation registry. */
-export type ValidSymbolsStatus = 'idle' | 'loading' | 'ready' | 'failed';
+type ValidSymbolsStatus = 'idle' | 'loading' | 'ready' | 'failed';
 
 interface MarketState {
   /** Map of symbol -> live price data (keyed by internal symbol e.g. "BTC") */

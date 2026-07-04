@@ -5,4 +5,4 @@
  * (binance-futures-client, binance-futures-normalizers, intervals) so this
  * barrel stays minimal: just the shared klines fetcher + error type.
  */
-export { fetchKlines, KlineFetchError, type FetchKlinesArgs } from './futures-klines';
+export { fetchKlines, KlineFetchError } from './futures-klines';
