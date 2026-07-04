@@ -117,10 +117,15 @@ export function SignalJournalPanel() {
     [filtered, page]
   );
   // Reset page when filters change.
-  useEffect(() => { setPage(0); }, [search, statusFilter, sourceFilter, sortKey, sortDir]);
+  useEffect(() => {
+    setPage(0);
+  }, [search, statusFilter, sourceFilter, sortKey, sortDir]);
 
   const handleRemoveEntry = useCallback((id: string) => remove(id), [remove]);
-  const handleCancelEntry = useCallback((id: string) => updateStatus(id, 'CANCELLED'), [updateStatus]);
+  const handleCancelEntry = useCallback(
+    (id: string) => updateStatus(id, 'CANCELLED'),
+    [updateStatus]
+  );
   const handleMarkEntryOutcome = useCallback(
     (id: string, status: 'TP1' | 'TP2' | 'TP3' | 'SL' | 'EXPIRED', exit?: number) =>
       markOutcome(id, status, exit),
@@ -308,7 +313,13 @@ function MetricsRow({ metrics: m }: { metrics: SignalJournalMetrics }) {
   const closed = m.closed > 0;
   const winRateLabel = closed ? `${m.winRate.toFixed(1)}%` : '—';
   const winTone = closed ? (m.winRate >= 50 ? 'bullish' : 'bearish') : 'neutral';
-  const rTone = closed ? (m.closedR > 0 ? 'bullish' : m.closedR < 0 ? 'bearish' : 'neutral') : 'neutral';
+  const rTone = closed
+    ? m.closedR > 0
+      ? 'bullish'
+      : m.closedR < 0
+        ? 'bearish'
+        : 'neutral'
+    : 'neutral';
 
   return (
     <div className="space-y-2">
@@ -319,7 +330,11 @@ function MetricsRow({ metrics: m }: { metrics: SignalJournalMetrics }) {
           primary={winRateLabel}
           tone={winTone}
           progressPct={closed ? Math.min(100, m.winRate) : 0}
-          subtitle={closed ? `${Math.round((m.winRate / 100) * m.closed)} of ${m.closed} closed` : 'No closed trades yet'}
+          subtitle={
+            closed
+              ? `${Math.round((m.winRate / 100) * m.closed)} of ${m.closed} closed`
+              : 'No closed trades yet'
+          }
         />
         <HeroMetric
           label="Total R"
@@ -353,8 +368,18 @@ function MetricsRow({ metrics: m }: { metrics: SignalJournalMetrics }) {
           accent={m.shortCount > 0 ? `${m.shortWinRate.toFixed(0)}% win` : 'no trades'}
           tone="bearish"
         />
-        <DistroItem label="Manual" value={m.manualCount.toString()} accent="manual entries" tone="neutral" />
-        <DistroItem label="Paper" value={m.paperCount.toString()} accent="paper trades" tone="neutral" />
+        <DistroItem
+          label="Manual"
+          value={m.manualCount.toString()}
+          accent="manual entries"
+          tone="neutral"
+        />
+        <DistroItem
+          label="Paper"
+          value={m.paperCount.toString()}
+          accent="paper trades"
+          tone="neutral"
+        />
         <DistroItem
           label="Avg Conf"
           value={m.total > 0 ? m.averageConfidence.toFixed(0) : '—'}
@@ -385,7 +410,9 @@ function HeroMetric({
 }) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-border-subtle/70 bg-bg-surface-soft px-3.5 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">{label}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+        {label}
+      </p>
       <p
         className={cn(
           'numeric mt-1.5 text-2xl font-bold leading-none tracking-tight',
@@ -435,7 +462,9 @@ function DistroItem({
 }) {
   return (
     <div className="min-w-[96px] flex-1 px-3 py-2">
-      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-text-muted">{label}</dt>
+      <dt className="text-[9px] font-semibold uppercase tracking-[0.14em] text-text-muted">
+        {label}
+      </dt>
       <dd className="mt-0.5 flex items-baseline gap-1.5">
         <span
           className={cn(
@@ -562,7 +591,9 @@ const JournalCard = memo(function JournalCard({
       <div className="flex items-center gap-2 px-3 pt-3 pb-2">
         <ActionBadge action={entry.action} />
         <span className="truncate text-sm font-bold text-text-primary">{entry.symbol}</span>
-        <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">{entry.timeframe}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted">
+          {entry.timeframe}
+        </span>
         {entry.source && entry.source !== 'manual' && <SourceBadge source={entry.source} />}
         <StatusPill status={entry.status} className="ml-auto" />
       </div>
@@ -590,8 +621,14 @@ const JournalCard = memo(function JournalCard({
             {livePrice != null ? formatCurrency(livePrice) : '—'}
           </p>
           {liveDeltaPct != null && liveFavorable != null && (
-            <p className={cn('numeric text-[10px] font-semibold', liveFavorable ? 'text-market-up' : 'text-market-down')}>
-              {liveDeltaPct > 0 ? '+' : ''}{liveDeltaPct.toFixed(2)}%
+            <p
+              className={cn(
+                'numeric text-[10px] font-semibold',
+                liveFavorable ? 'text-market-up' : 'text-market-down'
+              )}
+            >
+              {liveDeltaPct > 0 ? '+' : ''}
+              {liveDeltaPct.toFixed(2)}%
             </p>
           )}
         </div>
@@ -614,7 +651,10 @@ const JournalCard = memo(function JournalCard({
         </span>
         {entry.riskRewardRatio != null && (
           <span className="text-text-muted">
-            RR <span className="numeric font-bold text-text-primary">{entry.riskRewardRatio.toFixed(1)}</span>
+            RR{' '}
+            <span className="numeric font-bold text-text-primary">
+              {entry.riskRewardRatio.toFixed(1)}
+            </span>
           </span>
         )}
         {entry.setupType && (
@@ -623,20 +663,41 @@ const JournalCard = memo(function JournalCard({
           </span>
         )}
         {entry.finalR != null && Number.isFinite(entry.finalR) && (
-          <span className={cn('numeric ml-auto font-bold', entry.finalR > 0 ? 'text-market-up' : entry.finalR < 0 ? 'text-market-down' : 'text-text-muted')}>
+          <span
+            className={cn(
+              'numeric ml-auto font-bold',
+              entry.finalR > 0
+                ? 'text-market-up'
+                : entry.finalR < 0
+                  ? 'text-market-down'
+                  : 'text-text-muted'
+            )}
+          >
             {formatR(entry.finalR)}R
           </span>
         )}
       </div>
 
       {/* ─── Section 5: Tracking (conditional) ─── */}
-      {(entry.maxFavorableExcursion != null || entry.maxAdverseExcursion != null || (entry.status === 'PENDING' && entry.expiresAt != null)) && (
+      {(entry.maxFavorableExcursion != null ||
+        entry.maxAdverseExcursion != null ||
+        (entry.status === 'PENDING' && entry.expiresAt != null)) && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle/30 px-3 py-2 text-[10px] text-text-muted">
           {entry.maxFavorableExcursion != null && (
-            <span>MFE <span className="numeric font-semibold text-market-up">{formatCurrency(entry.maxFavorableExcursion)}</span></span>
+            <span>
+              MFE{' '}
+              <span className="numeric font-semibold text-market-up">
+                {formatCurrency(entry.maxFavorableExcursion)}
+              </span>
+            </span>
           )}
           {entry.maxAdverseExcursion != null && (
-            <span>MAE <span className="numeric font-semibold text-market-down">{formatCurrency(entry.maxAdverseExcursion)}</span></span>
+            <span>
+              MAE{' '}
+              <span className="numeric font-semibold text-market-down">
+                {formatCurrency(entry.maxAdverseExcursion)}
+              </span>
+            </span>
           )}
           {entry.status === 'PENDING' && entry.expiresAt != null && (
             <ExpiryCountdown expiresAt={entry.expiresAt} />
@@ -707,10 +768,7 @@ function ManualClosePopover({
   onCancel,
 }: {
   entry: SignalJournalEntry;
-  onSubmit: (
-    status: 'TP1' | 'TP2' | 'TP3' | 'SL' | 'EXPIRED',
-    actualExit?: number
-  ) => void;
+  onSubmit: (status: 'TP1' | 'TP2' | 'TP3' | 'SL' | 'EXPIRED', actualExit?: number) => void;
   onCancel: () => void;
 }) {
   const [status, setStatus] = useState<'TP1' | 'TP2' | 'TP3' | 'SL' | 'EXPIRED'>('TP1');
@@ -810,7 +868,8 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: number }) {
 
   return (
     <p className="text-[9px] text-text-muted">
-      Expires in <span className="numeric font-medium text-text-secondary">{formatDuration(remaining)}</span>
+      Expires in{' '}
+      <span className="numeric font-medium text-text-secondary">{formatDuration(remaining)}</span>
     </p>
   );
 }
@@ -900,21 +959,21 @@ interface FilterArgs {
  * Pure filter+sort. Extracted so it can be unit-tested separately and so
  * the panel keeps a single useMemo with stable deps.
  */
-function filterAndSort(
-  entries: SignalJournalEntry[],
-  args: FilterArgs
-): SignalJournalEntry[] {
+function filterAndSort(entries: SignalJournalEntry[], args: FilterArgs): SignalJournalEntry[] {
   const q = args.search.trim().toLowerCase();
   let out = entries.filter((e) => {
-    if (
-      args.statusFilter === 'open' &&
-      !(e.status === 'PENDING' || e.status === 'CANCELLED')
-    ) {
+    if (args.statusFilter === 'open' && !(e.status === 'PENDING' || e.status === 'CANCELLED')) {
       return false;
     }
     if (
       args.statusFilter === 'closed' &&
-      !(e.status === 'TP1' || e.status === 'TP2' || e.status === 'TP3' || e.status === 'SL' || e.status === 'EXPIRED')
+      !(
+        e.status === 'TP1' ||
+        e.status === 'TP2' ||
+        e.status === 'TP3' ||
+        e.status === 'SL' ||
+        e.status === 'EXPIRED'
+      )
     ) {
       return false;
     }
@@ -976,9 +1035,13 @@ function formatR(v: number): string {
   return v >= 0 ? `+${v.toFixed(2)}` : v.toFixed(2);
 }
 
-
-
-function StatusPill({ status, className: extraClass }: { status: SignalJournalStatus; className?: string }) {
+function StatusPill({
+  status,
+  className: extraClass,
+}: {
+  status: SignalJournalStatus;
+  className?: string;
+}) {
   const map: Record<SignalJournalStatus, { label: string; className: string }> = {
     PENDING: {
       label: 'Pending',

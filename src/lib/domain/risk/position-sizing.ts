@@ -96,15 +96,8 @@ const MIN_RISK_DISTANCE_PCT = 0.0001; // 0.01% — guards divide-by-zero and abs
  * message instead of guessing why the calculation refused.
  */
 export function computePositionSize(inputs: PositionSizingInputs): PositionSizingOutcome {
-  const {
-    side,
-    entry,
-    stopLoss,
-    accountSize,
-    riskPerTrade,
-    maxLeverage,
-    suggestedLeverage,
-  } = inputs;
+  const { side, entry, stopLoss, accountSize, riskPerTrade, maxLeverage, suggestedLeverage } =
+    inputs;
 
   if (side !== 'LONG' && side !== 'SHORT') {
     return fail('invalid_side', 'Side must be LONG or SHORT.');
@@ -130,16 +123,10 @@ export function computePositionSize(inputs: PositionSizingInputs): PositionSizin
 
   // Stop on wrong side check — a LONG stop must be below entry; SHORT above.
   if (side === 'LONG' && stopLoss >= entry) {
-    return fail(
-      'stop_on_wrong_side',
-      'For a LONG, stop loss must be strictly below entry.'
-    );
+    return fail('stop_on_wrong_side', 'For a LONG, stop loss must be strictly below entry.');
   }
   if (side === 'SHORT' && stopLoss <= entry) {
-    return fail(
-      'stop_on_wrong_side',
-      'For a SHORT, stop loss must be strictly above entry.'
-    );
+    return fail('stop_on_wrong_side', 'For a SHORT, stop loss must be strictly above entry.');
   }
 
   const rDistance = Math.abs(entry - stopLoss);
@@ -181,18 +168,18 @@ export function computePositionSize(inputs: PositionSizingInputs): PositionSizin
   return {
     ok: true,
     plan: {
-      riskAmount: round8(riskAmount),
-      rDistance: round8(rDistance),
-      rDistancePct: round8(rDistancePct),
-      qty: round8(qty),
-      notional: round8(notional),
-      requiredLeverage: round4(requiredLeverage),
-      cappedLeverage: round4(cappedLeverage),
+      riskAmount: roundTo(riskAmount, 8),
+      rDistance: roundTo(rDistance, 8),
+      rDistancePct: roundTo(rDistancePct, 8),
+      qty: roundTo(qty, 8),
+      notional: roundTo(notional, 8),
+      requiredLeverage: roundTo(requiredLeverage, 4),
+      cappedLeverage: roundTo(cappedLeverage, 4),
       leverageExceedsCap,
-      marginAtCappedLeverage: round8(marginAtCappedLeverage),
-      cappedNotional: round8(cappedNotional),
-      cappedQty: round8(cappedQty),
-      cappedRiskAmount: round8(cappedRiskAmount),
+      marginAtCappedLeverage: roundTo(marginAtCappedLeverage, 8),
+      cappedNotional: roundTo(cappedNotional, 8),
+      cappedQty: roundTo(cappedQty, 8),
+      cappedRiskAmount: roundTo(cappedRiskAmount, 8),
     },
   };
 }
@@ -223,12 +210,8 @@ function fail(error: PositionSizingError, message: string): PositionSizingOutcom
   return { ok: false, error, message };
 }
 
-function round8(v: number): number {
+function roundTo(v: number, decimals: number): number {
   if (!Number.isFinite(v)) return v;
-  return Math.round(v * 1e8) / 1e8;
-}
-
-function round4(v: number): number {
-  if (!Number.isFinite(v)) return v;
-  return Math.round(v * 1e4) / 1e4;
+  const factor = 10 ** decimals;
+  return Math.round(v * factor) / factor;
 }

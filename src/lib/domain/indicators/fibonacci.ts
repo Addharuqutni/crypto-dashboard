@@ -28,12 +28,12 @@ const FIB_LABELS: Record<number, string> = {
 
 /**
  * Calculate Fibonacci Retracement levels from candle data.
- * 
+ *
  * Logic:
  * 1. Identify the swing high and swing low within the lookback period.
  * 2. Determine trend direction (uptrend if close > open of the range).
  * 3. Calculate retracement levels between swing high and swing low.
- * 
+ *
  * In an uptrend: levels are measured from swing low to swing high.
  * In a downtrend: levels are measured from swing high to swing low.
  */
