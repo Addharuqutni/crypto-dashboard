@@ -7,7 +7,7 @@ import type { ScreenerUniverseCoin } from './types';
  * perpetual symbols available on Binance Futures. Ranks are advisory metadata
  * for display/tie-breaks only; trade decisions stay fully deterministic.
  */
-export const DEFAULT_SCREENER_UNIVERSE: readonly ScreenerUniverseCoin[] = Object.freeze([
+const DEFAULT_SCREENER_UNIVERSE: readonly ScreenerUniverseCoin[] = Object.freeze([
   { symbol: 'BTCUSDT', baseAsset: 'BTC', quoteAsset: 'USDT', marketCapRank: 1 },
   { symbol: 'ETHUSDT', baseAsset: 'ETH', quoteAsset: 'USDT', marketCapRank: 2 },
   { symbol: 'BNBUSDT', baseAsset: 'BNB', quoteAsset: 'USDT', marketCapRank: 3 },

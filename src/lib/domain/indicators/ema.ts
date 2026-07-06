@@ -19,7 +19,7 @@ import type { Candle } from '@/types/chart';
  * @returns array aligned to the tail of the input (length = values.length - period + 1),
  *          or `null` when input is too short / period is invalid.
  */
-export function calculateEMA(values: number[], period: number): number[] | null {
+function calculateEMA(values: number[], period: number): number[] | null {
   if (!Number.isFinite(period) || period <= 0) return null;
   if (values.length < period) return null;
 
@@ -50,7 +50,7 @@ export function calculateEMA(values: number[], period: number): number[] | null 
 /**
  * Convenience: latest EMA value, or `null` when insufficient data.
  */
-export function calculateLatestEMA(values: number[], period: number): number | null {
+function calculateLatestEMA(values: number[], period: number): number | null {
   const series = calculateEMA(values, period);
   if (!series || series.length === 0) return null;
   return series[series.length - 1] ?? null;

@@ -1,10 +1,13 @@
 'use client';
 
+import { useMemo } from 'react';
 import { TechnicalPanel } from '@/components/technical-analysis/technical-panel';
 import { FuturesSignalPanel } from '@/components/technical-analysis/futures-signal-panel';
+import { AiTechnicalSummary } from '@/components/ai-agent/ai-technical-summary';
 import { AiChatPanel } from '@/components/ai-agent/ai-chat-panel';
 import { BarChart3 } from 'lucide-react';
 import type { Candle, ChartTimeframe, AnalysisResult } from '@/types/chart';
+import type { TechnicalContext } from '@/types/ai';
 import type { FuturesSignal } from '@/types/futures-signal';
 
 type ChartMode = 'clean' | 'technical';
@@ -39,6 +42,48 @@ export function CoinAnalysisSection({
   onSwitchToTechnical,
 }: CoinAnalysisSectionProps) {
   const hasCandles = candles && candles.length > 0;
+  const aiContext = useMemo<TechnicalContext | null>(() => {
+    if (!analysis) return null;
+    return {
+      symbol,
+      timeframe,
+      price: price ?? undefined,
+      rsi:
+        analysis.rsi.value != null
+          ? { value: analysis.rsi.value, status: analysis.rsi.status }
+          : undefined,
+      macd: analysis.macd
+        ? {
+            macd: analysis.macd.macd,
+            signal: analysis.macd.signal,
+            histogram: analysis.macd.histogram,
+          }
+        : undefined,
+      trend: { value: analysis.trend.value, reasons: analysis.trend.reasons },
+      supportResistance: {
+        support: analysis.sr.support ?? null,
+        resistance: analysis.sr.resistance ?? null,
+        confidence: analysis.sr.confidence,
+      },
+      fibonacci: analysis.fib
+        ? {
+            direction: analysis.fib.direction,
+            levels: analysis.fib.levels.map((level) => ({
+              label: level.label,
+              price: level.price,
+            })),
+          }
+        : undefined,
+      orderBlocks: analysis.orderBlocks
+        .slice(-3)
+        .map((block) => ({
+          type: block.type,
+          high: block.high,
+          low: block.low,
+          strength: block.strength,
+        })),
+    };
+  }, [analysis, symbol, timeframe, price]);
 
   return (
     <>
@@ -47,21 +92,19 @@ export function CoinAnalysisSection({
         <TechnicalPanel
           candles={candles}
           symbol={symbol}
-          timeframe={timeframe}
-          currentPrice={price ?? undefined}
           activeIndicators={activeIndicators}
           analysis={analysis}
-          signal={futuresSignal}
         />
       )}
 
       {/* Futures Setup — disciplined LONG/SHORT/WAIT decision engine */}
       {chartMode === 'technical' && hasCandles && futuresSignal && (
-        <FuturesSignalPanel
-          signal={futuresSignal}
-          symbol={symbol}
-          timeframe={timeframe}
-        />
+        <FuturesSignalPanel signal={futuresSignal} symbol={symbol} timeframe={timeframe} />
+      )}
+
+      {/* AI Summary — sits directly above the advisor in Technical Mode */}
+      {chartMode === 'technical' && (
+        <AiTechnicalSummary context={aiContext} signal={futuresSignal} />
       )}
 
       {/* AI Technical Advisor — only in Technical Mode */}

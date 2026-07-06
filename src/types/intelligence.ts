@@ -102,7 +102,7 @@ export interface MarketContext {
  * Per-dimension score breakdown. Each value is 0-100. The composite ranking
  * is a weighted average; see `setup-ranking.ts` for the weights.
  */
-export interface SetupRankingBreakdown {
+interface SetupRankingBreakdown {
   regimeAlignment: number;
   triggerQuality: number;
   riskReward: number;

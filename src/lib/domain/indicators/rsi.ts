@@ -16,7 +16,7 @@ type RsiPoint = {
  * Default period: 14.
  * RSI > 70: Overbought, RSI < 30: Oversold, 30-70: Neutral.
  */
-export function calculateRSI(candles: Candle[], period = 14): RsiPoint[] {
+function calculateRSI(candles: Candle[], period = 14): RsiPoint[] {
   if (candles.length < period + 1) return [];
 
   const changes: number[] = [];

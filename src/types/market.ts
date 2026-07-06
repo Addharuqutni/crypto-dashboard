@@ -56,11 +56,6 @@ export type WatchlistItem = {
 };
 
 /**
- * Theme preference for the application.
- */
-export type ThemePreference = 'dark' | 'light' | 'system';
-
-/**
  * WebSocket connection status.
  */
 export type ConnectionStatus = 'connected' | 'reconnecting' | 'disconnected';

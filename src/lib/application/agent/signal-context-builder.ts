@@ -1,7 +1,10 @@
-import type { ScreenerAiAuditSummary, RankedScreenerResult } from '@/lib/application/screener/types';
+import type {
+  ScreenerAiAuditSummary,
+  RankedScreenerResult,
+} from '@/lib/application/screener/types';
 import type { AgentSignalContext } from './agent-types';
 
-export function buildSignalContext(
+function buildSignalContext(
   result: RankedScreenerResult,
   audit?: ScreenerAiAuditSummary
 ): AgentSignalContext {

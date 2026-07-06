@@ -1,14 +1,17 @@
 export type PriceFreshness = 'live' | 'delayed' | 'stale';
 
-export const LIVE_PRICE_MAX_AGE_MS = 5_000;
-export const STALE_PRICE_MAX_AGE_MS = 15_000;
+const LIVE_PRICE_MAX_AGE_MS = 5_000;
+const STALE_PRICE_MAX_AGE_MS = 15_000;
 
 /**
  * Classifies a locally received market price by age.
  * Centralizing the thresholds keeps market table, watchlist, and future widgets
  * consistent when tuning realtime freshness behavior.
  */
-export function getPriceFreshness(receivedAt: number | undefined, now = Date.now()): PriceFreshness {
+export function getPriceFreshness(
+  receivedAt: number | undefined,
+  now = Date.now()
+): PriceFreshness {
   if (!receivedAt) return 'stale';
 
   const age = now - receivedAt;

@@ -41,8 +41,8 @@ const MAX_ACCOUNT_SIZE = 1_000_000_000;
 const MIN_RISK_PER_TRADE = 0.0001; // 0.01%
 const MAX_RISK_PER_TRADE = 0.5; // 50% — well above what we'd recommend, but a hard ceiling
 
-export const DEFAULT_ACCOUNT_SIZE = 1_000;
-export const DEFAULT_RISK_PER_TRADE = 0.01;
+const DEFAULT_ACCOUNT_SIZE = 1_000;
+const DEFAULT_RISK_PER_TRADE = 0.01;
 
 export const useRiskAccountStore = create<RiskAccountState>()(
   persist(
@@ -57,10 +57,7 @@ export const useRiskAccountStore = create<RiskAccountState>()(
       },
       setRiskPerTrade: (fraction) => {
         if (!Number.isFinite(fraction)) return;
-        const clamped = Math.min(
-          MAX_RISK_PER_TRADE,
-          Math.max(MIN_RISK_PER_TRADE, fraction)
-        );
+        const clamped = Math.min(MAX_RISK_PER_TRADE, Math.max(MIN_RISK_PER_TRADE, fraction));
         set({ riskPerTrade: clamped });
       },
     }),

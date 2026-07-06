@@ -36,7 +36,7 @@ const TIMEFRAME_CONFIG: Record<ChartTimeframe, { interval: string; limit: number
  * boundaries, telemetry) to differentiate between empty success and a
  * real upstream failure.
  */
-export class KlineFetchError extends Error {
+class KlineFetchError extends Error {
   /** HTTP status when available; undefined for network/parse failures. */
   readonly status?: number;
 
@@ -231,4 +231,3 @@ export async function fetchHistoricalKlines(
   if (sorted.length > target) return sorted.slice(-target);
   return sorted;
 }
-

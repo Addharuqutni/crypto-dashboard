@@ -5,7 +5,6 @@ export const STORAGE_KEYS = {
   watchlist: 'crypto-dashboard.watchlist.v1',
   portfolio: 'crypto-dashboard.portfolio.v1',
   alerts: 'crypto-dashboard.alerts.v1',
-  theme: 'crypto-dashboard.theme.v1',
   coinDetailMode: 'crypto-dashboard.coin-detail-mode.v1',
 } as const;
 

@@ -25,7 +25,7 @@ const TELEGRAM_API_BASE = `${TELEGRAM_HOST}/bot`;
 const MAX_ATTEMPTS = 4;
 const BACKOFF_MS = [200, 500, 1500, 4000];
 
-export class TelegramDeliveryError extends Error {
+class TelegramDeliveryError extends Error {
   readonly status?: number;
   /** True when Telegram returned a 4xx — retrying won't help. */
   readonly terminal: boolean;
@@ -84,10 +84,10 @@ export async function sendTelegramMessage(
       }
       const status = res.status;
       const terminal = status >= 400 && status < 500;
-      lastError = new TelegramDeliveryError(
-        `Telegram API responded with HTTP ${status}`,
-        { status, terminal }
-      );
+      lastError = new TelegramDeliveryError(`Telegram API responded with HTTP ${status}`, {
+        status,
+        terminal,
+      });
       if (terminal) break;
     } catch (err) {
       // Network-level failures are retryable.

@@ -33,7 +33,10 @@ export interface MtfInput {
  * The bias is conservative: only clean trends produce BULLISH/BEARISH;
  * everything else is NEUTRAL. INSUFFICIENT_DATA short-circuits early.
  */
-export function deriveBias(candles: Candle[] | undefined, config = DEFAULT_FUTURES_SIGNAL_CONFIG): FuturesBias {
+function deriveBias(
+  candles: Candle[] | undefined,
+  config = DEFAULT_FUTURES_SIGNAL_CONFIG
+): FuturesBias {
   if (!candles || candles.length === 0) return 'INSUFFICIENT_DATA';
   const ctx = detectRegime(candles, config);
   if (ctx.regime === 'INSUFFICIENT_DATA') return 'INSUFFICIENT_DATA';
@@ -111,8 +114,7 @@ function computeAlignmentScore(
   if (setup === 'INSUFFICIENT_DATA') return 0;
 
   // Each TF contributes a directional vote: +1 bullish, -1 bearish, 0 neutral/missing.
-  const v = (b: FuturesBias): number =>
-    b === 'BULLISH' ? 1 : b === 'BEARISH' ? -1 : 0;
+  const v = (b: FuturesBias): number => (b === 'BULLISH' ? 1 : b === 'BEARISH' ? -1 : 0);
 
   const m = v(macro);
   const s = v(setup);

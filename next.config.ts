@@ -40,10 +40,12 @@ const nextConfig: NextConfig = {
             value:
               'camera=(), microphone=(), geolocation=(), payment=(), usb=(), fullscreen=(self)',
           },
-          // ponytail: 'unsafe-inline' in script-src/style-src is a ceiling —
-          // Next.js 16 inline runtime needs it until a nonce-based CSP pass is
-          // added. connect-src is strict allowlist: only the data providers the
-          // app actually calls + user-supplied AI base URL (browser-side).
+          // ponytail: 'unsafe-inline'/'unsafe-eval' in script-src/style-src is
+          // a ceiling — Next.js 16 inline runtime needs it until a nonce-based
+          // CSP pass is added. 'unsafe-eval' only in dev (React dev mode
+          // reconstructs callstacks via eval); prod React never evals.
+          // connect-src is strict allowlist: only the data providers the app
+          // actually calls + user-supplied AI base URL (browser-side).
           {
             key: 'Content-Security-Policy',
             value: [
@@ -51,7 +53,7 @@ const nextConfig: NextConfig = {
               "base-uri 'self'",
               "object-src 'none'",
               "frame-ancestors 'none'",
-              "script-src 'self' 'unsafe-inline'",
+              `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https:",
               "font-src 'self'",

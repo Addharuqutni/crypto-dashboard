@@ -102,7 +102,7 @@ export class WorkerStore {
   }
 }
 
-export function defaultHealth(): WorkerHealth {
+function defaultHealth(): WorkerHealth {
   return {
     lastRunAt: null,
     lastSuccessAt: null,
@@ -128,9 +128,6 @@ export function truncateError(err: unknown, max = 500): string {
  * exposed alongside the store so tests can verify the cooldown bookkeeping
  * without touching disk.
  */
-export function recordAlert(
-  state: AlertDedupeState,
-  record: AlertDedupeRecord
-): AlertDedupeState {
+export function recordAlert(state: AlertDedupeState, record: AlertDedupeRecord): AlertDedupeState {
   return { ...state, [record.key]: record };
 }

@@ -57,7 +57,7 @@ Usage:
 Defaults:
   universe: top 100 large-cap Binance USDT perpetuals
   timeframes: setup=30m macro=4h trigger=15m
-  interval: 5m
+  interval: 15m
   maxConcurrentSymbols: 3
   persistence: ./data/screener/
   retention: history=${DEFAULT_RETENTION_CONFIG.historyRetentionDays}d alerts=${DEFAULT_RETENTION_CONFIG.alertRetentionDays}d
