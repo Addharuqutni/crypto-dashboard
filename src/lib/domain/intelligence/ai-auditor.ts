@@ -1,7 +1,4 @@
-import type {
-  AiAuditorInput,
-  AiAuditorReport,
-} from '@/types/intelligence';
+import type { AiAuditorInput, AiAuditorReport } from '@/types/intelligence';
 
 /**
  * Phase 4 — AI Signal Auditor.
@@ -15,37 +12,6 @@ import type {
  * The auditor never produces trade levels of its own. It only explains the
  * deterministic engine's output.
  */
-
-/**
- * System prompt for the auditor. Strict, slot-shaped, in English so the
- * model behaves predictably across providers. Keep it short — long prompts
- * encourage drift on smaller models.
- */
-export const AUDITOR_SYSTEM_PROMPT = `You are a TRADING SIGNAL AUDITOR. You DO NOT make trading decisions.
-A deterministic risk engine has already decided. Your job is to explain, audit, and challenge.
-
-ABSOLUTE RULES:
-- Do NOT invent prices, levels, stop-loss, take-profit, or numbers. Only reference values supplied in the structured context.
-- Do NOT recommend leverage. The risk engine sets the ceiling.
-- Do NOT convert WAIT into LONG or SHORT.
-- Do NOT promise profits, "guaranteed", "must enter", or "risk-free".
-- If the deterministic action is WAIT, you must agree with WAIT.
-- If data health flags issues, you must surface them.
-
-OUTPUT FORMAT — return strict minified JSON, no Markdown, no prose around it:
-{
-  "consistent": boolean,
-  "consistencyExplanation": string,
-  "bestArgumentFor": string,
-  "bestArgumentAgainst": string,
-  "invalidationCondition": string,
-  "shouldWait": boolean,
-  "shouldWaitReason": string,
-  "caveats": string[]
-}
-
-Each string must be 1–3 sentences. No HTML. No emoji. No financial advice phrasing.
-Use decision-support language: "setup", "bias", "invalidation", "confirmation", "risk".`;
 
 /** Build the structured user message. JSON-encoded so the LLM can't ignore. */
 export function buildAuditorUserPrompt(input: AiAuditorInput): string {
@@ -133,10 +99,7 @@ export class AiAuditorParseError extends Error {
   }
 }
 
-export function parseAuditorResponse(
-  raw: string,
-  input: AiAuditorInput
-): AiAuditorReport {
+export function parseAuditorResponse(raw: string, input: AiAuditorInput): AiAuditorReport {
   const json = extractJsonBlock(raw);
   if (!json) {
     throw new AiAuditorParseError('No JSON object found in auditor response.');
@@ -146,9 +109,7 @@ export function parseAuditorResponse(
   try {
     parsed = JSON.parse(json);
   } catch (err) {
-    throw new AiAuditorParseError(
-      `Auditor response is not valid JSON: ${(err as Error).message}`
-    );
+    throw new AiAuditorParseError(`Auditor response is not valid JSON: ${(err as Error).message}`);
   }
 
   const report = coerceReport(parsed);
@@ -188,7 +149,9 @@ function extractJsonBlock(raw: string): string | null {
   return null;
 }
 
-function coerceReport(parsed: unknown): Omit<AiAuditorReport, 'detectedPriceFabrication' | 'conflict'> {
+function coerceReport(
+  parsed: unknown
+): Omit<AiAuditorReport, 'detectedPriceFabrication' | 'conflict'> {
   if (!parsed || typeof parsed !== 'object') {
     throw new AiAuditorParseError('Auditor JSON is not an object.');
   }
@@ -202,7 +165,10 @@ function coerceReport(parsed: unknown): Omit<AiAuditorReport, 'detectedPriceFabr
     shouldWait: typeof obj.shouldWait === 'boolean' ? obj.shouldWait : false,
     shouldWaitReason: stringify(obj.shouldWaitReason),
     caveats: Array.isArray(obj.caveats)
-      ? obj.caveats.map(stringify).filter((s) => s.length > 0).slice(0, 5)
+      ? obj.caveats
+          .map(stringify)
+          .filter((s) => s.length > 0)
+          .slice(0, 5)
       : [],
   };
 }
@@ -287,16 +253,14 @@ function detectConflict(
     return {
       aiAction: 'LONG',
       deterministicAction: 'WAIT',
-      note:
-        'AI suggests acting while the deterministic engine emitted WAIT. The deterministic decision wins.',
+      note: 'AI suggests acting while the deterministic engine emitted WAIT. The deterministic decision wins.',
     };
   }
   if (detAction !== 'WAIT' && report.shouldWait === true && report.consistent === false) {
     return {
       aiAction: 'WAIT',
       deterministicAction: detAction,
-      note:
-        'AI thinks the trader should wait while the deterministic engine has approved a setup. The deterministic decision still applies; review the AI’s rationale.',
+      note: 'AI thinks the trader should wait while the deterministic engine has approved a setup. The deterministic decision still applies; review the AI’s rationale.',
     };
   }
   return null;

@@ -89,7 +89,7 @@ export function normalizeResult({
  * Setup/macro/trigger ages come from the latest candle close vs `evaluatedAt`.
  * Funding/OI ages come from the engine's data-health gate when available.
  */
-export function computeFreshness(
+function computeFreshness(
   signal: FuturesSignal,
   setupCandles: Candle[],
   macroCandles: Candle[],

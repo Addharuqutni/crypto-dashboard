@@ -5,7 +5,7 @@ import type { CoinRegistryItem } from '@/types/coin';
  * Contains top coins by market cap with verified CoinGecko IDs.
  * Additional coins can be fetched dynamically from Binance at runtime.
  */
-export const COIN_REGISTRY: CoinRegistryItem[] = [
+const COIN_REGISTRY: CoinRegistryItem[] = [
   // --- Top 20 (Tier 1) ---
   {
     symbol: 'BTC',

@@ -52,7 +52,7 @@ export type PositionSizingError =
   | 'stop_on_wrong_side'
   | 'risk_distance_too_small';
 
-export interface PositionSizingPlan {
+interface PositionSizingPlan {
   /** USDT amount the trader stands to lose if SL is hit (gross of fees). */
   riskAmount: number;
   /** Absolute price distance from entry to stop. */

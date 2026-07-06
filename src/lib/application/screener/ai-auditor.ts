@@ -194,7 +194,7 @@ export function parseAuditResult(raw: string, expectedSymbol: string): ScreenerA
  *   - AI request fails (fail-soft)
  *   - AI output fails schema validation (rejected)
  */
-export async function auditRankedResult(
+async function auditRankedResult(
   result: RankedScreenerResult,
   config: AiConfig | null
 ): Promise<ScreenerAuditResult | null> {

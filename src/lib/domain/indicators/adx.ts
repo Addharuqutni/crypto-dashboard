@@ -32,7 +32,7 @@ type AdxPoint = AdxResult & { time: number };
  *
  * Requires at least `2 * period + 1` candles to produce a single ADX point.
  */
-export function calculateADX(candles: Candle[], period = 14): AdxPoint[] | null {
+function calculateADX(candles: Candle[], period = 14): AdxPoint[] | null {
   if (!Number.isFinite(period) || period <= 0) return null;
   if (candles.length < 2 * period + 1) return null;
 

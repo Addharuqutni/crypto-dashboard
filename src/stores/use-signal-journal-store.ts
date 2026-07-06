@@ -17,13 +17,7 @@ const STORAGE_KEY = 'crypto-dashboard.signal-journal.v1';
 const MAX_ENTRIES = 200;
 
 /** Statuses considered "closed" — used both for metrics and gating mutations. */
-const CLOSED_STATUSES: ReadonlyArray<SignalJournalStatus> = [
-  'TP1',
-  'TP2',
-  'TP3',
-  'SL',
-  'EXPIRED',
-];
+const CLOSED_STATUSES: ReadonlyArray<SignalJournalStatus> = ['TP1', 'TP2', 'TP3', 'SL', 'EXPIRED'];
 
 /** Statuses that count as wins — TP-of-any-tier. */
 const WIN_STATUSES: ReadonlyArray<SignalJournalStatus> = ['TP1', 'TP2', 'TP3'];
@@ -43,18 +37,12 @@ interface SignalJournalState {
     }
   ) => SignalJournalEntry | null;
   updateStatus: (id: string, status: SignalJournalStatus) => void;
-  updateExcursions: (id: string, latestPrice: number) => void;
 
   /**
    * Apply a batch of latest prices in a single state update, then run expiry
-   * maintenance. Prefer this over `updateExcursions` when iterating a price
-   * snapshot — it avoids the N-rerender cascade you get from a per-entry loop
-   * and keeps the rendered list stable across the tick.
+   * maintenance.
    */
-  applyTickBatch: (
-    prices: Record<string, number | undefined | null>,
-    nowMs?: number
-  ) => void;
+  applyTickBatch: (prices: Record<string, number | undefined | null>, nowMs?: number) => void;
 
   /**
    * Manually mark a PENDING entry as closed with a user-confirmed outcome.
@@ -73,13 +61,7 @@ interface SignalJournalState {
     actualExitPrice?: number
   ) => void;
 
-  /**
-   * Run expiry + finalR maintenance across every entry. Safe to call on a
-   * timer; no-op when nothing changes.
-   */
-  tickAll: (nowMs?: number) => void;
   remove: (id: string) => void;
-  clearOlderThan: (epochMs: number) => void;
   clearAll: () => void;
   metrics: () => SignalJournalMetrics;
 }
@@ -143,31 +125,6 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
   },
 
   /**
-   * Refresh maxFavorable/maxAdverse excursions from a freshly observed price.
-   * Auto-promotes status when TP/SL levels are crossed.
-   *
-   * Outcomes are only updated based on actual observed prices — no fakery.
-   * Prefer `applyTickBatch` when iterating multiple symbols at once.
-   */
-  updateExcursions: (id, latestPrice) => {
-    if (!Number.isFinite(latestPrice) || latestPrice <= 0) return;
-
-    const state = get();
-    let mutated = false;
-    const next = state.entries.map((entry) => {
-      if (entry.id !== id) return entry;
-      const updated = applyPriceToEntry(entry, latestPrice);
-      if (updated !== entry) mutated = true;
-      return updated;
-    });
-
-    if (mutated) {
-      safeSetItem(STORAGE_KEY, next);
-      set({ entries: next });
-    }
-  },
-
-  /**
    * Batched price update for a snapshot of multiple symbols.
    * Single set() call regardless of how many entries match.
    */
@@ -189,11 +146,7 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
 
       // Step 2: time-driven expiry. Re-check on the (possibly) updated entry
       // so we don't expire something we just promoted to TP/SL.
-      if (
-        updated.status === 'PENDING' &&
-        updated.expiresAt != null &&
-        now >= updated.expiresAt
-      ) {
+      if (updated.status === 'PENDING' && updated.expiresAt != null && now >= updated.expiresAt) {
         updated = { ...updated, status: 'EXPIRED', finalR: 0 };
       }
 
@@ -243,37 +196,9 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
     }
   },
 
-  /**
-   * Force-expire any PENDING entry past its `expiresAt` deadline. Run on a
-   * cadence (or on every tick) by callers that want max-hold enforcement.
-   */
-  tickAll: (nowMs?: number) => {
-    const now = nowMs ?? Date.now();
-    const state = get();
-    let mutated = false;
-    const next = state.entries.map((entry) => {
-      if (entry.status !== 'PENDING') return entry;
-      if (entry.expiresAt == null) return entry;
-      if (now < entry.expiresAt) return entry;
-      mutated = true;
-      return { ...entry, status: 'EXPIRED' as SignalJournalStatus, finalR: 0 };
-    });
-    if (mutated) {
-      safeSetItem(STORAGE_KEY, next);
-      set({ entries: next });
-    }
-  },
-
   remove: (id) => {
     const state = get();
     const next = state.entries.filter((e) => e.id !== id);
-    safeSetItem(STORAGE_KEY, next);
-    set({ entries: next });
-  },
-
-  clearOlderThan: (epochMs) => {
-    const state = get();
-    const next = state.entries.filter((e) => e.createdAt >= epochMs);
     safeSetItem(STORAGE_KEY, next);
     set({ entries: next });
   },
@@ -336,8 +261,7 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
       .map((e) => e.finalR)
       .filter((r): r is number => r != null && Number.isFinite(r));
     const closedR = realizedFinals.reduce((s, r) => s + r, 0);
-    const averageR =
-      realizedFinals.length > 0 ? closedR / realizedFinals.length : 0;
+    const averageR = realizedFinals.length > 0 ? closedR / realizedFinals.length : 0;
     const bestR = realizedFinals.length > 0 ? Math.max(...realizedFinals) : 0;
     const worstR = realizedFinals.length > 0 ? Math.min(...realizedFinals) : 0;
 
@@ -369,10 +293,8 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
       longCount,
       shortCount,
       waitCount,
-      longWinRate:
-        longClosed.length > 0 ? (longWins / longClosed.length) * 100 : 0,
-      shortWinRate:
-        shortClosed.length > 0 ? (shortWins / shortClosed.length) * 100 : 0,
+      longWinRate: longClosed.length > 0 ? (longWins / longClosed.length) * 100 : 0,
+      shortWinRate: shortClosed.length > 0 ? (shortWins / shortClosed.length) * 100 : 0,
 
       // Phase 3 additive — UI-only consumers can fall back to defaults.
       closed,
@@ -408,12 +330,8 @@ export function applyPriceToEntry(
   const isShort = entry.action === 'SHORT';
   if (!isLong && !isShort) return entry;
 
-  const favorable = isLong
-    ? latestPrice - entry.entryPrice
-    : entry.entryPrice - latestPrice;
-  const adverse = isLong
-    ? entry.entryPrice - latestPrice
-    : latestPrice - entry.entryPrice;
+  const favorable = isLong ? latestPrice - entry.entryPrice : entry.entryPrice - latestPrice;
+  const adverse = isLong ? entry.entryPrice - latestPrice : latestPrice - entry.entryPrice;
 
   const newMfe =
     entry.maxFavorableExcursion == null
@@ -453,7 +371,7 @@ export function applyPriceToEntry(
   const finalR =
     closing && entry.entryPrice != null && entry.stopLoss != null
       ? computeFinalR(entry, nextStatus)
-      : entry.finalR ?? null;
+      : (entry.finalR ?? null);
 
   return {
     ...entry,
@@ -497,10 +415,7 @@ export function computeFinalR(
  * Compute realised R given an actual exit price. Used both by canonical
  * level closes and by user-supplied overrides.
  */
-export function computeFinalRFromExit(
-  entry: SignalJournalEntry,
-  exit: number
-): number | null {
+export function computeFinalRFromExit(entry: SignalJournalEntry, exit: number): number | null {
   if (entry.entryPrice == null || entry.stopLoss == null) return null;
   const rDist = Math.abs(entry.entryPrice - entry.stopLoss);
   if (rDist <= 0) return null;

@@ -1,10 +1,5 @@
 import type { FuturesSignal } from '@/types/futures-signal';
-import type {
-  AlertDecision,
-  AlertDedupeRecord,
-  AlertDedupeState,
-  WorkerConfig,
-} from './types';
+import type { AlertDecision, AlertDedupeRecord, AlertDedupeState, WorkerConfig } from './types';
 
 /**
  * Alert deduper.
@@ -172,7 +167,7 @@ export function makeRecord(
  * during cooldown — that's intentional, those represent genuinely different
  * setups.
  */
-export function makeKey(symbol: string, signal: FuturesSignal): string {
+function makeKey(symbol: string, signal: FuturesSignal): string {
   return [symbol, signal.action, signal.entryTrigger ?? 'NO_TRIGGER'].join(':');
 }
 

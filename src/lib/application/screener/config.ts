@@ -1,5 +1,5 @@
 import type { ScreenerAlertSettings, ScreenerConfig } from './types';
-import { getDefaultUniverse } from './universe';
+import { getScreenerUniverseFromEnv } from './universe';
 
 /**
  * Default ranking/alert thresholds for the screener.
@@ -23,18 +23,31 @@ export const DEFAULT_SCREENER_ALERT_SETTINGS: ScreenerAlertSettings = {
  * logic and no AI in the hot path.
  */
 export const DEFAULT_SCREENER_CONFIG: ScreenerConfig = {
-  symbols: getDefaultUniverse(),
+  // ponytail: env-driven universe so SCREENER_SYMBOLS/SCREENER_MAX_SYMBOLS
+  // apply everywhere (scheduler, CLI, cron) — not just the on-demand API route.
+  symbols: getScreenerUniverseFromEnv(100),
   setupTimeframe: '30m',
   triggerTimeframe: '15m',
   macroTimeframe: '4h',
-  intervalMinutes: 5,
+  // ponytail: env override keeps the cycle cadence tunable without code edits;
+  // clamp [1, 1440] min so a stray value can't starve the event loop or stall.
+  intervalMinutes: clampEnvInt('SCREENER_INTERVAL_MINUTES', 5, 1, 1440),
   maxConcurrentSymbols: 3,
   candleLimit: 300,
   alertSettings: DEFAULT_SCREENER_ALERT_SETTINGS,
 };
 
+/** Read a positive integer env var with bounds; falls back when unset/invalid. */
+function clampEnvInt(name: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[name]?.trim();
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
 /** Numeric ordering for grade thresholds (lower = better). */
-export const GRADE_ORDER = ['A', 'B', 'C', 'D'] as const;
+const GRADE_ORDER = ['A', 'B', 'C', 'D'] as const;
 
 /** Returns the numeric rank of a coarse grade for threshold comparisons. */
 export function gradeRank(grade: 'A' | 'B' | 'C' | 'D'): number {

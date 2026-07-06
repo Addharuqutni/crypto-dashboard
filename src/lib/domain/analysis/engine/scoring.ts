@@ -12,7 +12,7 @@ import { clamp } from './utils';
  * Centralised so calibration changes are made in exactly one place. Weights
  * sum to 1.0; do not edit during a refactor phase.
  */
-export const SCORE_WEIGHTS = {
+const SCORE_WEIGHTS = {
   trend: 0.35,
   momentum: 0.25,
   volume: 0.15,
@@ -92,11 +92,7 @@ export function computeAvgVolume(candles: Candle[]): number | null {
  * candidate side. Anchored at 50 (neutral) and adjusted in fixed increments
  * so the contribution of each sub-rule is auditable.
  */
-function computeTrendScore(
-  side: 'LONG' | 'SHORT',
-  regime: RegimeContext,
-  price: number
-): number {
+function computeTrendScore(side: 'LONG' | 'SHORT', regime: RegimeContext, price: number): number {
   const { ema20, ema50, ema200 } = regime;
   if (ema20 == null || ema50 == null || ema200 == null) return 0;
 

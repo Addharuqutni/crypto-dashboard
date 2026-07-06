@@ -62,6 +62,61 @@ export async function sendChatCompletion(
   return data.choices[0]?.message?.content ?? '';
 }
 
+/** Same-origin server proxy. Uses .env AI_* when config is omitted/incomplete. */
+export async function sendServerChatCompletion(
+  messages: { role: AiMessageRole; content: string }[],
+  options?: {
+    config?: Partial<AiConfig>;
+    temperature?: number;
+    maxTokens?: number;
+    signal?: AbortSignal;
+  }
+): Promise<string> {
+  const response = await fetch('/api/ai/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      config: options?.config,
+      messages,
+      temperature: options?.temperature,
+      maxTokens: options?.maxTokens,
+    }),
+    signal: options?.signal ?? AbortSignal.timeout(60_000),
+  });
+
+  const data = (await response.json()) as Partial<{ content: string; error: string }>;
+  if (!response.ok) {
+    throw new AiClientError(data.error ?? `AI request failed: ${response.status}`, response.status);
+  }
+  return data.content ?? '';
+}
+
+/** Non-streaming server proxy adapter for chat UI. */
+export function sendServerStreamingChatCompletion(
+  messages: { role: AiMessageRole; content: string }[],
+  callbacks: {
+    onChunk: (content: string) => void;
+    onDone: () => void;
+    onError: (error: AiClientError) => void;
+  },
+  options?: { config?: Partial<AiConfig>; temperature?: number; maxTokens?: number }
+): AbortController {
+  const controller = new AbortController();
+  void sendServerChatCompletion(messages, { ...options, signal: controller.signal })
+    .then((content) => {
+      if (controller.signal.aborted) return;
+      if (content) callbacks.onChunk(content);
+      callbacks.onDone();
+    })
+    .catch((error) => {
+      if (controller.signal.aborted) return;
+      callbacks.onError(
+        error instanceof AiClientError ? error : new AiClientError('AI request failed')
+      );
+    });
+  return controller;
+}
+
 /**
  * Sends a streaming chat completion request.
  * Calls onChunk for each content delta received.

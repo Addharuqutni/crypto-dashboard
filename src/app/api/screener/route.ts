@@ -136,8 +136,11 @@ const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 export function resolveScreenerStorageMode(): 'file' | 'on-demand' {
   const raw = process.env.SCREENER_STORAGE_MODE?.trim();
   if (raw === 'file' || raw === 'on-demand') return raw;
-  if (isServerlessRuntime()) return 'file';
-  return process.env.NODE_ENV === 'production' ? 'file' : 'on-demand';
+  // ponytail: always default to file mode so "Last run" reflects the worker's
+  // actual persisted cycle, not a fresh on-demand run per poll. Dev without a
+  // worker still falls back to on-demand via readFromFileStore() when no file
+  // exists. Opt into on-demand explicitly with SCREENER_STORAGE_MODE=on-demand.
+  return 'file';
 }
 
 function shouldFallbackToOnDemand(): boolean {

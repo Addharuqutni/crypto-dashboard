@@ -9,7 +9,7 @@ import { BINANCE_INTERVALS, type BinanceInterval } from '@/lib/adapters/binance/
  * load time only. They are never embedded in defaults and never logged.
  */
 
-export const DEFAULT_WORKER_CONFIG: WorkerConfig = {
+const DEFAULT_WORKER_CONFIG: WorkerConfig = {
   symbols: ['BTCUSDT'],
   setupTimeframe: '30m',
   macroTimeframe: '4h',
@@ -148,12 +148,7 @@ function parseInterval(raw: string | undefined, fallback: BinanceInterval): Bina
   return VALID_INTERVALS.includes(cleaned) ? cleaned : fallback;
 }
 
-function clampPosInt(
-  raw: string | undefined,
-  fallback: number,
-  min: number,
-  max: number
-): number {
+function clampPosInt(raw: string | undefined, fallback: number, min: number, max: number): number {
   if (!raw) return fallback;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n)) return fallback;

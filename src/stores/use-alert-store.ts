@@ -10,8 +10,6 @@ interface AlertState {
   addAlert: (alert: Omit<PriceAlert, 'id' | 'status' | 'createdAt'>) => void;
   removeAlert: (id: string) => void;
   triggerAlert: (id: string) => void;
-  getActiveAlerts: () => PriceAlert[];
-  getTriggeredAlerts: () => PriceAlert[];
 }
 
 /** Maximum number of alerts a user can create to prevent storage bloat */
@@ -135,9 +133,6 @@ export const useAlertStore = create<AlertState>((set, get) => ({
     safeSetItem(STORAGE_KEYS.alerts, updated);
     set({ alerts: updated });
   },
-
-  getActiveAlerts: () => get().alerts.filter((a) => a.status === 'active'),
-  getTriggeredAlerts: () => get().alerts.filter((a) => a.status === 'triggered'),
 }));
 
 /**

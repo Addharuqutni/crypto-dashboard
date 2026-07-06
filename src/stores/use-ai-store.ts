@@ -12,7 +12,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { AiConfig, AiMessage, TechnicalContext } from '@/types/ai';
-import { sendStreamingChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
+import { sendServerStreamingChatCompletion, AiClientError } from '@/lib/adapters/ai/ai-client';
 import { buildSystemPrompt, buildUserMessage } from '@/lib/adapters/ai/ai-prompt-builder';
 
 /**
@@ -35,6 +35,8 @@ interface AiState {
   config: AiConfig;
   isConfigured: boolean;
   hydrated: boolean;
+  /** Whether the same-origin API can use server-side AI_* env config. */
+  serverManaged: boolean;
   /**
    * Whether to persist the API key to localStorage.
    *
@@ -53,6 +55,7 @@ interface AiState {
   technicalContext: TechnicalContext | null;
 
   // Actions
+  hydrateServerConfig: () => Promise<void>;
   updateConfig: (config: Partial<AiConfig>) => void;
   setRememberKey: (remember: boolean) => void;
   setTechnicalContext: (context: TechnicalContext | null) => void;
@@ -74,11 +77,37 @@ export const useAiStore = create<AiState>()(
       config: { baseUrl: '', apiKey: '', model: '' },
       isConfigured: false,
       hydrated: false,
+      serverManaged: false,
       rememberKey: false,
       messages: [],
       isStreaming: false,
       error: null,
       technicalContext: null,
+
+      /** Hydrate server-managed config metadata from AI_* env via same-origin API. */
+      hydrateServerConfig: async () => {
+        try {
+          const res = await fetch('/api/ai/config', { cache: 'no-store' });
+          if (!res.ok) return;
+          const data = (await res.json()) as Partial<{
+            configured: boolean;
+            baseUrl: string;
+            model: string;
+          }>;
+          if (!data.configured) return;
+          set({
+            config: {
+              baseUrl: data.baseUrl ?? '',
+              apiKey: '',
+              model: data.model ?? '',
+            },
+            isConfigured: true,
+            serverManaged: true,
+          });
+        } catch {
+          // Keep client-side config path available.
+        }
+      },
 
       /**
        * Merge config updates and recompute `isConfigured` so UI state can react
@@ -88,7 +117,7 @@ export const useAiStore = create<AiState>()(
         const current = get().config;
         const updated = { ...current, ...partial };
         const isConfigured = Boolean(updated.baseUrl && updated.apiKey && updated.model);
-        set({ config: updated, isConfigured });
+        set({ config: updated, isConfigured, serverManaged: false });
       },
 
       /** Toggle whether the API key persists across reloads. */
@@ -159,8 +188,7 @@ export const useAiStore = create<AiState>()(
 
         const assistantId = assistantMessage.id;
 
-        const controller = sendStreamingChatCompletion(
-          state.config,
+        const controller = sendServerStreamingChatCompletion(
           apiMessages,
           {
             /**
@@ -210,7 +238,8 @@ export const useAiStore = create<AiState>()(
                 };
               });
             },
-          }
+          },
+          { config: state.serverManaged ? undefined : state.config }
         );
 
         activeController = controller;
@@ -248,9 +277,7 @@ export const useAiStore = create<AiState>()(
       // `rememberKey`. Otherwise it stays in-memory and disappears on reload,
       // which is the safer default for credentials in localStorage.
       partialize: (state) => ({
-        config: state.rememberKey
-          ? state.config
-          : { ...state.config, apiKey: '' },
+        config: state.rememberKey ? state.config : { ...state.config, apiKey: '' },
         isConfigured: state.rememberKey ? state.isConfigured : false,
         rememberKey: state.rememberKey,
         messages: state.messages.slice(-50), // Keep last 50 messages

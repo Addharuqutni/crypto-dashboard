@@ -38,6 +38,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.dev-log.txt
 
 # OS / editor
 .DS_Store

@@ -57,7 +57,7 @@ const HOURS = 60 * MINUTES;
  * `24H`, `7D`, `30D`) plus common aliases like `1h`, `4h`, `1d`. Returns
  * `null` for genuinely unknown values so callers can downgrade gracefully.
  */
-export function timeframeToSeconds(tf: string): number | null {
+function timeframeToSeconds(tf: string): number | null {
   if (!tf) return null;
   const normalized = tf.trim();
   const match = normalized.match(/^(\d+)\s*([mMhHdDwW])$/);
@@ -108,9 +108,7 @@ export function evaluateDataHealth(
 
   // --- Setup timeframe (always required) ---
   const setupSeconds = timeframeToSeconds(input.setupTimeframe);
-  const setupMaxAgeSec = setupSeconds
-    ? setupSeconds * config.freshnessMultiplier
-    : 6 * HOURS; // generous fallback when TF is unknown
+  const setupMaxAgeSec = setupSeconds ? setupSeconds * config.freshnessMultiplier : 6 * HOURS; // generous fallback when TF is unknown
   const setupMin = Math.max(
     config.emaLongPeriod,
     2 * config.adxPeriod + 1,
@@ -129,10 +127,7 @@ export function evaluateDataHealth(
   // --- Macro timeframe (4H) — required for directional authority ---
   const macroSeconds = 4 * HOURS;
   const macroMaxAgeSec = macroSeconds * config.freshnessMultiplier;
-  const macroMin = Math.max(
-    config.emaLongPeriod,
-    2 * config.adxPeriod + 1
-  );
+  const macroMin = Math.max(config.emaLongPeriod, 2 * config.adxPeriod + 1);
   const macro = evaluateTimeframe({
     label: '4H macro',
     candles: input.macroCandles,
@@ -157,8 +152,7 @@ export function evaluateDataHealth(
   if (!trigger.ok && trigger.reason) reasons.push(trigger.reason);
 
   // --- Funding rate (secondary) ---
-  const fundingAvailable =
-    input.fundingRate != null && Number.isFinite(input.fundingRate);
+  const fundingAvailable = input.fundingRate != null && Number.isFinite(input.fundingRate);
   const fundingAge = ageSecOrNull(input.fundingRateUpdatedAtMs, now);
   const fundingFresh =
     fundingAvailable && (fundingAge == null || fundingAge <= config.fundingMaxAgeSec);
@@ -171,11 +165,9 @@ export function evaluateDataHealth(
 
   // --- Open interest (secondary) ---
   const oiAvailable =
-    input.openInterestChangePercent != null &&
-    Number.isFinite(input.openInterestChangePercent);
+    input.openInterestChangePercent != null && Number.isFinite(input.openInterestChangePercent);
   const oiAge = ageSecOrNull(input.openInterestUpdatedAtMs, now);
-  const oiFresh =
-    oiAvailable && (oiAge == null || oiAge <= config.oiMaxAgeSec);
+  const oiFresh = oiAvailable && (oiAge == null || oiAge <= config.oiMaxAgeSec);
   const openInterest = {
     available: oiAvailable,
     ageSec: oiAge,

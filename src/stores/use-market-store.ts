@@ -26,8 +26,6 @@ interface MarketState {
   updatePrices: (prices: LivePrice[]) => void;
   /** Set connection status */
   setConnectionStatus: (status: ConnectionStatus) => void;
-  /** Get price by Binance symbol (e.g. "BTCUSDT") */
-  getPriceByBinanceSymbol: (binanceSymbol: string) => LivePrice | undefined;
   /** Set valid symbols from exchangeInfo — called once at app init */
   setValidSymbols: (symbols: Set<string>) => void;
   /** Set the loading status of validSymbols */
@@ -90,8 +88,6 @@ export const useMarketStore = create<MarketState>((set, get) => ({
     }),
 
   setConnectionStatus: (status) => set({ connectionStatus: status }),
-
-  getPriceByBinanceSymbol: (binanceSymbol) => get().pricesByBinanceSymbol[binanceSymbol],
 
   setValidSymbols: (symbols) => set({ validSymbols: symbols, validSymbolsStatus: 'ready' }),
 

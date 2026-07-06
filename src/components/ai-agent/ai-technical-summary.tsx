@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAiStore } from '@/stores/use-ai-store';
-import { sendChatCompletion } from '@/lib/adapters/ai/ai-client';
+import { sendServerChatCompletion } from '@/lib/adapters/ai/ai-client';
 import { buildSystemPrompt } from '@/lib/adapters/ai/ai-prompt-builder';
 import { cn } from '@/lib/shared/utils';
 import type { TechnicalContext } from '@/types/ai';
@@ -24,10 +24,7 @@ interface AiTechnicalSummaryProps {
  * engine's action/grade/forecast prevents stale narration after the
  * signal flips.
  */
-function getContextSignature(
-  ctx: TechnicalContext | null,
-  signal?: FuturesSignal | null
-): string {
+function getContextSignature(ctx: TechnicalContext | null, signal?: FuturesSignal | null): string {
   if (!ctx) return 'null';
   const rsi = ctx.rsi?.value != null ? ctx.rsi.value.toFixed(0) : '-';
   const trend = ctx.trend?.value ?? '-';
@@ -59,6 +56,7 @@ function formatTime(ts: number): string {
 export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps) {
   const config = useAiStore((s) => s.config);
   const isConfigured = useAiStore((s) => s.isConfigured);
+  const serverManaged = useAiStore((s) => s.serverManaged);
 
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -92,13 +90,17 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
         ? buildSignalAuditPrompt(signal, context.symbol)
         : buildContextOnlyPrompt(context.symbol);
 
-      const response = await sendChatCompletion(
-        config,
+      const response = await sendServerChatCompletion(
         [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        { temperature: 0.3, maxTokens: 320 }
+        {
+          config: serverManaged ? undefined : config,
+          temperature: 0.3,
+          maxTokens: 320,
+          signal: controller.signal,
+        }
       );
 
       if (controller.signal.aborted) return;
@@ -112,7 +114,7 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [isConfigured, context, signal, config, signature]);
+  }, [isConfigured, context, signal, config, serverManaged, signature]);
 
   // Auto-fetch when context signature changes meaningfully.
   useEffect(() => {
@@ -229,7 +231,10 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
             aria-label="Refresh AI summary"
             title="Refresh"
           >
-            <RefreshCw className={cn('h-3 w-3 transition-transform', loading && 'animate-spin')} aria-hidden />
+            <RefreshCw
+              className={cn('h-3 w-3 transition-transform', loading && 'animate-spin')}
+              aria-hidden
+            />
           </button>
         </div>
       </header>
@@ -254,18 +259,11 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
       )}
 
       {/* Content */}
-      <output
-        className="mt-3 block min-h-[2.5rem]"
-        aria-live="polite"
-        aria-busy={loading}
-      >
+      <output className="mt-3 block min-h-[2.5rem]" aria-live="polite" aria-busy={loading}>
         {loading && !summary && <SummarySkeleton />}
 
         {summary && (
-          <SummaryBody
-            text={summary}
-            className={cn(loading && 'opacity-60 transition-opacity')}
-          />
+          <SummaryBody text={summary} className={cn(loading && 'opacity-60 transition-opacity')} />
         )}
 
         {error && !loading && (
@@ -337,9 +335,7 @@ function SummarySkeleton() {
 
 // ---- Helpers -----------------------------------------------------------
 
-type Block =
-  | { type: 'paragraph'; text: string }
-  | { type: 'list'; items: string[] };
+type Block = { type: 'paragraph'; text: string } | { type: 'list'; items: string[] };
 
 /**
  * Split AI text into rendering blocks. Consecutive `-` or `•` lines collapse
