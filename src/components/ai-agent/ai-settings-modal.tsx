@@ -81,10 +81,6 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
   // Close on Escape key
   useEffect(() => {
     if (!isOpen) return;
-    /**
-     * Menjalankan logic handle esc.
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-     */
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -95,14 +91,6 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
   if (!isOpen) return null;
 
   const canSave = baseUrl.trim() && apiKey.trim() && model.trim();
-
-  /**
-
-   * Menjalankan logic handle test.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
 
   const handleTest = async () => {
     if (!canSave) return;
@@ -117,14 +105,6 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
     setTestResult(result);
     setTesting(false);
   };
-
-  /**
-
-   * Menjalankan logic handle save.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
 
   const handleSave = () => {
     setRememberKey(remember);
@@ -150,7 +130,8 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="ai-settings-title"
-        className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface shadow-2xl"
+        className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface"
+        style={{ boxShadow: 'var(--shadow-overlay)' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">

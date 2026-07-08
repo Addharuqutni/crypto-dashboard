@@ -23,22 +23,19 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue>({ toast: () => {} });
 
 const DEFAULT_DURATION_MS = 3000;
+const MAX_TOASTS = 3;
 
 /**
- * Toast provider — premium notification surface dengan:
- *  - Spring entrance dari kanan-bawah.
- *  - Progress bar auto-dismiss yang sinkron dengan timer (linear 3s).
- *  - Hover/focus mem-pause timer agar pesan bisa dibaca.
- *  - Maksimum 3 toast tampil sekaligus; yang lama tergeser keluar.
+ * Toast provider — notification surface with:
+ *  - Spring entrance from bottom-right.
+ *  - Auto-dismiss progress bar synced with timer.
+ *  - Hover/focus pauses timer.
+ *  - Maximum 3 toasts visible at once.
  */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  /**
-   * Menjadwalkan auto-dismiss untuk satu toast. Disimpan di ref agar bisa
-   * dibatalkan saat user hover/fokus dan dijadwalkan ulang saat lepas.
-   */
   const scheduleDismiss = useCallback((id: string, duration: number) => {
     const existing = timers.current.get(id);
     if (existing) clearTimeout(existing);
@@ -67,7 +64,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         duration: DEFAULT_DURATION_MS,
         createdAt: Date.now(),
       };
-      setToasts((prev) => [...prev.slice(-2), next]);
+      setToasts((prev) => [...prev.slice(-(MAX_TOASTS - 1)), next]);
       scheduleDismiss(id, DEFAULT_DURATION_MS);
     },
     [scheduleDismiss]
@@ -81,7 +78,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [cancelDismiss]
   );
 
-  // Membersihkan timer yang masih hidup saat provider unmount.
+  // Clean up lingering timers on unmount.
   useEffect(() => {
     const map = timers.current;
     return () => {
@@ -125,11 +122,9 @@ interface ToastItemProps {
 }
 
 /**
- * ToastItem — satu kartu notifikasi.
- *
- * Mengisolasi state per-toast (mis. pause/resume) dari provider sehingga
- * provider tetap fokus pada antrean & timing. Progress bar dibuat dengan
- * keyframe linear yang ikut state `animation-play-state` saat hover/fokus.
+ * ToastItem — single notification card.
+ * Isolates per-toast pause/resume from the provider.
+ * Progress bar uses a keyframe synced to the setTimeout duration.
  */
 function ToastItem({ toast: t, onDismiss, onPause, onResume }: ToastItemProps) {
   const accent = ACCENT_BY_TYPE[t.type];
@@ -138,7 +133,7 @@ function ToastItem({ toast: t, onDismiss, onPause, onResume }: ToastItemProps) {
     <div
       className={cn(
         'pointer-events-auto group relative flex min-w-[280px] max-w-sm items-center gap-2.5 overflow-hidden rounded-lg border px-4 py-3 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-md',
-        // Spring entrance + hover lift untuk feel premium.
+        // Spring entrance + hover lift.
         'animate-spring-in transition-transform duration-200 hover:-translate-y-0.5',
         accent.surface
       )}
@@ -165,9 +160,9 @@ function ToastItem({ toast: t, onDismiss, onPause, onResume }: ToastItemProps) {
       </button>
 
       {/*
-        Progress bar — di-render sebagai pseudo via inline element supaya
-        `animation-play-state` bisa di-pause via group-hover. Linear timing
-        memastikan visual progress sinkron dengan timer setTimeout.
+        Progress bar — rendered as inline element so
+        `animation-play-state` can be paused via group-hover.
+        Linear timing keeps visual progress synced with setTimeout.
       */}
       <span
         aria-hidden

@@ -29,6 +29,8 @@ let activeRequestId: string | null = null;
 
 /** Minimum interval between messages to prevent API credit burn (ms) */
 const MESSAGE_COOLDOWN_MS = 2000;
+/** Maximum number of messages persisted to localStorage. */
+const MAX_PERSISTED_MESSAGES = 50;
 
 interface AiState {
   // Configuration
@@ -67,7 +69,7 @@ interface AiState {
 
 /** Generate a stable, locally-unique id for messages and request tags. */
 function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return crypto.randomUUID();
 }
 
 export const useAiStore = create<AiState>()(
@@ -140,7 +142,7 @@ export const useAiStore = create<AiState>()(
         if (!state.isConfigured || state.isStreaming) return;
 
         // Rate limiting: prevent rapid-fire messages.
-        const lastUserMsg = [...state.messages].reverse().find((m) => m.role === 'user');
+        const lastUserMsg = state.messages.findLast((m) => m.role === 'user');
         if (lastUserMsg && Date.now() - lastUserMsg.timestamp < MESSAGE_COOLDOWN_MS) return;
 
         // Abort any leftover request before starting a new one.
@@ -280,7 +282,7 @@ export const useAiStore = create<AiState>()(
         config: state.rememberKey ? state.config : { ...state.config, apiKey: '' },
         isConfigured: state.rememberKey ? state.isConfigured : false,
         rememberKey: state.rememberKey,
-        messages: state.messages.slice(-50), // Keep last 50 messages
+        messages: state.messages.slice(-MAX_PERSISTED_MESSAGES),
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {

@@ -146,7 +146,7 @@ export function AiTechnicalSummary({ context, signal }: AiTechnicalSummaryProps)
   if (!isConfigured) {
     return (
       <section
-        className="card relative overflow-hidden px-4 py-4"
+        className="card relative overflow-hidden p-5"
         aria-labelledby="ai-summary-heading"
       >
         <header className="flex items-center gap-2">
@@ -348,23 +348,11 @@ function splitBlocks(text: string): Block[] {
   let paragraph: string[] = [];
   let list: string[] = [];
 
-  /**
-
-   * Menjalankan logic flush paragraph.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
-
   const flushParagraph = () => {
     if (paragraph.length === 0) return;
     blocks.push({ type: 'paragraph', text: paragraph.join(' ').trim() });
     paragraph = [];
   };
-  /**
-   * Menjalankan logic flush list.
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-   */
   const flushList = () => {
     if (list.length === 0) return;
     blocks.push({ type: 'list', items: list });
@@ -495,12 +483,12 @@ function buildSignalAuditPrompt(signal: FuturesSignal, symbol: string): string {
   lines.push('');
   lines.push('TASK:');
   lines.push(
-    'Jelaskan output engine di atas dalam 3–4 kalimat ringkas (Bahasa Indonesia, profesional). Jelaskan kenapa engine memutuskan ' +
+    'Explain the engine output above in 3–4 concise sentences (English, professional). Explain why the engine decided ' +
       signal.action +
-      ', bagaimana Kronos menambah/mengurangi keyakinan, dan apa kondisi invalidation. ' +
-      'JANGAN ubah action, grade, confidence, entry, SL, TP, leverage, atau invalidation. ' +
-      'JANGAN buat trade baru. JANGAN sarankan PLACE_ORDER, OPEN_POSITION, SET_LEVERAGE. ' +
-      'Risk engine adalah satu-satunya otoritas final. Akhiri dengan satu kalimat tentang apa yang harus diawasi user berikutnya.'
+      ', how Kronos adjusted confidence, and what the invalidation condition is. ' +
+      'DO NOT change action, grade, confidence, entry, SL, TP, leverage, or invalidation. ' +
+      'DO NOT create a new trade. DO NOT suggest PLACE_ORDER, OPEN_POSITION, SET_LEVERAGE. ' +
+      'The risk engine is the sole final authority. End with one sentence on what the user should watch next.'
   );
 
   return lines.join('\n');
@@ -513,14 +501,14 @@ function buildSignalAuditPrompt(signal: FuturesSignal, symbol: string): string {
  */
 function buildContextOnlyPrompt(symbol: string): string {
   return [
-    `Berikan ringkasan teknikal singkat (3–4 kalimat) untuk ${symbol} berdasarkan data yang dilampirkan.`,
+    `Provide a brief technical summary (3–4 sentences) for ${symbol} based on the attached data.`,
     '',
-    'Fokus pada:',
-    '1. Bias arah saat ini (bullish / bearish / sideways).',
-    '2. Level kunci (support, resistance, level Fibonacci) yang perlu diawasi.',
-    '3. Konfirmasi atau divergensi dari indikator (RSI, MACD).',
-    '4. Apa yang akan membuat bias berubah (invalidation).',
+    'Focus on:',
+    '1. Current directional bias (bullish / bearish / sideways).',
+    '2. Key levels (support, resistance, Fibonacci levels) to watch.',
+    '3. Confirmation or divergence from indicators (RSI, MACD).',
+    '4. What would invalidate the current bias.',
     '',
-    'JANGAN merekomendasikan entry / exit / leverage tertentu. Belum ada output engine deterministik untuk simbol ini, jadi tetap deskriptif. Jawab dalam Bahasa Indonesia, profesional, dan ringkas.',
+    'DO NOT recommend specific entry / exit / leverage. There is no deterministic engine output for this symbol yet, so stay descriptive. Answer in English, professional, and concise.',
   ].join('\n');
 }

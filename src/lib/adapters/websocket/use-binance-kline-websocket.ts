@@ -120,10 +120,6 @@ export function useBinanceKlineWebSocket({
     if (!enabled || !symbol) return;
 
     const generation = ++generationRef.current;
-    /**
-     * Mengecek apakah kondisi is stale terpenuhi.
-     * Mengembalikan boolean agar aturan validasi tetap eksplisit dan mudah dibaca.
-     */
     const isStale = () => generationRef.current !== generation;
 
     const coin = getCoinBySymbol(symbol);
@@ -145,14 +141,6 @@ export function useBinanceKlineWebSocket({
     let lastMessageAt = 0;
     let retryCount = 0;
     let openedAtLeastOnce = false;
-
-    /**
-
-     * Menjalankan logic clear timer.
-
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-     */
 
     const clearTimer = (t: ReturnType<typeof setTimeout> | null) => {
       if (t) clearTimeout(t);
@@ -257,14 +245,6 @@ export function useBinanceKlineWebSocket({
       connect();
     };
 
-    /**
-
-     * Menjalankan logic connect.
-
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-     */
-
     const connect = () => {
       if (isStale()) return;
       teardownSocket();
@@ -362,10 +342,6 @@ export function useBinanceKlineWebSocket({
       // Force a fresh connection on resume to recover from silent stalls.
       forceReconnect();
     };
-    /**
-     * Menjalankan logic handle online.
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-     */
     const handleOnline = () => {
       if (isStale()) return;
       forceReconnect();

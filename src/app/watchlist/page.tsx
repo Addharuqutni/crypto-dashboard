@@ -31,11 +31,11 @@ export default function WatchlistPage() {
   if (!hydrated) {
     return (
       <AppShell>
-        <div className="card animate-pulse p-6">
-          <div className="h-6 w-32 rounded bg-bg-surface-raised" />
+        <div className="card p-6">
+          <div className="skeleton h-6 w-32" />
           <div className="mt-4 space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-12 rounded bg-bg-surface-raised" />
+              <div key={i} className="skeleton h-12" />
             ))}
           </div>
         </div>
@@ -45,10 +45,10 @@ export default function WatchlistPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Page Header */}
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary">
+          <h1 className="h1">
             Watchlist
           </h1>
           <p className="mt-1 text-sm text-text-secondary">

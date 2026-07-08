@@ -127,14 +127,6 @@ interface ScoreInputs {
   volumeSpikeRatio: number;
 }
 
-/**
-
- * Menjalankan logic score sweep.
-
- * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
- */
-
 function scoreSweep(s: ScoreInputs): number {
   if (s.referenceLevel <= 0) return 0;
 
@@ -155,14 +147,6 @@ function scoreSweep(s: ScoreInputs): number {
   const total = reclaimScore + wickScore + ratioScore + volumeScore;
   return clamp(Math.round(total), 0, 100);
 }
-
-/**
-
- * Menjalankan logic clamp.
-
- * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
- */
 
 function clamp(v: number, min: number, max: number): number {
   if (!Number.isFinite(v)) return min;

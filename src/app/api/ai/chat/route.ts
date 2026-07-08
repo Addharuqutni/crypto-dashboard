@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sendChatCompletion } from '@/lib/adapters/ai/ai-client';
 import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
+import { rateLimit, getClientIp } from '@/lib/shared/security/rate-limit';
 import type { AiConfig, AiMessageRole } from '@/types/ai';
 
 export const runtime = 'nodejs';
@@ -15,6 +16,14 @@ type Body = {
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    if (!rateLimit(ip)) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please wait a moment.' },
+        { status: 429, headers: { 'Cache-Control': 'no-store' } }
+      );
+    }
+
     const body = (await request.json()) as Body;
     const messages = Array.isArray(body.messages)
       ? body.messages.filter(

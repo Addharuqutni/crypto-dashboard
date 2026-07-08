@@ -33,14 +33,6 @@ export interface RegimeContext {
   reason: string;
 }
 
-/**
-
- * Menjalankan logic detect regime.
-
- * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
- */
-
 export function detectRegime(
   candles: Candle[],
   config: FuturesSignalConfig = DEFAULT_FUTURES_SIGNAL_CONFIG

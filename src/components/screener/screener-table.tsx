@@ -41,7 +41,7 @@ export function ScreenerTable({ results, isLoading, sort, onSort, onRowClick }: 
             All Coins
           </h2>
         </div>
-        <div className="scroll-x-hint overflow-x-auto">
+        <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-text-muted">
@@ -120,7 +120,7 @@ function SortableHeader({
 function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () => void }) {
   return (
     <tr
-      className="cursor-pointer border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-raised/50 focus-within:bg-bg-surface-raised/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
+      className="cursor-pointer border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50 focus-within:bg-bg-surface-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
       onClick={onClick}
       role="button"
       tabIndex={0}

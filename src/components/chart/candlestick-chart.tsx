@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/shared/utils';
 import { formatCurrency } from '@/lib/shared/formatting';
+import { CHART_COLORS, MA_COLORS } from '@/lib/shared/theme/chart-tokens';
 import {
   toChartCandles,
   toVolumeData,
@@ -150,14 +151,6 @@ export function CandlestickChart({
     // sure cleanup uses the SAME map instance the effect captured at mount.
     const maSeries = maSeriesRef.current;
 
-    /**
-
-     * Menjalankan logic init chart.
-
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-     */
-
     const initChart = async () => {
       try {
         const {
@@ -183,38 +176,38 @@ export function CandlestickChart({
         const container = containerRef.current;
         const chart = createChart(container, {
           width: container.clientWidth,
-          height: 420,
+          height: container.clientHeight || 420,
           layout: {
             background: { type: ColorType.Solid, color: 'transparent' },
-            textColor: '#94a3b8',
+            textColor: CHART_COLORS.textMuted,
             fontFamily: 'Inter, system-ui, sans-serif',
             fontSize: 11,
           },
           grid: {
-            vertLines: { color: 'rgba(31, 41, 55, 0.3)', style: LineStyle.Dotted },
-            horzLines: { color: 'rgba(31, 41, 55, 0.3)', style: LineStyle.Dotted },
+            vertLines: { color: CHART_COLORS.gridLine, style: LineStyle.Dotted },
+            horzLines: { color: CHART_COLORS.gridLine, style: LineStyle.Dotted },
           },
           crosshair: {
             mode: 0,
             vertLine: {
-              color: 'rgba(56, 189, 248, 0.4)',
+              color: CHART_COLORS.crosshairLine,
               width: 1,
               style: LineStyle.Dashed,
-              labelBackgroundColor: '#1e293b',
+              labelBackgroundColor: CHART_COLORS.crosshairLabelBg,
             },
             horzLine: {
-              color: 'rgba(56, 189, 248, 0.4)',
+              color: CHART_COLORS.crosshairLine,
               width: 1,
               style: LineStyle.Dashed,
-              labelBackgroundColor: '#1e293b',
+              labelBackgroundColor: CHART_COLORS.crosshairLabelBg,
             },
           },
           rightPriceScale: {
-            borderColor: 'rgba(31, 41, 55, 0.5)',
+            borderColor: CHART_COLORS.priceScaleBorder,
             scaleMargins: { top: 0.05, bottom: 0.25 },
           },
           timeScale: {
-            borderColor: 'rgba(31, 41, 55, 0.5)',
+            borderColor: CHART_COLORS.priceScaleBorder,
             timeVisible: true,
             secondsVisible: false,
             rightOffset: 5,
@@ -226,11 +219,11 @@ export function CandlestickChart({
         });
 
         const candleSeries = chart.addSeries(CandlestickSeries, {
-          upColor: '#22c55e',
-          downColor: '#ef4444',
+          upColor: CHART_COLORS.marketUp,
+          downColor: CHART_COLORS.marketDown,
           borderVisible: false,
-          wickUpColor: 'rgba(34, 197, 94, 0.8)',
-          wickDownColor: 'rgba(239, 68, 68, 0.8)',
+          wickUpColor: CHART_COLORS.wickUp,
+          wickDownColor: CHART_COLORS.wickDown,
           priceLineVisible: true,
           lastValueVisible: true,
         });
@@ -369,19 +362,15 @@ export function CandlestickChart({
     if (!chart) return;
 
     let cancelled = false;
-    /**
-     * Menjalankan logic ensure series.
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-     */
     const ensureSeries = async () => {
       const lc = await import('lightweight-charts');
       if (cancelled || !chartRef.current) return;
       const { LineSeries } = lc;
 
       const desired: Record<string, { color: string; width: 1 | 2 | 3 | 4 }> = {
-        MA7: { color: '#facc15', width: 1 },
-        MA25: { color: '#38bdf8', width: 2 },
-        MA99: { color: '#a78bfa', width: 2 },
+        MA7: { color: MA_COLORS.MA7, width: 1 },
+        MA25: { color: MA_COLORS.MA25, width: 2 },
+        MA99: { color: MA_COLORS.MA99, width: 2 },
       };
 
       // Toggle off any series that should no longer be displayed.
@@ -426,8 +415,13 @@ export function CandlestickChart({
 
   // Stats for accessibility.
   const lastCandle = data[data.length - 1];
-  const highPrice = data.length > 0 ? Math.max(...data.map((d) => d.high)) : undefined;
-  const lowPrice = data.length > 0 ? Math.min(...data.map((d) => d.low)) : undefined;
+  const { highPrice, lowPrice } = useMemo(() => {
+    if (data.length === 0) return { highPrice: undefined, lowPrice: undefined };
+    return {
+      highPrice: Math.max(...data.map((d) => d.high)),
+      lowPrice: Math.min(...data.map((d) => d.low)),
+    };
+  }, [data]);
 
   return (
     <div className="relative">
@@ -456,13 +450,13 @@ export function CandlestickChart({
           {maOverlays && (
             <div className="ml-auto flex items-center gap-3">
               {activeIndicators?.has('MA7') && (
-                <LegendDot color="#facc15" label="MA7" />
+                <LegendDot color={MA_COLORS.MA7} label="MA7" />
               )}
               {activeIndicators?.has('MA25') && (
-                <LegendDot color="#38bdf8" label="MA25" />
+                <LegendDot color={MA_COLORS.MA25} label="MA25" />
               )}
               {activeIndicators?.has('MA99') && (
-                <LegendDot color="#a78bfa" label="MA99" />
+                <LegendDot color={MA_COLORS.MA99} label="MA99" />
               )}
             </div>
           )}
@@ -473,8 +467,8 @@ export function CandlestickChart({
       <div
         ref={containerRef}
         className={cn(
-          'h-[420px] w-full rounded-lg',
-          status === 'loading' && 'animate-pulse bg-bg-surface-raised',
+          'min-h-[300px] w-full rounded-lg md:h-[420px]',
+          status === 'loading' && 'skeleton',
           status === 'error' && 'flex items-center justify-center bg-bg-surface-raised',
           status === 'empty' && 'flex items-center justify-center bg-bg-surface-raised'
         )}
@@ -527,14 +521,6 @@ export function CandlestickChart({
 
 // --- Inline atoms ---
 
-/**
-
- * Komponen OhlcItem untuk merender bagian UI terkait ohlc item.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
 function OhlcItem({ label, value, prev }: { label: string; value: number; prev: number }) {
   const isUp = value >= prev;
   return (
@@ -546,14 +532,6 @@ function OhlcItem({ label, value, prev }: { label: string; value: number; prev: 
     </span>
   );
 }
-
-/**
-
- * Komponen LegendDot untuk merender bagian UI terkait legend dot.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
 
 function LegendDot({ color, label }: { color: string; label: string }) {
   return (
@@ -575,7 +553,7 @@ function LegendDot({ color, label }: { color: string; label: string }) {
  * Used to detect whether only the most recent bar changed so we can
  * pick the cheaper `series.update()` path.
  */
-function isHistoryEqual(a: ChartCandle[], b: ChartCandle[], until: number): boolean {
+export function isHistoryEqual(a: ChartCandle[], b: ChartCandle[], until: number): boolean {
   for (let i = 0; i < until; i++) {
     const ai = a[i]!;
     const bi = b[i]!;

@@ -58,11 +58,11 @@ export default function PortfolioPage() {
   if (!hydrated) {
     return (
       <AppShell>
-        <div className="card animate-pulse p-6">
-          <div className="h-6 w-32 rounded bg-bg-surface-raised" />
+        <div className="card p-6">
+          <div className="skeleton h-6 w-32" />
           <div className="mt-4 space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-14 rounded bg-bg-surface-raised" />
+              <div key={i} className="skeleton h-14" />
             ))}
           </div>
         </div>
@@ -72,11 +72,11 @@ export default function PortfolioPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary">
+            <h1 className="h1">
               Portfolio
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
@@ -95,7 +95,7 @@ export default function PortfolioPage() {
         {/* Summary Cards */}
         {holdings.length > 0 && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SummaryCard label="Total Value" value={formatCurrency(summary.totalValue)} />
+            <SummaryCard label="Total Value" value={formatCurrency(summary.totalValue)} hero />
             <SummaryCard
               label="Total P/L"
               value={summary.totalCost > 0 ? formatCurrency(summary.totalPnl) : '—'}
@@ -244,22 +244,14 @@ export default function PortfolioPage() {
 
 // --- Sub-components ---
 
-/**
-
- * Komponen SummaryCard untuk merender bagian UI terkait summary card.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
-function SummaryCard({ label, value, change }: { label: string; value: string; change?: number | null }) {
+function SummaryCard({ label, value, change, hero = false }: { label: string; value: string; change?: number | null; hero?: boolean }) {
   const isUp = (change ?? 0) > 0;
   const isDown = (change ?? 0) < 0;
 
   return (
-    <div className="card px-4 py-3.5">
+    <div className={cn('card p-5', hero && 'sm:col-span-2')}>
       <p className="text-xs font-medium uppercase tracking-wider text-text-muted">{label}</p>
-      <p className="numeric mt-1 text-2xl font-bold text-text-primary">{value}</p>
+      <p className={cn('numeric mt-1 font-bold text-text-primary', hero ? 'text-3xl' : 'text-xl')}>{value}</p>
       {change != null && (
         <span
           className={cn('numeric mt-1 inline-flex items-center gap-1 text-sm font-medium', isUp && 'text-market-up', isDown && 'text-market-down', !isUp && !isDown && 'text-market-neutral')}
@@ -301,14 +293,6 @@ function PnlDisplay({ pnl, pnlPercent, compact }: { pnl: number | null; pnlPerce
   );
 }
 
-/**
-
- * Komponen HoldingForm untuk merender bagian UI terkait holding form.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
 function HoldingForm({
   editingHolding,
   onSubmit,
@@ -322,14 +306,6 @@ function HoldingForm({
   const [quantity, setQuantity] = useState(editingHolding?.quantity?.toString() ?? '');
   const [buyPrice, setBuyPrice] = useState(editingHolding?.averageBuyPrice?.toString() ?? '');
   const [error, setError] = useState('');
-
-  /**
-
-   * Menjalankan logic handle submit.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,19 +346,19 @@ function HoldingForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="holding-symbol" className="mb-1 block text-xs font-medium text-text-secondary">Coin Symbol *</label>
-          <input id="holding-symbol" type="text" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="BTC" disabled={!!editingHolding} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30 disabled:opacity-50" />
+          <input id="holding-symbol" type="text" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="BTC" disabled={!!editingHolding} aria-invalid={!!error} aria-describedby={error ? 'holding-error' : undefined} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50" />
         </div>
         <div>
           <label htmlFor="holding-quantity" className="mb-1 block text-xs font-medium text-text-secondary">Quantity *</label>
-          <input id="holding-quantity" type="number" step="any" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0.5" className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30" />
+          <input id="holding-quantity" type="number" step="any" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="0.5" aria-invalid={!!error} aria-describedby={error ? 'holding-error' : undefined} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" />
         </div>
         <div>
           <label htmlFor="holding-buyprice" className="mb-1 block text-xs font-medium text-text-secondary">Avg Buy Price (optional)</label>
-          <input id="holding-buyprice" type="number" step="any" min="0" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} placeholder="65000" className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30" />
+          <input id="holding-buyprice" type="number" step="any" min="0" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} placeholder="65000" aria-invalid={!!error} aria-describedby={error ? 'holding-error' : undefined} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" />
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p id="holding-error" className="text-sm text-danger">{error}</p>}
 
       <div className="flex gap-2">
         <button type="submit" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-bg-app transition-colors hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">

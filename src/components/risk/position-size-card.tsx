@@ -105,7 +105,7 @@ export function PositionSizeCard({
               const next = Number.parseFloat(event.target.value);
               if (Number.isFinite(next)) setAccountSize(next);
             }}
-            className="mt-1 h-8 w-full rounded-md border border-transparent bg-transparent px-1 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-accent-primary/40 focus:ring-2 focus:ring-focus-ring/30"
+            className="mt-1 h-8 w-full rounded-md border border-transparent bg-transparent px-1 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-accent-primary/40 focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Account size in USDT"
           />
         </label>
@@ -129,7 +129,7 @@ export function PositionSizeCard({
               const next = Number.parseFloat(event.target.value);
               if (Number.isFinite(next)) setRiskPerTrade(next / 100);
             }}
-            className="mt-1 h-8 w-full rounded-md border border-transparent bg-transparent px-1 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-accent-primary/40 focus:ring-2 focus:ring-focus-ring/30"
+            className="mt-1 h-8 w-full rounded-md border border-transparent bg-transparent px-1 text-sm font-semibold tabular-nums text-text-primary outline-none focus:border-accent-primary/40 focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label="Risk percent of account per trade"
           />
         </label>

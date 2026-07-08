@@ -55,7 +55,7 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
   return (
     <div className="fixed inset-0 z-overlay flex justify-end bg-black/45 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="screener-detail-title">
       <button className="absolute inset-0 cursor-default focus-visible:outline-none" onClick={onClose} aria-label="Close details" />
-      <aside className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-border-subtle bg-bg-surface shadow-2xl animate-slide-up sm:rounded-l-2xl">
+      <aside className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-border-subtle bg-bg-surface animate-slide-up sm:rounded-l-2xl" style={{ boxShadow: 'var(--shadow-overlay)' }}>
         {/* Header */}
         <div className="border-b border-border-subtle bg-bg-surface-soft/70 px-5 py-4">
           <div className="flex items-start justify-between gap-3">
