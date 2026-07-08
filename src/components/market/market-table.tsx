@@ -8,15 +8,12 @@ import { formatCurrency, formatPercentage, formatCompactNumber } from '@/lib/sha
 import { buildPriceChangeAriaLabel } from '@/lib/shared/a11y/price-change-label';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
+import { compareMarketRows, type SortKey, type SortDir } from './sort-comparator';
 import { TrendingUp, TrendingDown, Minus, Star, LayoutGrid, List, ChevronLeft, ChevronRight, ArrowDown, ArrowUp } from 'lucide-react';
 import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
 import { getPriceFreshness } from '@/lib/shared/market/freshness';
 import type { MarketRow } from '@/types/market';
 
-type DisplayMarketRow = MarketRow;
-
-type SortKey = 'price' | 'priceChangePercent24h' | 'volume24h' | 'marketCap';
-type SortDir = 'asc' | 'desc';
 type ViewMode = 'table' | 'cards';
 
 const PAGE_SIZE = 48;
@@ -32,11 +29,7 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const sorted = useMemo(() => {
-    return [...data].sort((a, b) => {
-      const aVal = a[sortKey] ?? 0;
-      const bVal = b[sortKey] ?? 0;
-      return sortDir === 'desc' ? bVal - aVal : aVal - bVal;
-    });
+    return [...data].sort((a, b) => compareMarketRows(a, b, sortKey, sortDir));
   }, [data, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -234,8 +227,8 @@ const PaginationControls = memo(function PaginationControls({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-bg-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-text-muted">
-        Menampilkan <span className="numeric text-text-primary">{totalItems === 0 ? 0 : pageStart}-{pageEnd}</span> dari{' '}
-        <span className="numeric text-text-primary">{totalItems}</span> coin
+        Showing <span className="numeric text-text-primary">{totalItems === 0 ? 0 : pageStart}–{pageEnd}</span> of{' '}
+        <span className="numeric text-text-primary">{totalItems}</span> coins
       </p>
 
       <div className="flex items-center justify-between gap-3 sm:justify-end">
@@ -284,7 +277,7 @@ const PaginationControls = memo(function PaginationControls({
  * The selector subscribes to a single coin, so unrelated price ticks do not
  * invalidate this row/card.
  */
-function useLiveMarketRow(row: MarketRow, now: number): DisplayMarketRow {
+function useLiveMarketRow(row: MarketRow, now: number): MarketRow {
   const livePrice = useMarketStore((state) => state.prices[row.symbol]);
 
   return useMemo(() => {
@@ -320,8 +313,7 @@ const CoinCard = memo(function CoinCard({ row }: { row: MarketRow }) {
   return (
     <div
       className={cn(
-        'card group relative flex flex-col justify-between overflow-hidden px-5 py-4 transition-colors duration-200',
-        'hover:border-border-strong'
+        'card interactive group relative flex flex-col justify-between overflow-hidden px-5 py-4',
       )}
     >
       {/* Watchlist sits ABOVE the link cover; renders before the link so it
@@ -427,7 +419,7 @@ const MobileMarketCard = memo(function MobileMarketCard({ row }: { row: MarketRo
 });
 
 /** Renders consistent coin identity for cards. */
-function CoinIdentity({ row, size }: { row: DisplayMarketRow; size: 'sm' | 'md' | 'lg' }) {
+function CoinIdentity({ row, size }: { row: MarketRow; size: 'sm' | 'md' | 'lg' }) {
   return (
     <div className="flex items-center gap-2.5">
       <CoinAvatar row={row} size={size} />
@@ -447,7 +439,7 @@ function CoinIdentity({ row, size }: { row: DisplayMarketRow; size: 'sm' | 'md' 
  * URLs that aren't on the Next.js image-domain allowlist; remove the flag
  * once `next.config` adds the relevant remote patterns.
  */
-function CoinAvatar({ row, size }: { row: DisplayMarketRow; size: 'sm' | 'md' | 'lg' }) {
+function CoinAvatar({ row, size }: { row: MarketRow; size: 'sm' | 'md' | 'lg' }) {
   const sizeClass = size === 'lg' ? 'h-9 w-9' : 'h-8 w-8';
   const pixelSize = size === 'lg' ? 36 : 32;
 

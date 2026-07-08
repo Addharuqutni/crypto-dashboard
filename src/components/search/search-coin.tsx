@@ -197,10 +197,6 @@ export function SearchCoin() {
 
   /** Close dropdown on outside click */
   useEffect(() => {
-    /**
-     * Menjalankan logic handle click outside.
-     * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-     */
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (!containerRef.current?.contains(target)) {
@@ -235,7 +231,7 @@ export function SearchCoin() {
           placeholder="Search coin..."
           className={cn(
             'h-10 w-full rounded-xl border border-border-subtle bg-bg-surface pl-9 pr-8 text-sm text-text-primary placeholder:text-text-muted',
-            'transition-colors focus:border-border-strong focus:outline-none focus:ring-2 focus:ring-focus-ring/30'
+            'transition-colors focus:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring'
           )}
           role="combobox"
           aria-expanded={isOpen}

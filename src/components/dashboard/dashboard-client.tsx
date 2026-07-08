@@ -2,12 +2,15 @@
 
 import { useDeferredValue, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { MarketOverviewCards } from '@/components/market/market-overview-cards';
 import { MarketTable } from '@/components/market/market-table';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { useMarketData } from '@/lib/adapters/api/hooks';
 import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
+import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
+import { cn } from '@/lib/shared/utils';
 import type { MarketRow, CoinMetadata, LivePrice } from '@/types/market';
 
 /**
@@ -103,14 +106,40 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-8">
-      {/* Page header — lightweight context */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h1 className="h2">Markets</h1>
-        <p className="text-sm text-text-muted">
-          {trackedSymbolCount > 0
-            ? `${trackedSymbolCount} pairs tracked`
-            : 'Connecting\u2026'}
-        </p>
+      {/* Hero — composed market context */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="h2">Markets</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {trackedSymbolCount > 0
+              ? `${trackedSymbolCount} pairs tracked`
+              : 'Connecting\u2026'}
+          </p>
+        </div>
+        {/* Top coins inline — quick market pulse */}
+        {marketData.length > 0 && (
+          <div className="flex flex-wrap items-center gap-4">
+            {marketData.slice(0, 3).map((coin) => {
+              const change = coin.priceChangePercent24h ?? 0;
+              const isUp = change >= 0;
+              return (
+                <Link
+                  key={coin.symbol}
+                  href={`/coin/${coin.symbol}`}
+                  className="group flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-3 py-1.5 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                >
+                  <span className="text-xs font-bold text-text-secondary">{coin.symbol}</span>
+                  <span className="numeric text-xs font-semibold text-text-primary">
+                    {coin.price != null ? formatCurrency(coin.price) : '—'}
+                  </span>
+                  <span className={cn('numeric text-[10px] font-medium', isUp ? 'text-market-up' : 'text-market-down')}>
+                    {isUp ? '+' : ''}{formatPercentage(change)}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* API Error Banner */}
@@ -164,14 +193,6 @@ function DashboardSkeleton() {
   );
 }
 
-/**
-
- * Komponen TableSkeleton untuk merender bagian UI terkait table skeleton.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
 function TableSkeleton() {
   return (
     <div className="card p-4">
@@ -186,14 +207,6 @@ function TableSkeleton() {
   );
 }
 
-/**
-
- * Komponen SidebarSkeleton untuk merender bagian UI terkait sidebar skeleton.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
 function SidebarSkeleton() {
   return (
     <div className="card px-4 py-5">
@@ -206,14 +219,6 @@ function SidebarSkeleton() {
     </div>
   );
 }
-
-/**
-
- * Komponen WidgetSkeleton untuk merender bagian UI terkait widget skeleton.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
 
 function WidgetSkeleton() {
   return (

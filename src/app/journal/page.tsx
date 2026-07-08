@@ -1,7 +1,7 @@
 'use client';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { SignalJournalPanel } from '@/components/technical-analysis/signal-journal-panel';
+import { SignalJournalPanel } from '@/components/technical-analysis/signal-journal';
 
 /**
  * Signal Journal page — dedicated view for tracking futures signal outcomes.
@@ -14,9 +14,9 @@ import { SignalJournalPanel } from '@/components/technical-analysis/signal-journ
 export default function JournalPage() {
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary">
+          <h1 className="h1">
             Signal Journal
           </h1>
           <p className="mt-1 text-sm text-text-secondary">

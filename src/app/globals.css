@@ -19,7 +19,7 @@
   /* Text */
   --color-text-primary: #f8fafc;
   --color-text-secondary: #a7b0c0;
-  --color-text-muted: #64748b;
+  --color-text-muted: #7c8aa0;
 
   /* Accent */
   --color-accent-primary: #38bdf8;
@@ -46,6 +46,7 @@
   --color-success: #22c55e;
 
   /* Radius */
+  --radius-xs: 6px;
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 18px;
@@ -109,6 +110,8 @@
    */
   --text-eyebrow: 0.6875rem;       /* 11px */
   --text-eyebrow--line-height: 1.4;
+  --text-xxs: 0.625rem;            /* 10px */
+  --text-xxs--line-height: 1.4;
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1.4;
   --text-caption: 0.75rem;         /* 12px */
@@ -466,16 +469,11 @@ body {
 /*
  * Staggered card entrance — scoped to an opt-in parent so the stagger only
  * applies where it was intentionally chosen (dashboards, market grids).
- * Avoids unintended motion on banners, drawers, or single-card surfaces.
+ * Uses --stagger-i CSS variable set inline per-child for unlimited items.
  */
-.card-stagger > .card:nth-child(1) { animation-delay: 0ms; }
-.card-stagger > .card:nth-child(2) { animation-delay: 30ms; }
-.card-stagger > .card:nth-child(3) { animation-delay: 60ms; }
-.card-stagger > .card:nth-child(4) { animation-delay: 90ms; }
-.card-stagger > .card:nth-child(5) { animation-delay: 120ms; }
-.card-stagger > .card:nth-child(6) { animation-delay: 150ms; }
-.card-stagger > .card:nth-child(7) { animation-delay: 180ms; }
-.card-stagger > .card:nth-child(8) { animation-delay: 210ms; }
+.card-stagger > .card {
+  animation-delay: calc(var(--stagger-i, 0) * 30ms);
+}
 
 /*
  * Scroll affordance — fades the right edge of a horizontal scroller so
@@ -495,12 +493,19 @@ body {
  * Minimum-44px tap target wrapper for small icon buttons. Use as a flex
  * container when the inner element is too small to meet WCAG 2.5.5 alone.
  */
-.tap-target {
+  .tap-target {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
+}
+
+.empty-state-icon {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-text-muted);
+  opacity: 0.4;
 }
 
 /* ============================================

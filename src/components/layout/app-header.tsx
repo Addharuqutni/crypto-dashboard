@@ -9,12 +9,12 @@ import { SearchCoin } from '@/components/search/search-coin';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: BarChart3 },
-  { href: '/screener', label: 'Screener', icon: Crosshair },
-  { href: '/agent', label: 'Agent', icon: Bot },
   { href: '/watchlist', label: 'Watchlist', icon: Star },
   { href: '/portfolio', label: 'Portfolio', icon: Wallet },
+  { href: '/screener', label: 'Screener', icon: Crosshair },
   { href: '/alerts', label: 'Alerts', icon: Bell },
   { href: '/journal', label: 'Journal', icon: BookOpen },
+  { href: '/agent', label: 'Agent', icon: Bot },
 ] as const;
 
 /**

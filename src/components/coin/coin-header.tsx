@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/shared/utils';
 import { formatCurrency, formatPercentage, formatPercentageMagnitude } from '@/lib/shared/formatting';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
@@ -50,12 +51,13 @@ export function CoinHeader({
       {/* Coin Identity */}
       <div className="flex flex-wrap items-center gap-4">
         {logoUrl ? (
-          <img
+          <Image
             src={logoUrl}
             alt={`${coinName} logo`}
             className="h-12 w-12 rounded-full"
             width={48}
             height={48}
+            unoptimized
           />
         ) : (
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-bg-surface-raised text-lg font-bold text-accent-primary">
@@ -65,7 +67,7 @@ export function CoinHeader({
 
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary">
+            <h1 className="h1">
               {coinName}
             </h1>
             <span className="rounded-md bg-bg-surface-raised px-2 py-0.5 text-xs font-medium text-text-muted">

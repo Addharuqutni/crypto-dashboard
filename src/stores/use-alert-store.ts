@@ -115,14 +115,6 @@ export const useAlertStore = create<AlertState>((set, get) => ({
     set({ alerts: updated });
   },
 
-  /**
-
-   * Menjalankan logic trigger alert.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
-
   triggerAlert: (id) => {
     const state = get();
     const updated = state.alerts.map((a) =>

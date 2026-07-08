@@ -93,14 +93,6 @@ export const useMarketStore = create<MarketState>((set, get) => ({
 
   setValidSymbolsStatus: (status) => set({ validSymbolsStatus: status }),
 
-  /**
-
-   * Mengecek apakah kondisi is valid symbol terpenuhi.
-
-   * Mengembalikan boolean agar alur validasi mudah dibaca.
-
-   */
-
   isValidSymbol: (binanceSymbol) => {
     const { validSymbols, validSymbolsStatus } = get();
     // If not loaded yet or failed, allow all (degraded mode — don't block data)

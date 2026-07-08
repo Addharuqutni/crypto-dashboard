@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
 import { useAlertStore } from '@/stores/use-alert-store';
 import { useMarketStore } from '@/stores/use-market-store';
@@ -36,14 +37,6 @@ export default function AlertsPage() {
     setNotificationPermission(Notification.permission);
   }, []);
 
-  /**
-
-   * Menjalankan logic request permission.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
-
   const requestPermission = async () => {
     if (!('Notification' in window)) return;
     const result = await Notification.requestPermission();
@@ -56,11 +49,11 @@ export default function AlertsPage() {
   if (!hydrated) {
     return (
       <AppShell>
-        <div className="card animate-pulse p-6">
-          <div className="h-6 w-32 rounded bg-bg-surface-raised" />
+        <div className="card p-6">
+          <div className="skeleton h-6 w-32" />
           <div className="mt-4 space-y-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-14 rounded bg-bg-surface-raised" />
+              <div key={i} className="skeleton h-14" />
             ))}
           </div>
         </div>
@@ -70,11 +63,11 @@ export default function AlertsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold text-text-primary">
+            <h1 className="h1">
               Price Alerts
             </h1>
             <p className="mt-1 text-sm text-text-secondary">
@@ -159,14 +152,6 @@ export default function AlertsPage() {
 
 // --- Sub-components ---
 
-/**
-
- * Komponen NotificationBanner untuk merender bagian UI terkait notification banner.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
 function NotificationBanner({
   permission,
   onRequest,
@@ -217,14 +202,6 @@ function NotificationBanner({
   );
 }
 
-/**
-
- * Komponen AlertCard untuk merender bagian UI terkait alert card.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
-
 function AlertCard({
   alert,
   onRemove,
@@ -239,15 +216,16 @@ function AlertCard({
   const conditionText = alert.condition === 'greater_than' ? 'above' : 'below';
 
   return (
-    <div className={cn('card flex items-center gap-4 px-4 py-3', triggered && 'opacity-70')}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-surface text-xs font-bold text-accent-primary">
+    <div className={cn('card flex items-center gap-4 px-4 py-3', triggered && 'border-success/30 bg-success/5')}>
+      <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold', triggered ? 'bg-success/10 text-success' : 'bg-bg-surface text-accent-primary')}>
         {alert.symbol.slice(0, 2)}
       </span>
       <div className="flex-1">
         <div className="flex items-center gap-2">
           <p className="font-medium text-text-primary">{alert.symbol}</p>
           {triggered && (
-            <span className="rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">
+            <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">
+              <CheckCircle2 className="h-3 w-3" />
               TRIGGERED
             </span>
           )}
@@ -260,14 +238,22 @@ function AlertCard({
           )}
         </p>
         {triggered && alert.triggeredAt && (
-          <p className="text-xs text-text-muted">
-            Triggered at {new Date(alert.triggeredAt).toLocaleString()}
+          <p className="text-xs font-medium text-success/80">
+            Triggered {new Date(alert.triggeredAt).toLocaleString()}
           </p>
         )}
       </div>
+      {triggered && (
+        <Link
+          href={`/coin/${alert.symbol}`}
+          className="tap-target inline-flex h-8 items-center gap-1 rounded-lg border border-border-subtle px-3 text-xs font-medium text-text-secondary transition-colors hover:border-border-strong hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        >
+          View
+        </Link>
+      )}
       <button
         onClick={() => onRemove(alert.id)}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        className="tap-target flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         aria-label={`Delete ${alert.symbol} alert`}
       >
         <Trash2 className="h-4 w-4" />
@@ -275,14 +261,6 @@ function AlertCard({
     </div>
   );
 }
-
-/**
-
- * Komponen AlertForm untuk merender bagian UI terkait alert form.
-
- * Menjaga struktur tampilan tetap terpisah dari halaman atau komponen induk.
-
- */
 
 function AlertForm({
   onSubmit,
@@ -295,14 +273,6 @@ function AlertForm({
   const [condition, setCondition] = useState<'greater_than' | 'less_than'>('greater_than');
   const [targetPrice, setTargetPrice] = useState('');
   const [error, setError] = useState('');
-
-  /**
-
-   * Menjalankan logic handle submit.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -335,22 +305,22 @@ function AlertForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div>
           <label htmlFor="alert-symbol" className="mb-1 block text-xs font-medium text-text-secondary">Coin Symbol *</label>
-          <input id="alert-symbol" type="text" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="BTC" className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30" />
+          <input id="alert-symbol" type="text" value={symbol} onChange={(e) => setSymbol(e.target.value)} placeholder="BTC" aria-invalid={!!error} aria-describedby={error ? 'alert-error' : undefined} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" />
         </div>
         <div>
           <label htmlFor="alert-condition" className="mb-1 block text-xs font-medium text-text-secondary">Condition *</label>
-          <select id="alert-condition" value={condition} onChange={(e) => setCondition(e.target.value as 'greater_than' | 'less_than')} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30">
+          <select id="alert-condition" value={condition} onChange={(e) => setCondition(e.target.value as 'greater_than' | 'less_than')} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
             <option value="greater_than">Price goes above</option>
             <option value="less_than">Price goes below</option>
           </select>
         </div>
         <div>
           <label htmlFor="alert-target" className="mb-1 block text-xs font-medium text-text-secondary">Target Price (USD) *</label>
-          <input id="alert-target" type="number" step="any" min="0" value={targetPrice} onChange={(e) => setTargetPrice(e.target.value)} placeholder="70000" className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-focus-ring/30" />
+          <input id="alert-target" type="number" step="any" min="0" value={targetPrice} onChange={(e) => setTargetPrice(e.target.value)} placeholder="70000" aria-invalid={!!error} aria-describedby={error ? 'alert-error' : undefined} className="h-9 w-full rounded-lg border border-border-subtle bg-bg-surface-raised px-3 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" />
         </div>
       </div>
 
-      {error && <p className="text-sm text-danger">{error}</p>}
+      {error && <p id="alert-error" className="text-sm text-danger">{error}</p>}
 
       <div className="flex gap-2">
         <button type="submit" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-bg-app transition-colors hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">

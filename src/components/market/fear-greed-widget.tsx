@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
 import { formatRelativeTime } from '@/lib/shared/formatting';
 import { cn } from '@/lib/shared/utils';
+import { FEAR_GREED_GRADIENT } from '@/lib/shared/theme/chart-tokens';
 import type { FearGreedLabel } from '@/types/fear-greed';
 
 /**
@@ -64,12 +65,12 @@ export function FearGreedWidget() {
           <div
             className="absolute inset-0 rounded-full"
             style={{
-              background: 'linear-gradient(to right, #ef4444, #f59e0b, #22c55e)',
+              background: FEAR_GREED_GRADIENT,
             }}
           />
           {/* Indicator */}
           <div
-            className="absolute top-0 h-full w-1 rounded-full bg-text-primary shadow-sm transition-all duration-500"
+            className="absolute top-0 h-full w-1 -translate-x-1/2 rounded-full bg-text-primary shadow-sm transition-all duration-500"
             style={{ left: `${value}%` }}
             aria-hidden="true"
           />

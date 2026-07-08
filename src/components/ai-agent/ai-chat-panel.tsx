@@ -78,14 +78,6 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  /**
-
-   * Menjalankan logic handle send.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
-
   const handleSend = () => {
     const trimmed = input.trim();
     if (!trimmed || isStreaming) return;
@@ -93,14 +85,6 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
     setInput('');
     inputRef.current?.focus();
   };
-
-  /**
-
-   * Menjalankan logic handle key down.
-
-   * Dipakai untuk memisahkan tanggung jawab fungsi ini dari bagian aplikasi lain.
-
-   */
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -111,10 +95,10 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
 
   // Quick prompts for empty state
   const quickPrompts = [
-    'Analisis teknikal singkat untuk kondisi saat ini',
-    'Apakah saat ini waktu yang tepat untuk entry?',
-    'Berikan level support dan resistance kunci',
-    'Apa sinyal dari RSI dan MACD saat ini?',
+    'Brief technical analysis of current conditions',
+    'Is now a good time to enter a position?',
+    'Give me key support and resistance levels',
+    'What are RSI and MACD signaling right now?',
   ];
 
   if (!hydrated) return null;
@@ -241,7 +225,7 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
                 </div>
 
                 {/* Messages */}
-                <div className="max-h-[400px] min-h-[200px] overflow-y-auto px-3 py-3 space-y-3" aria-live="polite" aria-atomic="false">
+                <div className="max-h-[400px] min-h-[200px] overflow-y-auto px-3 py-3 space-y-3">
                   {messages.length === 0 && (
                     <div className="flex flex-col items-center gap-3 py-6 text-center">
                       <Bot className="h-8 w-8 text-accent-secondary/30" />

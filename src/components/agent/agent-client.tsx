@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Bot, RefreshCw, ShieldAlert } from 'lucide-react';
 import type { AgentRunResult } from '@/lib/application/agent/agent-types';
 import { formatDateTime } from '@/lib/shared/formatting';
+import { ActionBadge } from '@/components/shared/badges';
 
 type AgentApiResponse = {
   ok: boolean;
@@ -57,7 +58,7 @@ export function AgentClient() {
             AI Agent Watchlist
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-text-secondary">
-            Ringkasan keputusan dari snapshot screener terbaru. Agent tidak mengeksekusi trade dan tidak mengubah keputusan engine.
+            Summary of decisions from the latest screener snapshot. The agent does not execute trades and does not override engine decisions.
           </p>
         </div>
         <button
@@ -81,7 +82,7 @@ export function AgentClient() {
         <div className="card flex items-start gap-3 p-5">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
           <div>
-            <h3 className="text-sm font-semibold text-text-primary">Agent belum siap</h3>
+            <h3 className="text-sm font-semibold text-text-primary">Agent not ready</h3>
             <p className="mt-1 text-sm text-text-secondary">{error}</p>
           </div>
         </div>
@@ -97,9 +98,7 @@ export function AgentClient() {
                     <h2 className="text-lg font-semibold text-text-primary">{decision.symbol}</h2>
                     <p className="text-xs text-text-muted">{decision.timeframe} · Engine {decision.engineAction}</p>
                   </div>
-                  <span className="rounded-full border border-border-subtle bg-bg-surface-soft px-3 py-1 text-xs font-semibold text-text-primary">
-                    {decision.decision}
-                  </span>
+                  <ActionBadge action={decision.decision} showIcon variant="default" />
                 </div>
 
                 <p className="mt-4 text-sm leading-6 text-text-secondary">{decision.summary}</p>
@@ -127,7 +126,7 @@ export function AgentClient() {
       <footer className="flex items-start gap-3 rounded-lg border border-border-subtle bg-bg-surface-soft p-4 text-xs text-text-muted">
         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
         <p>
-          Edukasi dan decision-support saja. Bukan financial advice, bukan sinyal pasti, dan bukan jaminan profit. WAIT adalah keputusan valid.
+          Educational and decision-support only. Not financial advice, not a guaranteed signal, and not a profit guarantee. WAIT is a valid decision.
         </p>
       </footer>
     </div>
@@ -164,5 +163,20 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
 }
 
 function SkeletonCard() {
-  return <div className="card h-72 animate-pulse bg-bg-surface-soft" />;
+  return (
+    <div className="card p-5">
+      <div className="skeleton h-5 w-24" />
+      <div className="mt-4 space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="skeleton h-8 w-8 rounded-full" />
+            <div className="flex-1 space-y-1.5">
+              <div className="skeleton h-3 w-3/4" />
+              <div className="skeleton h-2.5 w-1/2" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

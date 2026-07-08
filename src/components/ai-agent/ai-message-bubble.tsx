@@ -26,6 +26,7 @@ export function AiMessageBubble({ message, isStreaming }: AiMessageBubbleProps) 
         // Subtle scale + translation makes the chat feel alive without distracting.
         isUser ? 'flex-row-reverse animate-bubble-in-right' : 'flex-row animate-bubble-in-left'
       )}
+      aria-busy={isStreaming}
     >
       {/* Avatar */}
       <div
@@ -141,7 +142,7 @@ function FormattedContent({ content }: { content: string }) {
           );
         }
 
-        // Code block markers
+        // Code block fence lines — skip (inline code only, no multi-line blocks)
         if (line.trim().startsWith('```')) {
           return null;
         }
@@ -189,12 +190,3 @@ function formatInline(text: string): React.ReactNode {
     return part;
   });
 }
-
-/**
-
- * Memformat nilai menjadi bentuk time yang siap ditampilkan.
-
- * Dipakai agar aturan tampilan angka/teks konsisten di seluruh UI.
-
- */
-

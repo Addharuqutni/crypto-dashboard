@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { TechnicalPanel } from '@/components/technical-analysis/technical-panel';
-import { FuturesSignalPanel } from '@/components/technical-analysis/futures-signal-panel';
+import { FuturesSignalPanel } from '@/components/technical-analysis/futures-signal';
 import { AiTechnicalSummary } from '@/components/ai-agent/ai-technical-summary';
 import { AiChatPanel } from '@/components/ai-agent/ai-chat-panel';
 import { BarChart3 } from 'lucide-react';
