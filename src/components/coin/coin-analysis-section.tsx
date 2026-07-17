@@ -87,39 +87,33 @@ export function CoinAnalysisSection({
 
   return (
     <>
-      {/* Technical Analysis Panel — only in Technical Mode */}
       {chartMode === 'technical' && hasCandles && (
-        <TechnicalPanel
-          candles={candles}
-          symbol={symbol}
-          activeIndicators={activeIndicators}
-          analysis={analysis}
-        />
-      )}
+        <div className="space-y-3">
+          <TechnicalPanel
+            candles={candles}
+            symbol={symbol}
+            activeIndicators={activeIndicators}
+            analysis={analysis}
+          />
 
-      {/* Futures Setup — disciplined LONG/SHORT/WAIT decision engine */}
-      {chartMode === 'technical' && hasCandles && futuresSignal && (
-        <FuturesSignalPanel signal={futuresSignal} symbol={symbol} timeframe={timeframe} />
-      )}
+          {futuresSignal && (
+            <FuturesSignalPanel signal={futuresSignal} symbol={symbol} timeframe={timeframe} />
+          )}
 
-      {/* AI Summary — sits directly above the advisor in Technical Mode */}
-      {chartMode === 'technical' && (
-        <AiTechnicalSummary context={aiContext} signal={futuresSignal} />
-      )}
+          <AiTechnicalSummary context={aiContext} signal={futuresSignal} />
 
-      {/* AI Technical Advisor — only in Technical Mode */}
-      {chartMode === 'technical' && (
-        <AiChatPanel
-          symbol={symbol}
-          timeframe={timeframe}
-          currentPrice={price ?? undefined}
-          analysis={analysis}
-        />
+          <AiChatPanel
+            symbol={symbol}
+            timeframe={timeframe}
+            currentPrice={price ?? undefined}
+            analysis={analysis}
+          />
+        </div>
       )}
 
       {/* Technical Mode CTA when in Clean Mode */}
       {chartMode === 'clean' && (
-        <div className="card interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring flex items-center justify-between px-4 py-4">
+        <div className="card interactive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring flex items-center justify-between px-4 py-3">
           <div>
             <p className="text-sm font-medium text-text-secondary">Technical Analysis</p>
             <p className="mt-0.5 text-xs text-text-muted">

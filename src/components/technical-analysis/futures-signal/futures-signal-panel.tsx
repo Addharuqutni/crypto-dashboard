@@ -78,7 +78,7 @@ export function FuturesSignalPanel({
 
   if (signal.regime === 'INSUFFICIENT_DATA') {
     return (
-      <section className="card space-y-3 p-5" aria-labelledby="futures-signal-title">
+      <section className="card space-y-3 p-4" aria-labelledby="futures-signal-title">
         <header className="flex items-center justify-between">
           <h2
             id="futures-signal-title"
@@ -90,12 +90,12 @@ export function FuturesSignalPanel({
             {symbol} · {timeframe}
           </span>
         </header>
-        <div className="rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-6 text-center">
+        <div className="rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-5 text-center">
           <Hourglass className="mx-auto h-6 w-6 text-text-muted" />
           <p className="mt-2 text-sm font-medium text-text-secondary">Insufficient data</p>
           <p className="mt-1 text-xs text-text-muted">{signal.invalidationReason}</p>
-          <p className="mt-3 text-[11px] leading-relaxed text-text-muted">
-            Educational analysis only. This setup classification is not financial advice or an instruction to trade.
+          <p className="mt-2 text-[11px] leading-relaxed text-text-muted">
+            Educational analysis only. Not financial advice or an instruction to trade.
           </p>
         </div>
         <DataFreshnessCard signal={signal} compact />
@@ -123,7 +123,7 @@ export function FuturesSignalPanel({
 
   return (
     <section
-      className="card space-y-4 p-5"
+      className="card space-y-3 p-4"
       aria-labelledby="futures-signal-title"
       id="futures-signal-panel"
     >
@@ -156,7 +156,7 @@ export function FuturesSignalPanel({
 
       {/* Section 2 — trade plan (only when actionable). */}
       {signal.action !== 'WAIT' && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           <PlanStat
             icon={<Crosshair className="h-3.5 w-3.5" />}
             label="Entry Zone"
@@ -191,7 +191,7 @@ export function FuturesSignalPanel({
       )}
 
       {/* Section 3 — confirmation: MTF / funding / OI / sweep. */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <MtfBlock signal={signal} />
         <PositioningBlock signal={signal} />
       </div>
@@ -263,7 +263,7 @@ export function FuturesSignalPanel({
 
       {/* Section 8 — actions: save signal. */}
       {signal.action !== 'WAIT' && (
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-2.5">
           <p className="text-[11px] text-text-muted">
             Save this setup to track outcome locally.
           </p>
@@ -293,7 +293,7 @@ export function FuturesSignalPanel({
       {/* Skill mode notice + Disclaimer */}
       <div className="space-y-2">
         <div
-          className="flex items-center gap-1.5 rounded-lg border border-accent-secondary/20 bg-accent-secondary/5 px-3 py-2"
+          className="flex items-center gap-1.5 rounded-lg border border-accent-secondary/20 bg-accent-secondary/5 px-3 py-1.5"
           role="note"
           aria-label="AI Agent skill policy"
         >
@@ -306,12 +306,10 @@ export function FuturesSignalPanel({
             <span className="font-semibold text-text-secondary">Risk engine remains final authority.</span>
           </p>
         </div>
-        <div className="flex items-start gap-2 rounded-lg border border-border-subtle/70 bg-bg-surface-soft/60 px-3 py-2.5">
+        <div className="flex items-start gap-2 rounded-lg border border-border-subtle/70 bg-bg-surface-soft/60 px-3 py-2">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
           <p className="text-[11px] leading-relaxed text-text-muted">
-            Educational analysis only. This risk-assisted setup classification is
-            not financial advice and is not an instruction to trade. Use it as
-            market-condition context; confirm independently and manage risk.
+            Educational analysis only. Not financial advice or an instruction to trade.
           </p>
         </div>
       </div>

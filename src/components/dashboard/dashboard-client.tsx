@@ -105,41 +105,59 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Hero — composed market context */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="h2">Markets</h1>
-          <p className="mt-1 text-sm text-text-muted">
-            {trackedSymbolCount > 0
-              ? `${trackedSymbolCount} pairs tracked`
-              : 'Connecting\u2026'}
-          </p>
-        </div>
-        {/* Top coins inline — quick market pulse */}
-        {marketData.length > 0 && (
-          <div className="flex flex-wrap items-center gap-4">
-            {marketData.slice(0, 3).map((coin) => {
-              const change = coin.priceChangePercent24h ?? 0;
-              const isUp = change >= 0;
-              return (
-                <Link
-                  key={coin.symbol}
-                  href={`/coin/${coin.symbol}`}
-                  className="group flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-3 py-1.5 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                >
-                  <span className="text-xs font-bold text-text-secondary">{coin.symbol}</span>
-                  <span className="numeric text-xs font-semibold text-text-primary">
-                    {coin.price != null ? formatCurrency(coin.price) : '—'}
-                  </span>
-                  <span className={cn('numeric text-[10px] font-medium', isUp ? 'text-market-up' : 'text-market-down')}>
-                    {isUp ? '+' : ''}{formatPercentage(change)}
-                  </span>
-                </Link>
-              );
-            })}
+    <div className="space-y-5">
+      {/* Hero — market context with prominent top coins */}
+      <div className="card p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-text-primary">Markets</h1>
+              <span className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                trackedSymbolCount > 0
+                  ? 'border-market-up/30 bg-market-up/5 text-market-up'
+                  : 'border-border-subtle bg-bg-surface-soft text-text-muted'
+              )}>
+                <span className={cn(
+                  'inline-block h-1.5 w-1.5 rounded-full',
+                  trackedSymbolCount > 0 ? 'bg-market-up' : 'animate-pulse bg-text-muted'
+                )} />
+                {trackedSymbolCount > 0 ? `${trackedSymbolCount} pairs` : 'Connecting'}
+              </span>
+            </div>
+            <p className="mt-1.5 text-sm text-text-muted">
+              Real-time futures market data
+            </p>
           </div>
-        )}
+
+          {/* Top coins — prominent quick pulse */}
+          {marketData.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {marketData.slice(0, 4).map((coin) => {
+                const change = coin.priceChangePercent24h ?? 0;
+                const isUp = change >= 0;
+                return (
+                  <Link
+                    key={coin.symbol}
+                    href={`/coin/${coin.symbol}`}
+                    className="group flex items-center gap-2.5 rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2 transition-all hover:border-border-strong hover:shadow-elev-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  >
+                    <span className="text-xs font-bold text-text-secondary">{coin.symbol}</span>
+                    <span className="numeric text-xs font-semibold text-text-primary">
+                      {coin.price != null ? formatCurrency(coin.price) : '—'}
+                    </span>
+                    <span className={cn(
+                      'numeric inline-flex items-center gap-0.5 text-[10px] font-semibold',
+                      isUp ? 'text-market-up' : 'text-market-down'
+                    )}>
+                      {isUp ? '+' : ''}{formatPercentage(change)}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* API Error Banner */}
@@ -154,10 +172,10 @@ export function DashboardClient() {
       <MarketOverviewCards data={marketData} />
 
       {/* Main Grid: Table + Sidebar */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px] xl:grid-cols-[1fr_400px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
         {/* Top Coins Table — primary content */}
         <section>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-medium text-text-secondary">
               Futures Market
             </h2>
@@ -166,7 +184,7 @@ export function DashboardClient() {
         </section>
 
         {/* Right Rail — lazy-loaded, secondary content */}
-        <aside className="space-y-6">
+        <aside className="space-y-4">
           <WatchlistSnapshot />
           <FearGreedWidget />
         </aside>

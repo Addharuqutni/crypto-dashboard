@@ -5,16 +5,15 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
 import { CoinHeader } from '@/components/coin/coin-header';
+import type { CoinHeaderStats } from '@/components/coin/coin-header';
 import { CoinChartSection } from '@/components/coin/coin-chart-section';
 import { CoinAnalysisSection } from '@/components/coin/coin-analysis-section';
 import { useMarketStore } from '@/stores/use-market-store';
 import { useCoinMetadata } from '@/lib/adapters/api/hooks';
-import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
+import { getCoinBySymbol, resolveBinanceSymbol } from '@/lib/shared/registry/coin-registry';
 import { fetchSingleTicker24hr } from '@/lib/adapters/binance/binance-futures-client';
-import { formatCurrency, formatCompactNumber } from '@/lib/shared/formatting';
 import { ArrowLeft } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { resolveBinanceSymbol } from '@/lib/shared/registry/coin-registry';
 import type { ChartTimeframe } from '@/types/chart';
 
 import { useCoinMarketData } from '@/hooks/use-coin-market-data';
@@ -47,7 +46,7 @@ export default function CoinDetailPage() {
 
   // --- Page-level UI state. ---
   const [timeframe, setTimeframe] = useState<ChartTimeframe>('24H');
-  const [chartMode, setChartMode] = useState<ChartMode>('clean');
+  const [chartMode, setChartMode] = useState<ChartMode>('technical');
   const [activeIndicators, setActiveIndicators] = useState<Set<string>>(
     new Set(['MA25', 'RSI', 'MACD', 'S/R', 'Fib', 'OB'])
   );
@@ -106,6 +105,22 @@ export default function CoinDetailPage() {
   // --- CoinGecko metadata. ---
   const { data: metadata } = useCoinMetadata(coingeckoId);
 
+  // --- 24hr ticker for inline stats. ---
+  const binanceSymbol = resolveBinanceSymbol(coinSymbol);
+  const { data: ticker24hr } = useQuery({
+    queryKey: ['futures-ticker-24hr', binanceSymbol],
+    queryFn: () => fetchSingleTicker24hr(binanceSymbol),
+    staleTime: 60 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+
+  const stats: CoinHeaderStats = {
+    marketCap: metadata?.marketCap,
+    volume24h: metadata?.volume24h ?? (ticker24hr ? parseFloat(ticker24hr.quoteVolume) : undefined),
+    high24h: metadata?.high24h ?? (ticker24hr ? parseFloat(ticker24hr.highPrice) : undefined),
+    low24h: metadata?.low24h ?? (ticker24hr ? parseFloat(ticker24hr.lowPrice) : undefined),
+  };
+
   // --- Timeframe list. ---
   const timeframes: ChartTimeframe[] = ['5m', '15m', '30m', '1H', '4H', '24H', '7D', '30D'];
 
@@ -132,7 +147,7 @@ export default function CoinDetailPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <CoinHeader
           coinName={coinName}
           coinSymbol={coinSymbol}
@@ -141,6 +156,7 @@ export default function CoinDetailPage() {
           change={change}
           isUp={isUp}
           isDown={isDown}
+          stats={stats}
         />
 
         <CoinChartSection
@@ -157,9 +173,6 @@ export default function CoinDetailPage() {
           onToggleIndicator={handleToggleIndicator}
         />
 
-        {/* Market Stats */}
-        <MarketStats symbol={coinSymbol} metadata={metadata ?? undefined} />
-
         <CoinAnalysisSection
           chartMode={chartMode}
           candles={candles}
@@ -173,47 +186,5 @@ export default function CoinDetailPage() {
         />
       </div>
     </AppShell>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// MarketStats — kept in the page file because it's trivial + page-specific.
-// ---------------------------------------------------------------------------
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="card px-4 py-3">
-      <p className="text-xs font-medium uppercase tracking-wider text-text-muted">{label}</p>
-      <p className="numeric mt-1 text-lg font-bold text-text-primary">{value}</p>
-    </div>
-  );
-}
-
-/**
- * Market stats section — fetches 24hr ticker from Binance Futures as fallback
- * when CoinGecko metadata is unavailable (non-registry coins).
- */
-function MarketStats({ symbol, metadata }: { symbol: string; metadata?: { marketCap?: number; volume24h?: number; high24h?: number; low24h?: number } }) {
-  const binanceSymbol = resolveBinanceSymbol(symbol);
-
-  const { data: ticker24hr } = useQuery({
-    queryKey: ['futures-ticker-24hr', binanceSymbol],
-    queryFn: () => fetchSingleTicker24hr(binanceSymbol),
-    staleTime: 60 * 1000,
-    refetchInterval: 60 * 1000,
-  });
-
-  const volume24h = metadata?.volume24h ?? (ticker24hr ? parseFloat(ticker24hr.quoteVolume) : undefined);
-  const high24h = metadata?.high24h ?? (ticker24hr ? parseFloat(ticker24hr.highPrice) : undefined);
-  const low24h = metadata?.low24h ?? (ticker24hr ? parseFloat(ticker24hr.lowPrice) : undefined);
-  const marketCap = metadata?.marketCap;
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <StatCard label="Market Cap" value={marketCap ? formatCompactNumber(marketCap) : '—'} />
-      <StatCard label="24h Volume" value={volume24h ? formatCompactNumber(volume24h) : '—'} />
-      <StatCard label="24h High" value={high24h ? formatCurrency(high24h) : '—'} />
-      <StatCard label="24h Low" value={low24h ? formatCurrency(low24h) : '—'} />
-    </div>
   );
 }

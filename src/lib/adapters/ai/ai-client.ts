@@ -8,7 +8,6 @@ import type {
   AiConfig,
   AiChatCompletionRequest,
   AiChatCompletionResponse,
-  AiStreamChunk,
   AiMessageRole,
 } from '@/types/ai';
 
@@ -114,107 +113,6 @@ export function sendServerStreamingChatCompletion(
         error instanceof AiClientError ? error : new AiClientError('AI request failed')
       );
     });
-  return controller;
-}
-
-/**
- * Sends a streaming chat completion request.
- * Calls onChunk for each content delta received.
- * Returns an AbortController to cancel the stream.
- */
-export function sendStreamingChatCompletion(
-  config: AiConfig,
-  messages: { role: AiMessageRole; content: string }[],
-  callbacks: {
-    onChunk: (content: string) => void;
-    onDone: () => void;
-    onError: (error: AiClientError) => void;
-  },
-  options?: { temperature?: number; maxTokens?: number }
-): AbortController {
-  const controller = new AbortController();
-
-  let url: string;
-  let model: string;
-  try {
-    url = buildSafeProviderUrl(config.baseUrl, OPENAI_COMPATIBLE_PATH);
-    model = validateRequiredText(config.model, 'Model');
-    validateRequiredText(config.apiKey, 'API key');
-  } catch (error) {
-    queueMicrotask(() => {
-      callbacks.onError(
-        error instanceof AiClientError ? error : new AiClientError('Invalid AI configuration')
-      );
-    });
-    return controller;
-  }
-
-  const body: AiChatCompletionRequest = {
-    model,
-    messages,
-    stream: true,
-    temperature: options?.temperature ?? DEFAULT_TEMPERATURE,
-    max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
-  };
-
-  (async () => {
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: buildHeaders(config.apiKey),
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw await parseError(response);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new AiClientError('No response body available for streaming');
-      }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed === 'data: [DONE]') continue;
-          if (!trimmed.startsWith('data: ')) continue;
-
-          try {
-            const json: AiStreamChunk = JSON.parse(trimmed.slice(6));
-            const content = json.choices[0]?.delta?.content;
-            if (content) callbacks.onChunk(content);
-          } catch {
-            // Providers may emit keep-alive or malformed SSE lines; ignore them.
-          }
-        }
-      }
-
-      callbacks.onDone();
-    } catch (error) {
-      if (controller.signal.aborted) return;
-
-      if (error instanceof AiClientError) {
-        callbacks.onError(error);
-      } else if (error instanceof Error) {
-        callbacks.onError(new AiClientError(error.message));
-      } else {
-        callbacks.onError(new AiClientError('Unknown error occurred'));
-      }
-    }
-  })();
-
   return controller;
 }
 
