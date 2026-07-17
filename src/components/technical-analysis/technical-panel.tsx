@@ -44,12 +44,12 @@ export function TechnicalPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Trend Label */}
       <TrendBadge trend={analysis.trend} symbol={symbol} />
 
       {/* Indicator Grid */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {/* RSI */}
         {activeIndicators.has('RSI') && (
           <IndicatorCard title="RSI (14)">
@@ -94,12 +94,10 @@ export function TechnicalPanel({
       </div>
 
       {/* Disclaimer */}
-      <div className="flex items-start gap-2 rounded-lg border border-border-subtle bg-bg-surface-soft px-4 py-3">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" />
-        <p className="text-xs leading-relaxed text-text-muted">
-          This dashboard provides market data and technical indicators for informational purposes
-          only. It is not financial advice. Always do your own research before making investment
-          decisions.
+      <div className="flex items-start gap-2 rounded-lg border border-border-subtle bg-bg-surface-soft px-3 py-2">
+        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-text-muted" />
+        <p className="text-[11px] leading-relaxed text-text-muted">
+          Informational only — not financial advice. Always do your own research.
         </p>
       </div>
     </div>
@@ -125,7 +123,7 @@ function TrendBadge({ trend, symbol }: { trend: TrendLabel; symbol: string }) {
 
   return (
     <div
-      className={cn('flex items-center gap-3 rounded-lg border px-4 py-3', colorMap[trend.value])}
+      className={cn('flex items-center gap-3 rounded-lg border px-3 py-2.5', colorMap[trend.value])}
     >
       {iconMap[trend.value]}
       <div>
@@ -143,9 +141,9 @@ function TrendBadge({ trend, symbol }: { trend: TrendLabel; symbol: string }) {
 
 function IndicatorCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="card px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">{title}</p>
-      <div className="mt-2">{children}</div>
+    <div className="card px-3 py-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">{title}</p>
+      <div className="mt-1.5">{children}</div>
     </div>
   );
 }
@@ -171,7 +169,7 @@ function RsiDisplay({ rsi }: { rsi: RsiResult }) {
         {rsi.status.replace('_', ' ')}
       </p>
       {/* RSI gauge */}
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-bg-surface-raised">
+      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-bg-surface-raised">
         <div
           className={cn(
             'h-full rounded-full transition-all',

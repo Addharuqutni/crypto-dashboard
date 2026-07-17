@@ -75,11 +75,11 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
   }, [totalPages]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Sort + View Controls */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div
-          className="inline-flex items-center gap-1 rounded-xl border border-border-subtle bg-bg-surface p-1"
+          className="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-bg-surface p-1"
           role="group"
           aria-label="Sort coins"
         >
@@ -112,7 +112,7 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
           })}
         </div>
 
-        <div className="hidden items-center gap-0.5 rounded-xl border border-border-subtle bg-bg-surface p-1 md:flex">
+        <div className="hidden items-center gap-0.5 rounded-lg border border-border-subtle bg-bg-surface p-1 md:flex">
           <button
             type="button"
             onClick={() => setViewMode('cards')}
@@ -148,12 +148,12 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border-subtle text-left text-xs font-medium uppercase tracking-wider text-text-muted">
-                  <th className="px-4 py-3">Coin</th>
-                  <th className="px-4 py-3">Price</th>
-                  <th className="px-4 py-3">24h</th>
-                  <th className="px-4 py-3">Volume</th>
-                  <th className="px-4 py-3">Market Cap</th>
-                  <th className="px-4 py-3 text-center">Action</th>
+                  <th className="px-4 py-2.5">Coin</th>
+                  <th className="px-4 py-2.5">Price</th>
+                  <th className="px-4 py-2.5">24h</th>
+                  <th className="px-4 py-2.5">Volume</th>
+                  <th className="px-4 py-2.5">Market Cap</th>
+                  <th className="px-4 py-2.5 text-center">Action</th>
                 </tr>
               </thead>
               <tbody>

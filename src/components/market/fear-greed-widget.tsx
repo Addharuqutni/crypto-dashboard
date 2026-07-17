@@ -24,9 +24,9 @@ export function FearGreedWidget() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="card px-5 py-5">
+      <div className="card px-4 py-4">
         <div className="skeleton h-3 w-28" />
-        <div className="skeleton mt-4 h-10 w-16" />
+        <div className="skeleton mt-3 h-9 w-14" />
         <div className="skeleton mt-3 h-2 w-full" />
       </div>
     );
@@ -35,10 +35,10 @@ export function FearGreedWidget() {
   // Error state
   if (isError || !data) {
     return (
-      <div className="card px-5 py-5">
+      <div className="card px-4 py-4">
         <p className="text-sm font-medium text-text-secondary">Fear & Greed Index</p>
-        <p className="mt-3 text-sm text-text-secondary">Sentiment data unavailable</p>
-        <p className="mt-1.5 text-sm text-text-muted">Dashboard continues to function normally.</p>
+        <p className="mt-2 text-sm text-text-secondary">Sentiment data unavailable</p>
+        <p className="mt-1 text-xs text-text-muted">Dashboard continues to function normally.</p>
       </div>
     );
   }
@@ -46,36 +46,28 @@ export function FearGreedWidget() {
   const { value, label, timestamp } = data;
 
   return (
-    <div className="card px-5 py-5">
-      {/* Header */}
+    <div className="card px-4 py-4">
       <p className="text-sm font-medium text-text-secondary">Fear & Greed Index</p>
 
-      {/* Value + Label */}
-      <div className="mt-3 flex items-end gap-3">
-        <span className={cn('numeric text-4xl font-semibold tracking-tight', getLabelColor(label))}>
+      <div className="mt-2.5 flex items-end gap-3">
+        <span className={cn('numeric text-3xl font-bold tracking-tight', getLabelColor(label))}>
           {value}
         </span>
-        <span className={cn('mb-1 text-sm font-semibold', getLabelColor(label))}>{label}</span>
+        <span className={cn('mb-0.5 text-sm font-semibold', getLabelColor(label))}>{label}</span>
       </div>
 
-      {/* Gauge Bar */}
-      <div className="mt-3">
+      <div className="mt-2.5">
         <div className="relative h-2 w-full overflow-hidden rounded-full bg-bg-surface-raised">
-          {/* Gradient background */}
           <div
             className="absolute inset-0 rounded-full"
-            style={{
-              background: FEAR_GREED_GRADIENT,
-            }}
+            style={{ background: FEAR_GREED_GRADIENT }}
           />
-          {/* Indicator */}
           <div
             className="absolute top-0 h-full w-1 -translate-x-1/2 rounded-full bg-text-primary shadow-sm transition-all duration-500"
             style={{ left: `${value}%` }}
             aria-hidden="true"
           />
         </div>
-        {/* Scale labels */}
         <div className="mt-1 flex justify-between text-[10px] text-text-muted">
           <span>Extreme Fear</span>
           <span>Neutral</span>
@@ -83,10 +75,8 @@ export function FearGreedWidget() {
         </div>
       </div>
 
-      {/* Last Updated */}
-      <p className="mt-3 text-xs text-text-muted">Updated {formatRelativeTime(timestamp)}</p>
+      <p className="mt-2.5 text-xs text-text-muted">Updated {formatRelativeTime(timestamp)}</p>
 
-      {/* Accessible description */}
       <p className="sr-only">
         The crypto Fear and Greed Index is currently at {value} out of 100, indicating {label}. This
         index measures market sentiment based on volatility, momentum, social media, and other

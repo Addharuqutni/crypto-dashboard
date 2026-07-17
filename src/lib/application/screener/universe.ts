@@ -111,7 +111,7 @@ const DEFAULT_SCREENER_UNIVERSE: readonly ScreenerUniverseCoin[] = Object.freeze
 ]);
 
 /** Returns a mutable copy of the default universe. */
-export function getDefaultUniverse(): ScreenerUniverseCoin[] {
+function getDefaultUniverse(): ScreenerUniverseCoin[] {
   return DEFAULT_SCREENER_UNIVERSE.map((c) => ({ ...c }));
 }
 

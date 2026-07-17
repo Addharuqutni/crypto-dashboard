@@ -75,18 +75,18 @@ export function CoinChartSection({
   return (
     <div className="card overflow-hidden">
       {/* Chart Controls */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-4 py-2.5">
-        {/* Timeframe buttons */}
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-3 py-2">
+        {/* Timeframe segmented group */}
+        <div className="flex items-center gap-0.5 rounded-lg border border-border-subtle p-0.5">
           {timeframes.map((tf) => (
             <button
               key={tf}
               onClick={() => onTimeframeChange(tf)}
               className={cn(
-                'pressable rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
+                'pressable rounded-md px-2.5 py-1 text-xs font-semibold transition-colors',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                 timeframe === tf
-                  ? 'bg-accent-primary/10 text-accent-primary shadow-[inset_0_0_0_1px_rgba(56,189,248,0.25)]'
+                  ? 'bg-accent-primary/10 text-accent-primary'
                   : 'text-text-muted hover:bg-bg-surface-soft hover:text-text-secondary'
               )}
               aria-label={`Show ${tf} chart`}
@@ -108,7 +108,7 @@ export function CoinChartSection({
               role="status"
               aria-label="Chart data unavailable"
             >
-              Chart unavailable
+              Unavailable
             </span>
           )}
 
@@ -117,10 +117,10 @@ export function CoinChartSection({
             <button
               onClick={() => onChartModeChange('clean')}
               className={cn(
-                'pressable flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all',
+                'pressable flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                 chartMode === 'clean'
-                  ? 'bg-bg-surface-raised text-text-primary shadow-[inset_0_0_0_1px_rgba(56,189,248,0.18)]'
+                  ? 'bg-bg-surface-raised text-text-primary'
                   : 'text-text-muted hover:text-text-secondary'
               )}
               aria-pressed={chartMode === 'clean'}
@@ -131,30 +131,23 @@ export function CoinChartSection({
             <button
               onClick={() => onChartModeChange('technical')}
               className={cn(
-                'pressable flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-all',
+                'pressable flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                 chartMode === 'technical'
-                  ? 'bg-accent-secondary/10 text-accent-secondary shadow-[inset_0_0_0_1px_rgba(139,92,246,0.3)]'
+                  ? 'bg-accent-secondary/10 text-accent-secondary'
                   : 'text-text-muted hover:text-text-secondary'
               )}
               aria-pressed={chartMode === 'technical'}
             >
               <BarChart3 className="h-3 w-3" />
-              Technical
+              Tech
             </button>
           </div>
         </div>
       </div>
 
-      {/* Indicator Toggles — only in Technical Mode */}
-      {chartMode === 'technical' && (
-        <div className="border-b border-border-subtle/50 px-4 py-2">
-          <IndicatorToggles active={activeIndicators} onToggle={onToggleIndicator} />
-        </div>
-      )}
-
       {/* Chart */}
-      <div className="p-4">
+      <div className="p-3">
         <VisibilityGate fallback={<ChartDeferredSkeleton />}>
           <CandlestickChart
             data={candleChartData}
@@ -165,6 +158,13 @@ export function CoinChartSection({
           />
         </VisibilityGate>
       </div>
+
+      {/* Indicator Toggles — only in Technical Mode, moved to bottom */}
+      {chartMode === 'technical' && (
+        <div className="border-t border-border-subtle px-3 py-2">
+          <IndicatorToggles active={activeIndicators} onToggle={onToggleIndicator} />
+        </div>
+      )}
     </div>
   );
 }

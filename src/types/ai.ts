@@ -18,18 +18,6 @@ export interface AiMessage {
   timestamp: number;
 }
 
-export interface AiStreamChunk {
-  id: string;
-  choices: {
-    delta: {
-      content?: string;
-      role?: AiMessageRole;
-    };
-    finish_reason: string | null;
-    index: number;
-  }[];
-}
-
 export interface AiChatCompletionRequest {
   model: string;
   messages: { role: AiMessageRole; content: string }[];
