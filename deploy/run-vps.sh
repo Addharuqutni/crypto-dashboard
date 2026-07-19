@@ -120,12 +120,10 @@ fi
 echo "==> npm run build"
 npm run build
 
-echo "==> seed screener snapshot"
-npm run screener -- --once || echo "screener seed failed (will retry via PM2)"
-
 # --- pm2 ---
 chmod +x scripts/python-agent/start.sh 2>/dev/null || true
-echo "==> pm2 startOrReload"
+chmod +x scripts/python-agent/worker.sh 2>/dev/null || true
+echo "==> pm2 startOrReload (web, python-screener, worker, python-agent)"
 pm2 startOrReload ecosystem.config.cjs --update-env
 pm2 save
 

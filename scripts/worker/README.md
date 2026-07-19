@@ -1,8 +1,9 @@
 # Crypto Dashboard Worker
 
-A standalone, headless monitor for the crypto-dashboard signal engine. Runs
-without a browser, evaluates Binance USDⓈ-M Futures candles, dedupes alerts,
-and pushes disciplined Telegram notifications.
+A standalone, headless Telegram alert worker for the crypto-dashboard. It calls
+the internal Python Action Call service through `PYTHON_AGENT_URL`, applies
+local cooldown and health-alert rules, and pushes disciplined notifications.
+The Python service remains the sole signal engine.
 
 ## Quick start
 
@@ -126,13 +127,12 @@ grep '"action":"LONG"' data/worker/signals.jsonl | tail
 
 ## Deployment options
 
-The worker is a single Node script with no native dependencies. Common ways
-to run it 24/7:
+The worker is a Node/TypeScript process that depends on the Python Action Call service. Start the Python service first and keep `PYTHON_AGENT_URL` reachable. Common ways to run the worker 24/7:
 
 | Target | Notes |
 |--------|-------|
 | **systemd** on a Linux VPS | Most reliable. Add `Restart=always` and a `User=` clause. |
-| **Docker** | `node:20-alpine` base; mount `./data` as a volume. |
+| **Docker** | `node:22-alpine` base; mount `./data` as a volume. |
 | **PM2** | `pm2 start "npm run worker" --name crypto-worker`. |
 | **Vercel Cron / GitHub Actions** | Use `--once` per scheduled invocation. State directory must persist between runs (KV / S3). |
 | **Cron** (simple) | `*/15 * * * * cd /opt/crypto && /usr/bin/node node_modules/tsx/dist/cli.mjs scripts/worker/start.ts --once` |

@@ -1,6 +1,6 @@
 # Crypto Market Dashboard
 
-Crypto Market Dashboard adalah aplikasi dashboard analisis pasar crypto berbasis **Next.js App Router** untuk memantau **Binance USDⓈ-M Futures** secara real time. Project ini menyediakan market overview, candlestick chart, technical analysis, futures signal engine, screener, AI-assisted commentary, signal journal, watchlist, alert lokal, dan worker Telegram.
+Crypto Market Dashboard adalah aplikasi dashboard analisis pasar crypto berbasis **Next.js App Router** untuk memantau **Binance USDⓈ-M Futures** secara real time. Next.js menyediakan UI dan BFF routes, sedangkan Python Action Call service menjadi sumber sinyal dan screener. Project ini menyediakan market overview, candlestick chart, technical analysis, screener, AI-assisted commentary, signal journal, watchlist, alert lokal, dan worker Telegram.
 
 > **Disclaimer:** Project ini dibuat untuk edukasi, analisis, dan journaling. Bukan financial advice, bukan sinyal pasti, dan bukan jaminan profit.
 
@@ -37,18 +37,13 @@ Crypto Market Dashboard adalah aplikasi dashboard analisis pasar crypto berbasis
 - Clean and technical chart modes.
 - EMA, RSI, MACD, ATR, ADX, Fibonacci, support/resistance, order block, liquidity sweep, trend, and regime detection.
 
-### Futures Signal Engine
+### Python Action Call and Screener
 
-- Deterministic `LONG`, `SHORT`, or `WAIT` decision engine.
-- Entry zone, stop loss, take profit, risk-reward ratio, confidence score, and signal grade.
-- Risk-first guards for multi-timeframe confirmation, funding rate, open interest, stale data, liquidity sweep, and no-trade conditions.
-
-### Futures Screener
-
-- Periodic evaluation for selected Binance Futures symbols.
-- Ranked setup list with alert eligibility and block reasons.
-- Local JSON/JSONL persistence for latest snapshot, history, settings, and alert records.
-- Optional AI audit for top candidates.
+- Python FastAPI provides the sole signal and screener engine.
+- Multi-timeframe action calls produce entry, stop loss, take profit, risk-reward, confidence, and market context.
+- Dynamic Binance USDⓈ-M universe selection with configured symbol overrides.
+- Next.js `/api/action-call` and `/api/screener` routes proxy the internal service.
+- Optional local JSON/JSONL datasets and Telegram delivery.
 
 ### AI Tools
 
@@ -92,17 +87,19 @@ npm install
 
 ## Environment Variables
 
-Create a local environment file:
+Create the shared runtime environment file from the committed template:
 
 ```bash
-cp deploy/vps.env.example .env.local
+cp .env.example .env.local
 ```
 
 On Windows Command Prompt:
 
 ```cmd
-copy deploy\vps.env.example .env.local
+copy .env.example .env.local
 ```
+
+Next.js and the Python agent both load this root `.env.local`. See [`docs/ENV.md`](docs/ENV.md) for the complete reference.
 
 ### Application
 
@@ -116,7 +113,7 @@ copy deploy\vps.env.example .env.local
 
 | Variable | Description | Required | Default |
 |---|---|---:|---|
-| `SCREENER_STORAGE_MODE` | `/api/screener` mode: `file` or `on-demand` | No | `file` on production, `on-demand` in local dev |
+| `SCREENER_STORAGE_MODE` | `/api/screener` storage mode: `file` (default) or `on-demand` | No | `file` |
 | `SCREENER_STORAGE_BACKEND` | Storage backend: `supabase` or `file` | No | `file` for VPS |
 | `SCREENER_REQUIRE_DATABASE` | Require database storage and forbid file fallback when set to `1` | No | `0` for VPS |
 | `CRON_SECRET` | Bearer token required by `/api/cron/screener` | Yes for cron | - |
@@ -198,96 +195,35 @@ http://localhost:3000
 | `npm run test:watch` | Run Vitest in watch mode |
 | `npm run check` | Run typecheck, lint, and tests |
 | `npm run audit:prod` | Audit production dependencies |
-| `npm run screener` | Run screener loop |
-| `npm run screener -- --once` | Run one screener cycle and exit |
-| `npm run agent` | Run AI Signal Agent against latest screener snapshot |
+| `npm run agent` | Run the optional TypeScript AI agent |
+| `npm run python-agent` | Start the Python Action Call service |
 | `npm run worker` | Run Telegram alert worker |
+| `npm run deploy:vps` | Deploy to a VPS |
+| `npm run run:vps` | Deploy and optionally configure a domain |
+| `npm run setup:domain` | Configure nginx and optional TLS |
 
-## Futures Screener
+## Python Screener
 
-### Running the Screener
-
-```bash
-# Run once, persist output, then exit
-npm run screener -- --once
-
-# Run continuously
-npm run screener
-
-# Show help
-npm run screener -- --help
-```
-
-### Storage
-
-The screener writes runtime data to `data/screener/`:
-
-| File | Description |
-|---|---|
-| `latest.json` | Latest screener snapshot, written atomically |
-| `history.jsonl` | Append-only run summaries |
-| `alerts.jsonl` | Append-only alert policy records |
-| `settings.json` | Rank and alert settings, written atomically |
-
-When `SCREENER_STORAGE_MODE=file`, `/api/screener` reads `latest.json`. If the snapshot is missing, the API falls back to on-demand mode unless `SCREENER_FILE_MODE_STRICT=1` is set.
-
-### API Modes
-
-| Mode | Description | Recommended Use |
-|---|---|---|
-| `file` | Serve persisted worker/scheduler output | VPS, cPanel, long-running Node server |
-| `on-demand` | Run screener during API request | Development, simple serverless setup |
-
-Recommended production setup:
-
-```env
-SCREENER_STORAGE_MODE=file
-DISABLE_SCREENER_SCHEDULER=1
-```
-
-Generate the first snapshot:
+The Python Action Call service owns screener cycles. Start it from the repository root:
 
 ```bash
-npm run screener -- --once
+npm run python-agent
 ```
 
-Strict file-only mode:
+For the dashboard API, set `MARKET_DATA_MODE=dashboard`. The Next.js `/api/screener` route reads the latest Python snapshot by default; set `SCREENER_STORAGE_MODE=on-demand` to request a fresh Python run per request. The cron route triggers the Python scan with `CRON_SECRET` authentication.
 
-```env
-SCREENER_FILE_MODE_STRICT=1
-```
-
-### Default Alert Rules
-
-| Setting | Default |
-|---|---|
-| Alerts enabled | `false` |
-| Min confidence | `75` |
-| Min grade | `B` |
-| Min risk-reward | `1.5` |
-| Max alerts per hour | `10` |
-| Cooldown per symbol/action | `10` minutes |
-| Send WAIT alerts | `false` |
-| Top N only | `5` |
-
-Alerts are blocked for stale data, insufficient data, duplicate symbol/action during cooldown, and hourly caps.
+The Python service stores its configured datasets under `agent/datasets/` and serves internal endpoints such as `/api/v1/screener/latest` and `/api/v1/screener/run`. Keep the service bound to localhost in production.
 
 ## AI Signal Agent
 
-The AI Signal Agent reads the latest screener snapshot and generates read-only decision-support summaries.
+The optional TypeScript AI agent reads the latest Python screener/action-call data and generates read-only decision-support summaries.
 
 Safety rules:
 
 - Does not execute trades.
 - Does not request exchange API keys.
-- Does not change deterministic `LONG`, `SHORT`, or `WAIT` decisions.
+- Does not override Python action-call decisions.
 - Rejects risky AI output containing leverage, all-in sizing, API key requests, guaranteed profit, or equivalent claims.
-
-Prepare a snapshot:
-
-```bash
-npm run screener -- --once
-```
 
 Run the agent:
 
@@ -320,7 +256,9 @@ The worker can run without Telegram credentials for local state updates, but ext
 ```text
 crypto-dashboard/
 ├── data/                    # Local runtime data for screener and worker
-├── scripts/                 # TypeScript scripts for screener, worker, and agent
+├── agent/                   # Python Action Call service and screener
+├── scripts/                 # Runtime scripts for worker, agent, and deployment
+├── deploy/                  # VPS, cPanel, and nginx deployment helpers
 ├── src/
 │   ├── app/                 # Next.js App Router pages and API routes
 │   ├── components/          # UI components
@@ -370,15 +308,16 @@ Minimal deployment flow:
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run build
-npm run screener -- --once
+npm run python-agent
 npm run start:prod
 ```
 
-For production deployments with separate long-running processes, run the screener and worker under a process manager such as PM2 or systemd:
+For production deployments, run the Python Action Call service and worker under a process manager such as PM2 or systemd:
 
 ```bash
-npm run screener
+npm run python-agent
 npm run worker
 ```
 

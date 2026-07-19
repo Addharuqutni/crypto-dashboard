@@ -31,7 +31,7 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `NODE_ENV` | No | Runtime mode | `production` (VPS) |
 | `PORT` | No | HTTP port | `3000` |
 | `HOSTNAME` | No | Bind address | `127.0.0.1` |
-| `DISABLE_SCREENER_SCHEDULER` | No | Disable in-process Next.js screener scheduler. Set `1` when a separate PM2 screener process owns the cycle. | `0` (dev) / `1` (VPS) |
+| `DISABLE_SCREENER_SCHEDULER` | No | Retained compatibility flag for disabling a legacy in-process scheduler; production PM2 uses the Python screener process. | `0` / `1` |
 
 ## Screener
 
@@ -41,9 +41,9 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `SCREENER_STORAGE_BACKEND` | No | Persistence backend: `file` or `supabase` | `file` |
 | `SCREENER_REQUIRE_DATABASE` | No | When `1`, forbid file fallback and require database storage | `0` |
 | `SCREENER_FILE_MODE_STRICT` | No | When `1`, disable on-demand fallback if the file snapshot is missing | `1` (VPS) |
-| `SCREENER_API_RATE_LIMIT_PER_MINUTE` | No | Per-client request cap for `/api/screener` | `30` / `120` |
+| `SCREENER_API_RATE_LIMIT_PER_MINUTE` | No | Per-client request cap for `/api/screener` | `30` |
 | `SCREENER_SYMBOLS` | No | Comma-separated symbol override. Empty = top-100 Binance USDT perpetual | empty |
-| `SCREENER_MAX_SYMBOLS` | No | Cap on universe size | `50` (dev) / `100` (VPS) |
+| `SCREENER_MAX_SYMBOLS` | No | Cap on universe size | `100` |
 | `SCREENER_MAX_CONCURRENT_SYMBOLS` | No | Parallel symbol evaluation concurrency | `3` |
 | `SCREENER_CANDLE_LIMIT` | No | Candles fetched per timeframe per symbol | `120` |
 | `SCREENER_INTERVAL_MINUTES` | No | Cycle interval for the long-running screener process (`1`–`1440`) | `15` |
@@ -55,6 +55,7 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 |----------|----------|-------------|-------------------|
 | `PYTHON_AGENT_URL` | Yes (prod) | Base URL Next.js uses to reach FastAPI | `http://127.0.0.1:8000` |
 | `PYTHON_AGENT_TIMEOUT_MS` | No | HTTP timeout for agent calls | `20000` |
+| `PYTHON_AGENT_INTERNAL_TOKEN` | No | Shared token for authenticating Next.js-to-Python internal calls when enabled | long random secret |
 | `MARKET_DATA_MODE` | Yes (prod) | `dashboard` for FastAPI API mode | `dashboard` |
 | `DASHBOARD_HOST` | No | FastAPI bind host | `127.0.0.1` (VPS) |
 | `DASHBOARD_PORT` | No | FastAPI port | `8000` |
@@ -113,7 +114,7 @@ Used by Next.js AI routes and the Python agent (which also accepts `AI_MODEL_*` 
 
 ```env
 DISABLE_SCREENER_SCHEDULER=0
-SCREENER_MAX_SYMBOLS=50
+SCREENER_MAX_SYMBOLS=100
 BASIC_AUTH_ENABLED=0
 MARKET_DATA_MODE=dashboard
 DASHBOARD_HOST=127.0.0.1

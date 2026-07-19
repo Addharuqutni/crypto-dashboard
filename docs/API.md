@@ -4,16 +4,26 @@ Source of truth: route handlers under [`src/app/api/`](../src/app/api/).
 
 All routes use the Node.js runtime and `force-dynamic` (no static caching of responses unless noted).
 
-## Screener
+## Action Call and Screener
+
+### `GET /api/action-call`
+
+BFF for the internal Python Action Call service.
+
+| Query | Behavior |
+|-------|----------|
+| `symbol=BTCUSDT` | Analyze one symbol; `multi_timeframe=false` disables multi-timeframe analysis |
+| `limit=50` | Return the latest stored action calls when no symbol is supplied |
+
+The route forwards requests to `PYTHON_AGENT_URL` and returns the Python response. Internal authentication, when configured, uses `PYTHON_AGENT_INTERNAL_TOKEN`; the token is never returned to clients.
+
+### `POST /api/action-call`
+
+Triggers a scan of the Python agent's configured universe. The request body is accepted for forward compatibility; the current Python endpoint determines the universe from configuration.
 
 ### `GET /api/screener`
 
-Serves screener data to the UI.
-
-| Mode | When | Behavior |
-|------|------|----------|
-| `file` | `SCREENER_STORAGE_MODE=file` (production default) | Reads persisted snapshot from storage backend |
-| `on-demand` | `SCREENER_STORAGE_MODE=on-demand` or dev default | Runs a full screener cycle in-request |
+Serves the latest Python screener snapshot to the UI. With `SCREENER_STORAGE_MODE=on-demand`, it requests a fresh Python run; otherwise it reads the latest snapshot from the Python service. If file mode has no snapshot, fallback to on-demand is controlled by `SCREENER_FILE_MODE_STRICT`.
 
 **Auth / limits:** optional per-IP rate limit via `SCREENER_API_RATE_LIMIT_PER_MINUTE`.
 
@@ -22,13 +32,11 @@ Serves screener data to the UI.
 ```json
 {
   "ok": true,
-  "mode": "file",
+  "mode": "python",
   "latest": {
     "completedAt": 1710000000000,
     "health": {},
-    "results": [],
-    "timeframes": { "setup": "30m", "trigger": "15m", "macro": "4h" },
-    "universeSize": 100
+    "results": []
   },
   "settings": {},
   "recentAlerts": [],
@@ -39,7 +47,7 @@ Serves screener data to the UI.
 
 ### `GET /api/cron/screener`
 
-Vercel Cron / external scheduler entrypoint. Runs one cycle in-process and persists the result.
+Bearer-protected scheduler entrypoint. It triggers `POST /api/v1/scan` on the Python service; it does not run the removed TypeScript screener cycle.
 
 | Header | Required | Value |
 |--------|----------|-------|
@@ -47,11 +55,17 @@ Vercel Cron / external scheduler entrypoint. Runs one cycle in-process and persi
 
 | Status | Meaning |
 |--------|---------|
-| `200` | Cycle completed |
+| `200` | Python scan completed |
 | `401` | Missing/invalid bearer token |
-| `500` | `CRON_SECRET` unset, or cycle failure |
+| `409` | Python scan already running |
+| `500` | `CRON_SECRET` unset |
+| `502` | Python service failure |
 
-`maxDuration = 60` (serverless time budget).
+Use an external scheduler such as Vercel Cron or system cron when a dedicated Python worker is not running.
+
+### Python service endpoints
+
+The internal FastAPI service exposes `/api/v1/health`, `/api/v1/analyze`, `/api/v1/scan`, `/api/v1/action-calls/latest`, `/api/v1/screener/latest`, and `/api/v1/screener/run`. Keep port `8000` bound to localhost; expose only the Next.js BFF through nginx.
 
 ## AI
 
