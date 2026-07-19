@@ -1,16 +1,13 @@
 /**
- * Futures Call Action V2 — strict types for the structured futures decision engine.
+ * Shared signal-core types used by Action Call, screener, worker, and journal.
  *
- * V2 adds:
- *   - signalGrade        — A+ / A / B / C / D quality grade
- *   - entryTrigger       — classified entry mechanic
- *   - mtfConfirmation    — multi-timeframe alignment + conflicts
- *   - positioning        — funding rate + open interest interpretation
- *   - liquiditySweep     — bullish/bearish sweep detection
- *   - noTradeReasons     — ranked WAIT explanations
+ * These shapes originally belonged to the TypeScript futures-signal engine.
+ * That engine is gone — Python Action Call is the sole signal authority — but
+ * the type vocabulary (grade, regime, risk, plan levels) is still the contract
+ * between the agent response and the dashboard UI.
  *
- * The engine is still NOT a price-prediction system. Output is a setup with
- * explicit invalidation, risk, and confidence — never financial advice.
+ * Not a price-prediction model. Output describes a setup with explicit
+ * invalidation, risk, and confidence — never financial advice.
  */
 
 import type { Candle } from '@/types/chart';

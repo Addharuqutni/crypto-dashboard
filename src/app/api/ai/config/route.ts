@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
+import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

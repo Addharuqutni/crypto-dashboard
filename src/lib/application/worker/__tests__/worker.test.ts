@@ -4,26 +4,19 @@ import { decide, decideHealthAlert, makeRecord } from '@/lib/application/worker/
 import { formatHealthAlert, formatTradeAlert } from '@/lib/application/worker/formatter';
 import { recordAlert } from '@/lib/application/worker/store';
 import { sendTelegramMessage } from '@/lib/application/worker/telegram';
-import type {
-  AlertDedupeState,
-  WorkerConfig,
-} from '@/lib/application/worker/types';
-import type { FuturesSignal } from '@/types/futures-signal';
-
-/**
- * Phase 3 worker tests. Cover the contracts that prevent the worker from
- * spamming Telegram, leaking secrets, or crashing on transient errors.
- *
- * Pure-logic only — no disk, no network. The orchestrator's wiring is
- * exercised separately via `RunCycleDeps` injection (covered by an
- * integration test in this same file).
- */
+import type { AlertDedupeState, WorkerConfig } from '@/lib/application/worker/types';
+import type { ActionCallView } from '@/types/action-call';
 
 const NOW = 1_700_000_000_000;
 
-function buildSignal(overrides: Partial<FuturesSignal> = {}): FuturesSignal {
+function buildSignal(overrides: Partial<ActionCallView> = {}): ActionCallView {
   return {
     action: 'LONG',
+    status: 'READY',
+    signal: 'BREAKOUT_LONG',
+    bias: 'BULLISH',
+    trend: 'UP',
+    timeframe: '5m',
     confidenceScore: 80,
     signalGrade: 'A',
     entryTrigger: 'BREAKOUT',
@@ -105,6 +98,11 @@ function buildSignal(overrides: Partial<FuturesSignal> = {}): FuturesSignal {
     riskApproval: 'pass',
     invalidation: 'price below SL',
     reason: ['EMA20 > EMA50', 'ADX 25'],
+    sourceEngine: 'python_action_call',
+    pythonSignal: 'BREAKOUT_LONG',
+    pythonStatus: 'READY',
+    pythonBias: 'BULLISH',
+    pythonTrend: 'UP',
     ...overrides,
   };
 }
@@ -180,7 +178,12 @@ describe('alert deduper', () => {
 
   it('re-emits inside the cooldown when grade improves', () => {
     const cfg = buildConfig();
-    const initial = buildSignal({ signalGrade: 'B', grade: 'B', confidenceScore: 65, confidence: 65 });
+    const initial = buildSignal({
+      signalGrade: 'B',
+      grade: 'B',
+      confidenceScore: 65,
+      confidence: 65,
+    });
     const after = recordAlert({}, makeRecord('BTCUSDT', initial, NOW));
     const upgraded = buildSignal({ signalGrade: 'A', grade: 'A' });
     const decision = decide('BTCUSDT', upgraded, cfg, after, NOW + 5 * 60_000);
@@ -190,26 +193,42 @@ describe('alert deduper', () => {
 
   it('refuses directional alerts below minConfidenceToAlert', () => {
     const cfg = buildConfig({ minConfidenceToAlert: 70 });
-    const decision = decide('BTCUSDT', buildSignal({ confidenceScore: 60, confidence: 60 }), cfg, {});
+    const decision = decide(
+      'BTCUSDT',
+      buildSignal({ confidenceScore: 60, confidence: 60 }),
+      cfg,
+      {}
+    );
     expect(decision.emit).toBe(false);
     expect(decision.reason).toBe('below_min_confidence');
   });
 
   it('drops WAIT alerts when sendWaitAlerts is false', () => {
     const cfg = buildConfig({ sendWaitAlerts: false });
-    const decision = decide('BTCUSDT', buildSignal({ action: 'WAIT' }), cfg, {});
+    const decision = decide('BTCUSDT', buildSignal({ action: 'WAIT', status: 'HOLD' }), cfg, {});
     expect(decision.emit).toBe(false);
     expect(decision.reason).toBe('wait_disabled');
   });
 
+  it('drops non-READY directional alerts', () => {
+    const decision = decide(
+      'BTCUSDT',
+      buildSignal({ status: 'WAIT_CONFIRMATION' }),
+      buildConfig(),
+      {}
+    );
+    expect(decision.emit).toBe(false);
+    expect(decision.reason).toBe('wait_confirmation');
+  });
+
   it('rate-limits health alerts per hour', () => {
     const cfg = buildConfig({ healthAlertsPerHour: 1 });
-    const first = decideHealthAlert('binance_http_500', cfg, {}, NOW);
-    expect(first.allow).toBe(true);
-    const second = decideHealthAlert('binance_http_500', cfg, first.next, NOW + 30 * 60_000);
-    expect(second.allow).toBe(false);
-    const later = decideHealthAlert('binance_http_500', cfg, second.next, NOW + 65 * 60_000);
-    expect(later.allow).toBe(true);
+    const first = decideHealthAlert('python_error_BTCUSDT', cfg, {}, NOW);
+    expect(first.emit).toBe(true);
+    const second = decideHealthAlert('python_error_BTCUSDT', cfg, first.next, NOW + 30 * 60_000);
+    expect(second.emit).toBe(false);
+    const later = decideHealthAlert('python_error_BTCUSDT', cfg, second.next, NOW + 65 * 60_000);
+    expect(later.emit).toBe(true);
   });
 });
 
@@ -261,7 +280,7 @@ describe('telegram client', () => {
 });
 
 describe('formatters', () => {
-  it('produces the spec-shaped trade alert', () => {
+  it('produces the Python action-call trade alert shape', () => {
     const text = formatTradeAlert({
       symbol: 'BTCUSDT',
       setupTimeframe: '30m',
@@ -277,17 +296,18 @@ describe('formatters', () => {
     expect(text).toContain('Next step:');
     expect(text).toContain('SL:');
     expect(text).toContain('TP:');
+    expect(text).toContain('Python Action Call');
   });
 
-  it('formats a health-warning message with consecutive errors', () => {
+  it('formats a health warning', () => {
     const text = formatHealthAlert({
       symbol: 'BTCUSDT',
-      reason: 'binance HTTP 503',
+      reason: 'Python agent unreachable',
       consecutiveErrors: 3,
-      lastSuccessAt: null,
+      lastSuccessAt: NOW - 60_000,
     });
     expect(text).toContain('Worker health warning');
+    expect(text).toContain('BTCUSDT');
     expect(text).toContain('Consecutive errors:* 3');
-    expect(text).toContain('Last success:* never');
   });
 });

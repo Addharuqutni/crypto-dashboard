@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchCoinMarketData, fetchCoinMetadata } from '@/lib/adapters/api/coingecko';
+import { fetchCoinMarketData, fetchCoinMetadata } from '@/lib/adapters/market-data/coingecko';
 
 /**
  * Hook to fetch market data for all default coins from CoinGecko.

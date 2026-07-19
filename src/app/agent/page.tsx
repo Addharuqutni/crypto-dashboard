@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout/app-shell';
-import { AgentClient } from '@/components/agent/agent-client';
+import { SignalAgentClient } from '@/components/signal-agent/signal-agent-client';
 
 export const metadata: Metadata = {
   title: 'AI Agent · CryptoHawk',
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function AgentPage() {
   return (
     <AppShell>
-      <AgentClient />
+      <SignalAgentClient />
     </AppShell>
   );
 }

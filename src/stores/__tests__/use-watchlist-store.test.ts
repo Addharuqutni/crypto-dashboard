@@ -17,7 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const safeGetItem = vi.fn();
 const safeSetItem = vi.fn();
 
-vi.mock('@/lib/adapters/storage', () => ({
+vi.mock('@/lib/shared/browser-storage', () => ({
   STORAGE_KEYS: {
     watchlist: 'crypto-dashboard.watchlist.v1',
     portfolio: 'crypto-dashboard.portfolio.v1',

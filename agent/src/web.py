@@ -5,15 +5,20 @@ from collections import Counter
 from html import escape
 from typing import Any
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from src.config import load_settings
+from src.screener.auth import is_valid_internal_token
+from src.screener.engine import run_screener
+from src.screener.lock import RunAlreadyActive, RunLock
+
 from src.dataset import DEFAULT_JSONL_PATH
 from src.data import MarketDataClient, get_market_data_client
 from src.db import fetch_action_calls
 from src.evaluator import evaluate_pending_action_calls, load_action_call_rows
 from src.exporter import build_training_rows, rows_to_csv, rows_to_jsonl
+from src.signal_service import analyze_symbol, list_latest_action_calls, scan_symbols
 
 app = FastAPI(title="Crypto AI Agent Dashboard")
 _job_state: dict[str, Any] = {"scan_running": False, "evaluate_running": False, "last_scan": None, "last_evaluate": None}
@@ -22,6 +27,36 @@ _scheduler_started = False
 
 def create_app() -> FastAPI:
     return app
+
+
+def require_internal_token(x_internal_token: str | None = Header(default=None)) -> None:
+    settings = load_settings()
+    if not is_valid_internal_token(x_internal_token, settings.internal_token):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+@app.get("/api/v1/screener/latest", dependencies=[Depends(require_internal_token)])
+def api_screener_latest() -> dict[str, Any]:
+    from pathlib import Path
+    from src.screener.storage import AtomicJsonStore
+    latest = AtomicJsonStore(Path(load_settings().screener_storage_dir)).read_latest()
+    return {"ok": True, "latest": latest}
+
+
+@app.post("/api/v1/screener/run", dependencies=[Depends(require_internal_token)])
+def api_screener_run(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    settings = load_settings()
+    from pathlib import Path
+    lock = RunLock(Path(settings.screener_storage_dir) / "screener.lock")
+    try:
+        with lock:
+            payload = body or {}
+            symbols = payload.get("symbols")
+            if symbols is not None and (not isinstance(symbols, list) or not all(isinstance(item, str) for item in symbols)):
+                raise HTTPException(status_code=400, detail="symbols must be a list of strings")
+            return {"ok": True, "latest": run_screener(symbols)}
+    except RunAlreadyActive as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
 
 
 @app.on_event("startup")
@@ -57,6 +92,49 @@ def api_action_calls(limit: int = 200) -> dict[str, Any]:
     rows = _load_action_call_rows(limit=limit)
     rows = _attach_realtime_prices(rows)
     return {"items": rows, "count": len(rows)}
+
+
+@app.get("/api/v1/health")
+def api_v1_health() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "service": "python-action-call",
+        "jobs": _job_state,
+    }
+
+
+@app.get("/api/v1/analyze")
+def api_v1_analyze(
+    symbol: str = Query(..., min_length=2, max_length=32),
+    multi_timeframe: bool = Query(True),
+) -> dict[str, Any]:
+    try:
+        return analyze_symbol(symbol, multi_timeframe=multi_timeframe)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"Analyze failed: {error}") from error
+
+
+@app.get("/api/v1/action-calls/latest", dependencies=[Depends(require_internal_token)])
+def api_v1_action_calls_latest(limit: int = Query(100, ge=1, le=1000)) -> dict[str, Any]:
+    items = list_latest_action_calls(limit=limit)
+    items = _attach_realtime_prices(items)
+    return {"items": items, "count": len(items)}
+
+
+@app.post("/api/v1/scan", dependencies=[Depends(require_internal_token)])
+def api_v1_scan(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    payload = body or {}
+    symbols = payload.get("symbols")
+    if symbols is not None and (not isinstance(symbols, list) or not all(isinstance(item, str) for item in symbols)):
+        raise HTTPException(status_code=400, detail="symbols must be a list of strings")
+    try:
+        return {"ok": True, "latest": run_screener([str(item) for item in symbols] if symbols else None)}
+    except RunAlreadyActive as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"Scan failed: {error}") from error
 
 
 @app.get("/api/stats")

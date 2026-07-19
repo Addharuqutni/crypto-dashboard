@@ -15,12 +15,15 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "worker": "tsx scripts/worker/start.ts",
-    "screener": "tsx scripts/screener/start.ts",
     "agent": "tsx scripts/agent/start.ts",
+    "python-agent": "bash scripts/python-agent/start.sh",
     "check": "npm run typecheck && npm run lint && npm run test",
+    "clean": "node -e \"const fs=require('fs');const rm=(p)=>{try{fs.rmSync(p,{recursive:true,force:true});console.log('removed',p)}catch{}};['.next','coverage','tsconfig.tsbuildinfo','.dev-log.txt'].forEach(rm);\"",
     "audit:prod": "npm audit --omit=dev",
     "start:prod": "node scripts/start-prod.mjs",
-    "deploy:vps": "bash deploy/deploy-vps.sh"
+    "deploy:vps": "bash deploy/deploy-vps.sh",
+    "run:vps": "bash deploy/run-vps.sh",
+    "setup:domain": "bash deploy/setup-domain.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

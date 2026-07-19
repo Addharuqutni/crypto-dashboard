@@ -2,13 +2,13 @@
 
 import { useMemo } from 'react';
 import { TechnicalPanel } from '@/components/technical-analysis/technical-panel';
-import { FuturesSignalPanel } from '@/components/technical-analysis/futures-signal';
-import { AiTechnicalSummary } from '@/components/ai-agent/ai-technical-summary';
-import { AiChatPanel } from '@/components/ai-agent/ai-chat-panel';
+import { ActionCallPanel } from '@/components/technical-analysis/action-call';
+import { AiTechnicalSummary } from '@/components/signal-agent/ai-technical-summary';
+import { AiChatPanel } from '@/components/signal-agent/ai-chat-panel';
 import { BarChart3 } from 'lucide-react';
 import type { Candle, ChartTimeframe, AnalysisResult } from '@/types/chart';
 import type { TechnicalContext } from '@/types/ai';
-import type { FuturesSignal } from '@/types/futures-signal';
+import type { ActionCallView } from '@/types/action-call';
 
 type ChartMode = 'clean' | 'technical';
 
@@ -19,7 +19,9 @@ interface CoinAnalysisSectionProps {
   timeframe: ChartTimeframe;
   price: number | null | undefined;
   analysis: AnalysisResult | null;
-  futuresSignal: FuturesSignal | null;
+  actionCall: ActionCallView | null;
+  actionCallLoading?: boolean;
+  actionCallError?: string | null;
   activeIndicators: Set<string>;
   onSwitchToTechnical: () => void;
 }
@@ -37,7 +39,9 @@ export function CoinAnalysisSection({
   timeframe,
   price,
   analysis,
-  futuresSignal,
+  actionCall,
+  actionCallLoading = false,
+  actionCallError = null,
   activeIndicators,
   onSwitchToTechnical,
 }: CoinAnalysisSectionProps) {
@@ -74,14 +78,12 @@ export function CoinAnalysisSection({
             })),
           }
         : undefined,
-      orderBlocks: analysis.orderBlocks
-        .slice(-3)
-        .map((block) => ({
-          type: block.type,
-          high: block.high,
-          low: block.low,
-          strength: block.strength,
-        })),
+      orderBlocks: analysis.orderBlocks.slice(-3).map((block) => ({
+        type: block.type,
+        high: block.high,
+        low: block.low,
+        strength: block.strength,
+      })),
     };
   }, [analysis, symbol, timeframe, price]);
 
@@ -96,11 +98,122 @@ export function CoinAnalysisSection({
             analysis={analysis}
           />
 
-          {futuresSignal && (
-            <FuturesSignalPanel signal={futuresSignal} symbol={symbol} timeframe={timeframe} />
+          {(actionCall || actionCallLoading || actionCallError) && (
+            <ActionCallPanel
+              signal={
+                actionCall ?? {
+                  action: 'WAIT',
+                  status: 'HOLD',
+                  signal: 'HOLD',
+                  bias: 'NEUTRAL',
+                  trend: 'SIDEWAYS',
+                  timeframe,
+                  confidenceScore: 0,
+                  signalGrade: 'D',
+                  entryTrigger: 'NO_TRIGGER',
+                  regime: 'INSUFFICIENT_DATA',
+                  entryZone: { min: null, max: null },
+                  stopLoss: null,
+                  takeProfits: { tp1: null, tp2: null, tp3: null },
+                  riskRewardRatio: null,
+                  suggestedLeverage: { min: 0, max: 0 },
+                  riskLevel: 'NO_TRADE',
+                  invalidationReason: actionCallError ?? 'No actionable setup.',
+                  summary: actionCallLoading ? 'Loading…' : 'No setup',
+                  reasons: [],
+                  warnings: [],
+                  noTradeReasons: actionCallError ? [actionCallError] : [],
+                  primaryNoTradeReason: actionCallError ?? 'No actionable setup.',
+                  mtfConfirmation: {
+                    macroBias: 'NEUTRAL',
+                    setupBias: 'NEUTRAL',
+                    triggerBias: 'NEUTRAL',
+                    alignmentScore: 0,
+                    conflicts: [],
+                  },
+                  positioning: {
+                    fundingRate: null,
+                    fundingBias: 'UNAVAILABLE',
+                    openInterestChangePercent: null,
+                    openInterestBias: 'UNAVAILABLE',
+                  },
+                  liquiditySweep: {
+                    type: 'NONE',
+                    sweptLevel: null,
+                    confidence: 0,
+                  },
+                  scoreBreakdown: {
+                    trendScore: 0,
+                    momentumScore: 0,
+                    volumeScore: 0,
+                    structureScore: 0,
+                    riskScore: 0,
+                    finalScore: 0,
+                  },
+                  confidence: 0,
+                  grade: 'D',
+                  marketRegime: 'unknown',
+                  tradePermission: 'no_trade',
+                  dataHealth: {
+                    ok: true,
+                    symbol: { provided: true, valid: true, reason: null },
+                    setup: {
+                      required: true,
+                      candleCount: 0,
+                      minCandlesRequired: 0,
+                      lastCandleAgeSec: null,
+                      maxAgeSec: 0,
+                      ok: true,
+                      reason: null,
+                    },
+                    macro: {
+                      required: false,
+                      candleCount: 0,
+                      minCandlesRequired: 0,
+                      lastCandleAgeSec: null,
+                      maxAgeSec: 0,
+                      ok: true,
+                      reason: null,
+                    },
+                    trigger: {
+                      required: false,
+                      candleCount: 0,
+                      minCandlesRequired: 0,
+                      lastCandleAgeSec: null,
+                      maxAgeSec: 0,
+                      ok: true,
+                      reason: null,
+                    },
+                    funding: { available: false, ageSec: null, maxAgeSec: 0, ok: true },
+                    openInterest: { available: false, ageSec: null, maxAgeSec: 0, ok: true },
+                    reasons: [],
+                    confidenceCap: 100,
+                  },
+                  entryStatus: 'not_triggered',
+                  riskApproval: 'not_applicable',
+                  invalidation: actionCallError ?? 'No actionable setup.',
+                  reason: [],
+                  forecastAlignment: 'unavailable',
+                  forecastConfidenceAdjustment: 0,
+                  forecastWarnings: [],
+                  forecastUsedInDecision: false,
+                  lateEntryBlocked: false,
+                  lateEntryReason: null,
+                  sourceEngine: 'python_action_call',
+                  pythonSignal: 'HOLD',
+                  pythonStatus: 'HOLD',
+                  pythonBias: 'NEUTRAL',
+                  pythonTrend: 'SIDEWAYS',
+                }
+              }
+              symbol={symbol}
+              timeframe={timeframe}
+              isLoading={actionCallLoading}
+              error={actionCallError}
+            />
           )}
 
-          <AiTechnicalSummary context={aiContext} signal={futuresSignal} />
+          <AiTechnicalSummary context={aiContext} />
 
           <AiChatPanel
             symbol={symbol}

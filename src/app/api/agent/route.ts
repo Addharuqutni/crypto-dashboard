@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
-import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
-import { runAgentOnLatest } from '@/lib/application/agent/agent-runner';
+import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
+import { runAgentOnLatest } from '@/lib/application/signal-agent/agent-runner';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

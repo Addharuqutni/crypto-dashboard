@@ -69,3 +69,4 @@ DESIGN.md
 *.swo
 *~
 .envrc
+.github/

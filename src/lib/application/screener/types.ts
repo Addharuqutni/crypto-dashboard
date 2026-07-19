@@ -4,7 +4,7 @@ import type {
   FuturesMarketRegimeId,
   FuturesSignalAction,
   FuturesTradePermission,
-} from '@/types/futures-signal';
+} from '@/types/signal-core';
 import type { BinanceInterval } from '@/lib/adapters/binance/intervals';
 
 type ScreenerRunStatus = 'idle' | 'running' | 'completed' | 'completed_with_errors' | 'failed';

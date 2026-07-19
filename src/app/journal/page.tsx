@@ -1,7 +1,7 @@
 'use client';
 
 import { AppShell } from '@/components/layout/app-shell';
-import { SignalJournalPanel } from '@/components/technical-analysis/signal-journal';
+import { SignalJournalPanel } from '@/components/journal';
 
 /**
  * Signal Journal page — dedicated view for tracking futures signal outcomes.
@@ -16,11 +16,10 @@ export default function JournalPage() {
     <AppShell>
       <div className="space-y-8">
         <div>
-          <h1 className="h1">
-            Signal Journal
-          </h1>
+          <h1 className="h1">Signal Journal</h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Track your futures signal outcomes. Entries are auto-updated with live prices from Binance Futures WebSocket.
+            Track your futures signal outcomes. Entries are auto-updated with live prices from
+            Binance Futures WebSocket.
           </p>
         </div>
 

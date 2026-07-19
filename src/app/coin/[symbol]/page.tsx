@@ -9,7 +9,7 @@ import type { CoinHeaderStats } from '@/components/coin/coin-header';
 import { CoinChartSection } from '@/components/coin/coin-chart-section';
 import { CoinAnalysisSection } from '@/components/coin/coin-analysis-section';
 import { useMarketStore } from '@/stores/use-market-store';
-import { useCoinMetadata } from '@/lib/adapters/api/hooks';
+import { useCoinMetadata } from '@/hooks/use-market-data';
 import { getCoinBySymbol, resolveBinanceSymbol } from '@/lib/shared/registry/coin-registry';
 import { fetchSingleTicker24hr } from '@/lib/adapters/binance/binance-futures-client';
 import { ArrowLeft } from 'lucide-react';
@@ -19,7 +19,7 @@ import type { ChartTimeframe } from '@/types/chart';
 import { useCoinMarketData } from '@/hooks/use-coin-market-data';
 import { useCoinHeaderState } from '@/hooks/use-coin-header-state';
 import { useTechnicalAnalysis } from '@/hooks/use-technical-analysis';
-import { useFuturesSignal } from '@/hooks/use-futures-signal';
+import { useActionCall } from '@/hooks/use-action-call';
 
 type ChartMode = 'clean' | 'technical';
 
@@ -63,15 +63,7 @@ export default function CoinDetailPage() {
   }, []);
 
   // --- Market data. ---
-  const {
-    candles,
-    chartLoading,
-    chartError,
-    macroCandles,
-    triggerCandles,
-    funding,
-    oiSnapshot,
-  } = useCoinMarketData({
+  const { candles, chartLoading, chartError } = useCoinMarketData({
     symbol: symbolParam,
     timeframe,
     enabled: hasCoin,
@@ -88,17 +80,9 @@ export default function CoinDetailPage() {
   // --- Technical analysis. ---
   const analysis = useTechnicalAnalysis({ candles, isTechnicalMode });
 
-  // --- Futures signal. ---
-  const futuresSignal = useFuturesSignal({
+  // --- Python Action Call (primary signal source). ---
+  const actionCall = useActionCall({
     symbol: coinSymbol,
-    timeframe,
-    candles,
-    livePrice: price ?? undefined,
-    analysis,
-    macroCandles,
-    triggerCandles,
-    fundingRate: funding?.lastFundingRate,
-    openInterestChangePercent: oiSnapshot?.changePercent,
     isTechnicalMode,
   });
 
@@ -180,7 +164,15 @@ export default function CoinDetailPage() {
           timeframe={timeframe}
           price={price}
           analysis={analysis}
-          futuresSignal={futuresSignal}
+          actionCall={actionCall.data?.signal ?? null}
+          actionCallLoading={actionCall.isLoading}
+          actionCallError={
+            actionCall.error instanceof Error
+              ? actionCall.error.message
+              : actionCall.error
+                ? String(actionCall.error)
+                : null
+          }
           activeIndicators={activeIndicators}
           onSwitchToTechnical={() => setChartMode('technical')}
         />

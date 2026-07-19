@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
-import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
+import { fetchFearGreedIndex } from '@/lib/adapters/market-data/fear-greed';
 import {
   formatCurrency,
   formatPercentage,

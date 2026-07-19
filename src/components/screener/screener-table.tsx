@@ -5,7 +5,7 @@ import type { RankedScreenerResult } from '@/lib/application/screener/types';
 import type { SortField, SortDirection } from '@/hooks/use-screener-filters';
 import { calculateDistanceToEntryPercent } from '@/lib/application/screener/table-utils';
 import { cn } from '@/lib/shared/utils';
-import { ActionBadge, GradeBadge } from '@/components/shared/badges';
+import { ActionBadge, GradeBadge } from '@/components/ui/badges';
 
 interface ScreenerTableProps {
   results: RankedScreenerResult[];
@@ -19,7 +19,13 @@ interface ScreenerTableProps {
  * Full screener table with sortable columns and clickable rows.
  * WAIT is displayed as a valid decision with neutral styling, not as an error.
  */
-export function ScreenerTable({ results, isLoading, sort, onSort, onRowClick }: ScreenerTableProps) {
+export function ScreenerTable({
+  results,
+  isLoading,
+  sort,
+  onSort,
+  onRowClick,
+}: ScreenerTableProps) {
   if (isLoading && results.length === 0) {
     return <TableSkeleton />;
   }
@@ -108,7 +114,11 @@ function SortableHeader({
       >
         {label}
         {active ? (
-          sort.direction === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+          sort.direction === 'asc' ? (
+            <ChevronUp className="h-3 w-3" />
+          ) : (
+            <ChevronDown className="h-3 w-3" />
+          )
         ) : (
           <ChevronsUpDown className="h-3 w-3 opacity-40" />
         )}
@@ -124,7 +134,12 @@ function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () 
       onClick={onClick}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       aria-label={`View details for ${row.symbol}`}
     >
       {/* Symbol */}
@@ -162,9 +177,7 @@ function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () 
       </td>
 
       {/* Score */}
-      <td className="px-4 py-3 tabular-nums text-text-primary">
-        {row.rankingScore.toFixed(1)}
-      </td>
+      <td className="px-4 py-3 tabular-nums text-text-primary">{row.rankingScore.toFixed(1)}</td>
 
       {/* R:R */}
       <td className="px-4 py-3 tabular-nums text-text-primary">
@@ -241,11 +254,7 @@ function ScreenerMobileCard({ row, onClick }: { row: RankedScreenerResult; onCli
 
       <div className="grid grid-cols-3 gap-2 text-xs">
         <MobileMetric label="Conf" value={`${row.confidence}`} />
-        <MobileMetric
-          label="Grade"
-          value={<GradeBadge grade={row.grade} />}
-          align="left"
-        />
+        <MobileMetric label="Grade" value={<GradeBadge grade={row.grade} />} align="left" />
         <MobileMetric
           label="R:R"
           value={row.riskReward != null ? row.riskReward.toFixed(2) : '—'}
@@ -314,12 +323,14 @@ function MobileMetric({
 
 function ConfidenceBar({ value }: { value: number }) {
   const width = Math.min(100, Math.max(0, value));
-  const color =
-    value >= 75 ? 'bg-success' : value >= 60 ? 'bg-warning' : 'bg-text-muted';
+  const color = value >= 75 ? 'bg-success' : value >= 60 ? 'bg-warning' : 'bg-text-muted';
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-12 overflow-hidden rounded-full bg-bg-surface-raised">
-        <div className={cn('h-full rounded-full transition-all', color)} style={{ width: `${width}%` }} />
+        <div
+          className={cn('h-full rounded-full transition-all', color)}
+          style={{ width: `${width}%` }}
+        />
       </div>
       <span className="text-xs text-text-primary">{value}</span>
     </div>
@@ -328,7 +339,12 @@ function ConfidenceBar({ value }: { value: number }) {
 
 function FreshnessBadge({ ageSec }: { ageSec: number | null }) {
   if (ageSec == null) return <span className="text-xs text-text-muted">—</span>;
-  const label = ageSec < 60 ? `${ageSec}s` : ageSec < 3600 ? `${Math.round(ageSec / 60)}m` : `${Math.round(ageSec / 3600)}h`;
+  const label =
+    ageSec < 60
+      ? `${ageSec}s`
+      : ageSec < 3600
+        ? `${Math.round(ageSec / 60)}m`
+        : `${Math.round(ageSec / 3600)}h`;
   const tone = ageSec < 300 ? 'text-success' : ageSec < 1800 ? 'text-warning' : 'text-danger';
   return <span className={cn('text-xs font-medium tabular-nums', tone)}>{label}</span>;
 }
@@ -341,8 +357,12 @@ function EntryDistanceBadge({ value }: { value: number | null }) {
   const prefix = value > 0 ? '+' : '';
 
   return (
-    <span className={cn('text-xs font-medium tabular-nums', tone)} title="Estimated distance to engine entry">
-      {prefix}{value.toFixed(2)}%
+    <span
+      className={cn('text-xs font-medium tabular-nums', tone)}
+      title="Estimated distance to engine entry"
+    >
+      {prefix}
+      {value.toFixed(2)}%
     </span>
   );
 }
@@ -364,8 +384,8 @@ function NoCleanSetupState() {
       <div>
         <h3 className="text-sm font-semibold text-text-primary">No clean setup now</h3>
         <p className="mt-1 text-sm text-text-secondary">
-          The market may be weak, conflicting, stale, or below your configured thresholds.
-          This is valid analysis — WAIT is a legitimate risk-first decision.
+          The market may be weak, conflicting, stale, or below your configured thresholds. This is
+          valid analysis — WAIT is a legitimate risk-first decision.
         </p>
       </div>
     </div>

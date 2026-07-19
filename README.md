@@ -124,8 +124,11 @@ copy deploy\vps.env.example .env.local
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key, server-side only | For Supabase backend | - |
 | `SCREENER_FILE_MODE_STRICT` | Disable on-demand fallback in file mode when set to `1` | No | `1` for VPS |
 | `SCREENER_API_RATE_LIMIT_PER_MINUTE` | Request limit per client per minute | No | `30` |
-| `SCREENER_SYMBOLS` | Comma-separated symbol override, e.g. `BTCUSDT,ETHUSDT`; empty uses top 100 Binance USDT perpetuals | No | Top 100 universe |
-| `SCREENER_MAX_SYMBOLS` | Max symbols for screener | No | `100` for VPS |
+| `SCREENER_UNIVERSE_MODE` | Universe mode for Python screener: `top_futures_volume` ranks active Binance USDⓈ-M USDT linear perpetuals by 24h futures quote volume | No | `top_futures_volume` |
+| `SCREENER_SYMBOLS` | Comma-separated symbol override, e.g. `BTCUSDT,ETHUSDT` or `BTC/USDT`; when set, skips dynamic resolution | No | Empty (dynamic top-100) |
+| `SCREENER_MAX_SYMBOLS` | Max symbols for screener universe | No | `100` |
+| `SCREENER_UNIVERSE_CACHE_TTL_MINUTES` | In-process cache TTL for dynamic universe resolution | No | `30` |
+| `INCLUDE_STABLECOINS` | When `true`, allow stablecoin bases (USDC, FDUSD, …) in dynamic universe | No | `false` |
 | `SCREENER_MAX_CONCURRENT_SYMBOLS` | Symbol concurrency | No | `3` |
 | `SCREENER_CANDLE_LIMIT` | Candle limit | No | `120` |
 | `DISABLE_SCREENER_SCHEDULER` | Disable Next.js server scheduler when set to `1` | Recommended for PM2 screener process | `1` for VPS |

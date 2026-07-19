@@ -1,4 +1,4 @@
-import type { FuturesSignalAction } from '@/types/futures-signal';
+import type { FuturesSignalAction } from '@/types/signal-core';
 import type { ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 
 export type AgentDecision = 'WATCH' | 'AVOID' | 'WAIT_CONFIRMATION' | 'HIGH_RISK';

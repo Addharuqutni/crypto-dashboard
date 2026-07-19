@@ -3,7 +3,7 @@ import type {
   FuturesSignal,
   FuturesSignalAction,
   FuturesTradePermission,
-} from './futures-signal';
+} from './signal-core';
 
 /**
  * Phase 4 — intelligence layer types.
