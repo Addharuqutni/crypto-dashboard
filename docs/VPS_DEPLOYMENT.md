@@ -92,8 +92,8 @@ What the deploy script does:
 4. `npm ci`
 5. `npm run check` (typecheck + lint + test)
 6. `npm run build`
-7. `npm run screener -- --once` (seed snapshot)
-8. Python Action Call venv (reads root `.env.local`; `MARKET_DATA_MODE=dashboard`)
+7. Python Action Call venv (reads root `.env.local`; `MARKET_DATA_MODE=dashboard`)
+8. Starts the Python screener worker and FastAPI service through PM2
 9. `pm2 startOrReload ecosystem.config.cjs --update-env && pm2 save`
 
 ## 5. PM2 process model
@@ -101,7 +101,7 @@ What the deploy script does:
 | App name | Script | Role |
 |---|---|---|
 | `crypto-dashboard-web` | `scripts/start-prod.mjs` | Next.js standalone on `127.0.0.1:3000` |
-| `crypto-dashboard-screener` | `scripts/screener/start.ts` | Continuous screener → `data/screener/` (calls Python agent) |
+| `crypto-dashboard-python-screener` | `scripts/python-agent/worker.sh` | Continuous Python dashboard-mode screener |
 | `crypto-dashboard-worker` | `scripts/worker/start.ts` | Telegram trade alerts (calls Python agent) |
 | `crypto-dashboard-python-agent` | `scripts/python-agent/start.sh` | **Python Action Call API** on `127.0.0.1:8000` |
 
@@ -122,7 +122,7 @@ Useful PM2 commands:
 ```bash
 pm2 status
 pm2 logs crypto-dashboard-web
-pm2 logs crypto-dashboard-screener
+pm2 logs crypto-dashboard-python-screener
 pm2 logs crypto-dashboard-python-agent
 pm2 restart crypto-dashboard-web
 pm2 restart crypto-dashboard-python-agent
@@ -231,7 +231,7 @@ pm2 restart crypto-dashboard-web
 |---|---|
 | `Node.js >=22 is required` | Upgrade Node, re-run deploy |
 | PM2 not found | `npm install -g pm2` then re-run deploy |
-| Web online, empty screener | `npm run screener -- --once`; check `data/screener/latest.json` |
+| Web online, empty screener | Restart `crypto-dashboard-python-agent` and `crypto-dashboard-python-screener`; check `/api/v1/screener/latest` |
 | Action Call empty / 502 on analyze | `pm2 logs crypto-dashboard-python-agent`; `curl 127.0.0.1:8000/api/v1/health` |
 | Python agent missing | Ensure `agent/.venv` exists; `npm run python-agent` |
 | 502 from nginx | Confirm web is up: `pm2 logs crypto-dashboard-web`; `curl 127.0.0.1:3000` |

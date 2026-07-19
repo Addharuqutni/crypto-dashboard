@@ -1,6 +1,6 @@
-# Crypto AI Agent
+# Python Action Call Agent
 
-Agent Python untuk memantau harga crypto dan membuat analisis teknikal otomatis.
+The `agent/` directory contains the Python FastAPI Action Call service and its dashboard-mode screener. It is the sole signal source for the Next.js dashboard, `/api/action-call`, `/api/screener`, the cron route, and the Telegram worker.
 
 ## Fitur
 
@@ -37,7 +37,7 @@ Agent Python untuk memantau harga crypto dan membuat analisis teknikal otomatis.
 ## Instalasi
 
 ```bash
-cd crypto-ai-agent
+cd agent
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -46,7 +46,7 @@ pip install -r requirements.txt
 Windows PowerShell:
 
 ```powershell
-cd crypto-ai-agent
+cd agent
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -60,13 +60,13 @@ pip install pandas-ta
 
 ## Konfigurasi env
 
-Salin file env:
+Dari root monorepo, salin environment bersama:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
-Edit `.env`:
+Python memuat `.env.local` root terlebih dahulu. Edit `.env.local`:
 
 ```env
 EXCHANGE=binance
@@ -327,19 +327,26 @@ Catatan: order block dan liquidity sweep di versi ini memakai heuristik sederhan
 ## Struktur project
 
 ```text
-crypto-ai-agent/
+agent/
 ├── main.py
 ├── requirements.txt
 ├── config.yaml
-├── .env.example
 ├── README.md
 └── src/
     ├── __init__.py
+    ├── action_call.py
     ├── alert.py
     ├── analyzer.py
+    ├── binance_universe.py
     ├── config.py
     ├── data.py
-    └── indicators.py
+    ├── indicators.py
+    ├── signal_service.py
+    ├── web.py
+    └── screener/
+        ├── __init__.py
+        ├── storage.py
+        └── worker.py
 ```
 
 ## Catatan risiko

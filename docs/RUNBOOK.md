@@ -7,12 +7,12 @@ Operational guide for deploying, monitoring, and recovering the crypto-dashboard
 | Process | Role | Typical host |
 |---------|------|--------------|
 | Next.js app (`crypto-dashboard-web`) | UI + BFF API routes | `127.0.0.1:3000` behind nginx |
-| Screener (`crypto-dashboard-screener`) | Periodic scan → `data/screener/*.json` via Python Action Call | PM2 on VPS |
+| Python screener (`crypto-dashboard-python-screener`) | Periodic dashboard-mode scan and persisted Python screener data | PM2 on VPS |
 | Worker (`crypto-dashboard-worker`) | Telegram trade/health alerts via Python Action Call | PM2 on VPS |
 | Python Action Call (`crypto-dashboard-python-agent`) | **Sole signal engine** FastAPI on `127.0.0.1:8000` | PM2 on VPS |
-| TS AI agent (`npm run agent`) | Optional AI over screener data — **not** the signal engine | optional |
+| TS AI agent (`npm run agent`) | Optional read-only AI over Python data — **not** the signal engine | optional |
 
-On VPS, `DISABLE_SCREENER_SCHEDULER=1` so the Next.js process does **not** run the in-process scheduler. The dedicated screener process owns cycles. All trade signals come from the Python agent (`PYTHON_AGENT_URL`).
+All trade signals come from the Python agent (`PYTHON_AGENT_URL`). The Next.js app is a BFF and does not run the removed TypeScript screener engine.
 
 ## Health Checks
 
@@ -24,13 +24,13 @@ On VPS, `DISABLE_SCREENER_SCHEDULER=1` so the Next.js process does **not** run t
 | Analyze smoke | `curl -fsS "http://127.0.0.1:8000/api/v1/analyze?symbol=BTC"` |
 | Agent API (TS AI) | `curl -fsS http://127.0.0.1:3000/api/agent` — 404 if no screener snapshot yet |
 | Cron (if used) | `curl -fsS -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:3000/api/cron/screener` |
-| PM2 | `pm2 status` — web, screener, worker, python-agent all `online` |
-| Snapshot freshness | `stat data/screener/latest.json` — mtime within ~2× screener interval |
-| Logs | `pm2 logs crypto-dashboard-web --lines 100` / `crypto-dashboard-screener` / `crypto-dashboard-python-agent` |
+| PM2 | `pm2 status` — web, Python screener, worker, and Python agent all `online` |
+| Snapshot freshness | `curl -fsS http://127.0.0.1:8000/api/v1/screener/latest` — verify the latest timestamp is recent |
+| Logs | `pm2 logs crypto-dashboard-web --lines 100` / `crypto-dashboard-python-screener` / `crypto-dashboard-python-agent` |
 
 ### Freshness rule of thumb
 
-If `latest.completedAt` is older than `2 × SCREENER_INTERVAL_MINUTES`, treat the screener as stale. Check PM2 status and Binance connectivity first.
+If the latest Python screener timestamp is older than `2 × SCREENER_INTERVAL_MINUTES`, treat the screener as stale. Check PM2 status and Binance connectivity first.
 
 ## Deployment
 
@@ -55,8 +55,8 @@ What the deploy script does:
 2. Creates `logs/`, `data/screener/`, `data/worker/`
 3. Seeds root `.env.local` from `.env.example` if missing (unified Next + Python env)
 4. `npm ci` → `npm run check` → `npm run build`
-5. Warm-start screener: `npm run screener -- --once`
-6. Python Action Call venv (loads root `.env.local`; dashboard mode)
+5. Python Action Call venv (loads root `.env.local`; dashboard mode)
+6. Starts the Python screener worker and FastAPI service via PM2
 7. `pm2 startOrReload ecosystem.config.cjs --update-env && pm2 save`
 
 Post-deploy:
@@ -83,11 +83,8 @@ npm run check
 npm run build
 # Python signal engine first
 npm run python-agent
-# then app + background jobs
-npm run screener -- --once
+# then app + Telegram worker in separate terminals/services
 npm run start:prod          # standalone server.js
-# separate terminals / services:
-npm run screener
 npm run worker
 ```
 
@@ -113,7 +110,7 @@ Config: [`ecosystem.config.cjs`](../ecosystem.config.cjs)
 | App name | Script | Notes |
 |----------|--------|-------|
 | `crypto-dashboard-web` | `scripts/start-prod.mjs` | `DISABLE_SCREENER_SCHEDULER=1`; `PYTHON_AGENT_URL` |
-| `crypto-dashboard-screener` | `scripts/screener/start.ts` | Writes `data/screener/` via Python scan |
+| `crypto-dashboard-python-screener` | `scripts/python-agent/worker.sh` | Runs the Python dashboard-mode screener |
 | `crypto-dashboard-worker` | `scripts/worker/start.ts` | Telegram alerts from Python Action Call |
 | `crypto-dashboard-python-agent` | `scripts/python-agent/start.sh` | FastAPI Action Call on `:8000` |
 
@@ -122,7 +119,7 @@ pm2 startOrReload ecosystem.config.cjs --update-env
 pm2 save
 pm2 restart crypto-dashboard-web
 pm2 restart crypto-dashboard-python-agent
-pm2 logs crypto-dashboard-screener --lines 200
+pm2 logs crypto-dashboard-python-screener --lines 200
 pm2 logs crypto-dashboard-python-agent --lines 200
 pm2 stop crypto-dashboard-worker
 ```
@@ -131,11 +128,12 @@ pm2 stop crypto-dashboard-worker
 
 ### `/api/screener` returns empty / on-demand fallback
 
-- Cause: missing `data/screener/latest.json` or `SCREENER_FILE_MODE_STRICT=0`
+- Cause: the Python service has no current snapshot, or `SCREENER_FILE_MODE_STRICT=1` prevents fallback.
 - Fix:
   ```bash
-  npm run screener -- --once
-  pm2 restart crypto-screener
+  pm2 restart crypto-dashboard-python-agent
+  pm2 restart crypto-dashboard-python-screener
+  curl -fsS http://127.0.0.1:8000/api/v1/screener/run
   ```
 
 ### Screener stuck / Binance rate limits
@@ -198,14 +196,14 @@ npm run check
    pm2 resurrect
    ```
 
-3. **Data caution**: `data/screener/` and `data/worker/` are runtime state. Prefer keeping them across deploys. If corrupted, stop processes, move the directory aside, re-run `npm run screener -- --once`.
+3. **Data caution**: `agent/datasets/` and `data/worker/` are runtime state. Prefer keeping them across deploys. If Python screener data is corrupted, stop the Python processes, move the affected dataset aside, and restart `crypto-dashboard-python-screener`.
 
 ## Alerting & Escalation
 
 | Symptom | First action | Escalate when |
 |---------|--------------|---------------|
-| Snapshot stale > 2 intervals | Restart `crypto-screener`, check Binance | Repeats after restart |
-| App 5xx | `pm2 logs crypto-dashboard`, free disk/memory | Sustained errors |
+| Snapshot stale > 2 intervals | Restart `crypto-dashboard-python-screener`, check Binance | Repeats after restart |
+| App 5xx | `pm2 logs crypto-dashboard-web`, free disk/memory | Sustained errors |
 | Worker health alerts fire | Inspect worker logs + Telegram credentials | Delivery fails > 1h |
 | Auth lockout | Verify Basic Auth env | Credentials rotated without deploy |
 

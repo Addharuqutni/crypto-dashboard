@@ -28,19 +28,21 @@ Open `http://localhost:3000`.
 | `npm run build:webpack` | Production build with Webpack |
 | `npm start` | Start standard Next.js production server |
 | `npm run start:local` | Start production server on port 3000 |
-| `npm run start:prod` | Start standalone production server from `.next/standalone` |
 | `npm run lint` | ESLint over `src/` |
 | `npm run typecheck` | TypeScript check (`tsc --noEmit`) |
 | `npm test` | Vitest unit/integration suite (single run) |
 | `npm run test:watch` | Vitest watch mode |
 | `npm run test:e2e` | Playwright end-to-end tests |
-| `npm run check` | `typecheck` + `lint` + `test` |
-| `npm run audit:prod` | `npm audit --omit=dev` |
-| `npm run screener` | Long-running screener process |
-| `npm run screener -- --once` | One screener cycle, then exit |
-| `npm run agent` | AI Signal Agent against latest screener snapshot |
 | `npm run worker` | Telegram alert worker |
-| `npm run deploy:vps` | VPS deploy helper (`deploy/deploy-vps.sh`) |
+| `npm run agent` | Run the optional TypeScript AI agent |
+| `npm run python-agent` | Start the Python Action Call service |
+| `npm run check` | `typecheck` + `lint` + `test` |
+| `npm run clean` | Remove local build and test artifacts |
+| `npm run audit:prod` | Audit production dependencies |
+| `npm run start:prod` | Start the standalone production server |
+| `npm run deploy:vps` | Deploy to a VPS (`deploy/deploy-vps.sh`) |
+| `npm run run:vps` | Deploy and optionally configure a domain |
+| `npm run setup:domain` | Configure nginx and optional TLS |
 <!-- /AUTO-GENERATED -->
 
 ## Quality Gate
@@ -60,7 +62,7 @@ Or the shortcut:
 npm run check
 ```
 
-CI workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs typecheck, lint, test, and build on push/PR to `main`/`master`.
+The repository's quality gate is `typecheck`, `lint`, `test`, and `build`. Run it locally before opening a PR; CI configuration may vary by deployment environment.
 
 ## Testing
 
@@ -129,6 +131,6 @@ src/
 
 ## Architecture Notes
 
-- Futures signal engine is **deterministic**. AI may explain or audit — never override `LONG` / `SHORT` / `WAIT`.
-- Screener production path: separate process writes `data/screener/latest.json`; Next.js serves it via `/api/screener` in `file` mode.
+- Python Action Call is the **sole** signal/screener engine. AI may explain or audit — never override the Python decision.
+- Production path: PM2 `crypto-dashboard-python-screener` (`scripts/python-agent/worker.sh`) and `crypto-dashboard-python-agent` (`scripts/python-agent/start.sh`) own cycles; Next.js `/api/screener` and `/api/action-call` proxy `PYTHON_AGENT_URL`.
 - Optional Basic Auth is enforced in [`src/proxy.ts`](../src/proxy.ts).
