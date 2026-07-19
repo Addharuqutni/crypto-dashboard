@@ -3,7 +3,7 @@
 import { Shield, ChevronDown } from 'lucide-react';
 import { useState, useId } from 'react';
 import { useRiskProfileStore } from '@/stores/use-risk-profile-store';
-import { RISK_PROFILES } from '@/lib/domain/intelligence/risk-profile';
+import { RISK_PROFILES } from '@/lib/domain/risk/risk-profile';
 import { cn } from '@/lib/shared/utils';
 import type { RiskProfile } from '@/types/intelligence';
 

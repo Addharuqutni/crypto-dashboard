@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchFearGreedIndex } from '@/lib/adapters/api/fear-greed';
+import { fetchFearGreedIndex } from '@/lib/adapters/market-data/fear-greed';
 import { formatRelativeTime } from '@/lib/shared/formatting';
 import { cn } from '@/lib/shared/utils';
 import { FEAR_GREED_GRADIENT } from '@/lib/shared/theme/chart-tokens';

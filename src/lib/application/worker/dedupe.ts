@@ -1,44 +1,25 @@
-import type { FuturesSignal } from '@/types/futures-signal';
+import type { ActionCallView } from '@/types/action-call';
 import type { AlertDecision, AlertDedupeRecord, AlertDedupeState, WorkerConfig } from './types';
 
 /**
- * Alert deduper.
+ * Alert deduper for Python Action Call alerts.
  *
- * Capital preservation > alert frequency. The deduper enforces:
- *
- *   - Per-(symbol, timeframe, action, setup) cooldown.
- *   - Material-change re-alerting: same key may re-emit before cooldown if
- *     entry/SL move ≥ 0.5% or grade improves.
- *   - WAIT alerts gated by config (`sendWaitAlerts`).
- *   - Confidence floor: directional alerts below `minConfidenceToAlert` are
- *     silenced.
- *   - Health warnings rate-limited per kind, per hour.
- *
- * The functions are pure: `decide()` takes the current state and returns an
- * `AlertDecision`. Callers persist a new dedupe record only when the decision
- * actually emits an alert.
+ * Rules:
+ *  - WAIT is suppressed unless `sendWaitAlerts` is true.
+ *  - Directional alerts require `status === 'READY'` and min confidence.
+ *  - Within cooldown, only material changes re-emit.
  */
-
 const MATERIAL_PRICE_DIFF_PCT = 0.5;
 
-/**
- * Decide whether the engine output should be sent now.
- *
- * `nowMs` defaults to `Date.now()` but is injected explicitly in tests so the
- * cooldown math is reproducible.
- */
 export function decide(
   symbol: string,
-  signal: FuturesSignal,
+  signal: ActionCallView,
   cfg: WorkerConfig,
   state: AlertDedupeState,
   nowMs: number = Date.now()
 ): AlertDecision {
   const key = makeKey(symbol, signal);
 
-  // WAIT path. WAITs short-circuit before the confidence floor so an "WAIT
-  // because data stale" can still surface as a health alert later if the
-  // caller chooses.
   if (signal.action === 'WAIT') {
     if (!cfg.sendWaitAlerts) {
       return { emit: false, reason: 'wait_disabled', key };
@@ -46,29 +27,27 @@ export function decide(
     return decideWithCooldown(state, key, signal, cfg, nowMs, 'wait_emit');
   }
 
-  // Directional path. Apply confidence floor first.
-  if (signal.confidence < cfg.minConfidenceToAlert) {
+  if (signal.confidenceScore < cfg.minConfidenceToAlert) {
     return {
       emit: false,
       reason: 'below_min_confidence',
       key,
-      detail: `confidence ${signal.confidence} < ${cfg.minConfidenceToAlert}`,
+      detail: `confidence ${signal.confidenceScore} < ${cfg.minConfidenceToAlert}`,
     };
+  }
+
+  // Only READY calls are alertable by default.
+  if (signal.status !== 'READY') {
+    return { emit: false, reason: 'wait_confirmation', key };
   }
 
   return decideWithCooldown(state, key, signal, cfg, nowMs, 'state_changed');
 }
 
-/**
- * Apply the cooldown rule, allowing material-change re-emits.
- *
- * `materialReason` is the reason returned for a re-emit caused by changed
- * state. The first emit always returns `first_emit`.
- */
 function decideWithCooldown(
   state: AlertDedupeState,
   key: string,
-  signal: FuturesSignal,
+  signal: ActionCallView,
   cfg: WorkerConfig,
   nowMs: number,
   materialReason: 'state_changed' | 'wait_emit'
@@ -85,7 +64,6 @@ function decideWithCooldown(
     return { emit: true, reason: materialReason, key };
   }
 
-  // Within cooldown — only allow material change.
   if (hasMaterialChange(prev, signal)) {
     return {
       emit: true,
@@ -97,15 +75,7 @@ function decideWithCooldown(
   return { emit: false, reason: 'no_change', key };
 }
 
-/**
- * Material change rules:
- *   - Grade improved (toward A)
- *   - Confidence jumped ≥10 points
- *   - Entry or SL moved ≥0.5% from the previous record
- *
- * Anything else is treated as the "same" alert and held back.
- */
-function hasMaterialChange(prev: AlertDedupeRecord, sig: FuturesSignal): boolean {
+function hasMaterialChange(prev: AlertDedupeRecord, sig: ActionCallView): boolean {
   if (gradeRank(sig.signalGrade) > gradeRank(prev.lastGrade)) return true;
   if (Math.abs(sig.confidenceScore - prev.lastConfidence) >= 10) return true;
 
@@ -123,7 +93,6 @@ function priceMovedSignificantly(prev: number | null, next: number | null): bool
   return diffPct >= MATERIAL_PRICE_DIFF_PCT;
 }
 
-/** Grade rank: A+ > A > B > C > D. Higher = better. */
 function gradeRank(g: AlertDedupeRecord['lastGrade']): number {
   switch (g) {
     case 'A+':
@@ -141,13 +110,9 @@ function gradeRank(g: AlertDedupeRecord['lastGrade']): number {
   }
 }
 
-/**
- * Build a dedupe record snapshot from a fresh signal. Stored in the dedupe
- * map after a successful Telegram send.
- */
 export function makeRecord(
   symbol: string,
-  signal: FuturesSignal,
+  signal: ActionCallView,
   nowMs: number
 ): AlertDedupeRecord {
   return {
@@ -161,49 +126,42 @@ export function makeRecord(
   };
 }
 
-/**
- * Stable composite key used as the dedupe map's primary key. Including the
- * setup type means a fresh trigger on the same symbol can still emit even
- * during cooldown — that's intentional, those represent genuinely different
- * setups.
- */
-function makeKey(symbol: string, signal: FuturesSignal): string {
-  return [symbol, signal.action, signal.entryTrigger ?? 'NO_TRIGGER'].join(':');
+function makeKey(symbol: string, signal: ActionCallView): string {
+  return [symbol, signal.action, signal.signal, signal.status].join(':');
 }
 
 /**
- * Health-alert rate limiter. Callers track one counter per "kind" (e.g.
- * `data_health_setup_stale`) and a sliding 1-hour window.
- *
- * Returns whether the alert is allowed *and* the new state to persist.
+ * Rate-limit health warnings per kind (e.g. python_unreachable, data_stale).
+ * Returns whether a new health alert may be emitted and the updated counters.
  */
 export function decideHealthAlert(
   kind: string,
   cfg: WorkerConfig,
-  perKind: Record<string, { count: number; windowStartedAt: number }>,
+  current: Record<string, { count: number; windowStartedAt: number }>,
   nowMs: number = Date.now()
 ): {
-  allow: boolean;
+  emit: boolean;
+  reason: 'health_warning_emit' | 'health_warning_rate_limited';
   next: Record<string, { count: number; windowStartedAt: number }>;
 } {
-  if (!cfg.sendHealthAlerts) {
-    return { allow: false, next: perKind };
-  }
-  const cap = cfg.healthAlertsPerHour;
-  const HOUR = 3_600_000;
-  const existing = perKind[kind];
-  const next = { ...perKind };
+  const windowMs = 60 * 60 * 1000;
+  const maxPerHour = Math.max(0, cfg.healthAlertsPerHour);
+  const prev = current[kind];
+  const next = { ...current };
 
-  if (!existing || nowMs - existing.windowStartedAt >= HOUR) {
-    // New 1-hour window opens with this attempt.
+  if (maxPerHour <= 0) {
+    return { emit: false, reason: 'health_warning_rate_limited', next };
+  }
+
+  if (!prev || nowMs - prev.windowStartedAt >= windowMs) {
     next[kind] = { count: 1, windowStartedAt: nowMs };
-    return { allow: true, next };
+    return { emit: true, reason: 'health_warning_emit', next };
   }
 
-  if (existing.count >= cap) {
-    return { allow: false, next: perKind };
+  if (prev.count >= maxPerHour) {
+    return { emit: false, reason: 'health_warning_rate_limited', next };
   }
 
-  next[kind] = { count: existing.count + 1, windowStartedAt: existing.windowStartedAt };
-  return { allow: true, next };
+  next[kind] = { count: prev.count + 1, windowStartedAt: prev.windowStartedAt };
+  return { emit: true, reason: 'health_warning_emit', next };
 }

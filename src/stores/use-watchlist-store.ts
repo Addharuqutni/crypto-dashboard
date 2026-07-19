@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { WatchlistItem } from '@/types/market';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/shared/browser-storage';
 
 interface WatchlistState {
   /** List of watchlist items */
@@ -36,7 +36,11 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     const stored = safeGetItem<WatchlistItem[]>(STORAGE_KEYS.watchlist, []);
     const items = Array.isArray(stored)
       ? stored
-          .map((item) => ({ ...item, symbol: normalizeSymbol(item.symbol), name: item.name.trim() }))
+          .map((item) => ({
+            ...item,
+            symbol: normalizeSymbol(item.symbol),
+            name: item.name.trim(),
+          }))
           .filter((item) => item.symbol && item.name)
       : [];
 

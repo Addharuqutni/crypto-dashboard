@@ -4,7 +4,7 @@ import type {
   SignalJournalMetrics,
   SignalJournalStatus,
 } from '@/types/signal-journal';
-import { safeGetItem, safeSetItem } from '@/lib/adapters/storage';
+import { safeGetItem, safeSetItem } from '@/lib/shared/browser-storage';
 
 /**
  * Local persistence key. Versioned to allow safe future migrations.

@@ -7,7 +7,8 @@ Agent Python untuk memantau harga crypto dan membuat analisis teknikal otomatis.
 - Ambil data OHLCV dari exchange via `ccxt`.
 - Ambil harga Binance USDⓈ-M Futures real-time via WebSocket.
 - Pantau banyak pair sekaligus.
-- Scan otomatis top 100 coin crypto berdasarkan market cap CoinGecko.
+- Screener universe dinamis: top 100 Binance USD-M USDT linear perpetuals by 24h futures quote volume (cached, fallback ke SYMBOLS).
+- Scan otomatis top 100 coin crypto berdasarkan market cap CoinGecko (opsional).
 - Analisis indikator:
   - EMA 20/50/200
   - RSI
@@ -78,7 +79,18 @@ SCAN_INTERVAL_SECONDS=3600
 USE_BINANCE_TOP_VOLUME=true
 BINANCE_TOP_VOLUME_LIMIT=100
 BINANCE_TOP_VOLUME_QUOTE=USDT
-BINANCE_TOP_VOLUME_MARKET_TYPE=spot
+# swap/usdm = Binance USDⓈ-M futures; spot = legacy spot ranking
+BINANCE_TOP_VOLUME_MARKET_TYPE=swap
+
+# Screener universe for run_screener(None) / dashboard scan (no explicit symbols)
+# Resolves top active Binance USDⓈ-M USDT linear perpetuals by 24h quote volume.
+# Cached in-process for SCREENER_UNIVERSE_CACHE_TTL_MINUTES (default 30).
+# On API failure/empty, falls back to SYMBOLS with health.universeSource=settings_fallback.
+SCREENER_UNIVERSE_MODE=top_futures_volume
+SCREENER_MAX_SYMBOLS=100
+SCREENER_UNIVERSE_CACHE_TTL_MINUTES=30
+# Explicit override wins over dynamic resolution (comma-separated)
+SCREENER_SYMBOLS=
 
 # Optional fallback: scan coin market cap terbesar dari CoinGecko
 USE_TOP_MARKETCAP=false

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { PriceAlert } from '@/types/alert';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/shared/browser-storage';
 
 interface AlertState {
   alerts: PriceAlert[];

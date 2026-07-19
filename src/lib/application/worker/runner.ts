@@ -1,20 +1,12 @@
-import type { Candle } from '@/types/chart';
-import { generateFuturesSignal } from '@/lib/domain/analysis/futures-signal-engine';
-import type {
-  FuturesSignal,
-  FuturesSignalInput,
-} from '@/types/futures-signal';
-import { fetchKlines, KlineFetchError } from '@/lib/adapters/binance';
-import {
-  decide,
-  decideHealthAlert,
-  makeRecord,
-} from './dedupe';
+import type { ActionCallView } from '@/types/action-call';
+import { fetchPythonActionCall } from '@/lib/adapters/python-agent/client';
+import { hasTelegramCredentials } from './config';
+import { decide, decideHealthAlert, makeRecord } from './dedupe';
 import { formatHealthAlert, formatTradeAlert } from './formatter';
-import { recordAlert, truncateError, WorkerStore } from './store';
+import { WorkerStore, recordAlert } from './store';
 import { sendTelegramMessage } from './telegram';
 import type {
-  AlertDecision,
+  AlertDedupeState,
   EvaluationResult,
   WorkerConfig,
   WorkerHealth,
@@ -22,217 +14,191 @@ import type {
 } from './types';
 
 /**
- * Worker orchestrator.
+ * Worker orchestrator — Python Action Call backend.
  *
- *   runCycle()
- *     → fetch klines for every symbol (15m + 30m + 4H)
- *     → run the deterministic signal engine
- *     → consult dedupe + cooldown
- *     → send Telegram alert when allowed
- *     → append JSONL signal log
- *     → atomically rewrite state.json
- *
- * Pure-ish design: file I/O happens through `WorkerStore`, network I/O
- * through `fetchKlines`/`sendTelegramMessage`. Both are injectable through
- * `RunCycleDeps` so the unit tests run without disk or network.
+ * Each cycle:
+ *   1. Call Python agent for every configured symbol.
+ *   2. Run the alert through the dedupe layer.
+ *   3. Append a JSONL log entry.
+ *   4. Deliver to Telegram when the decision is `emit`.
+ *   5. Persist health + dedupe state.
  */
 
 export interface RunCycleDeps {
-  store: WorkerStore;
-  fetchKlinesFn?: typeof fetchKlines;
-  sendTelegramFn?: typeof sendTelegramMessage;
-  generateSignalFn?: typeof generateFuturesSignal;
-  /** Reference time. Defaults to `Date.now()`. */
+  store?: WorkerStore;
   now?: () => number;
+  analyze?: (symbol: string) => Promise<ActionCallView>;
+  send?: typeof sendTelegramMessage;
+  log?: (msg: string, meta?: Record<string, unknown>) => void;
 }
 
-export interface RunCycleResult {
+export interface CycleOutcome {
   evaluations: EvaluationResult[];
   health: WorkerHealth;
+  dedupe: AlertDedupeState;
 }
 
-/**
- * Run a single evaluation cycle across every configured symbol.
- *
- * Errors during one symbol do not block the others — each symbol's failure
- * is captured into the health snapshot and a single health-alert kind is
- * fired through the rate limiter. The function never throws to its caller.
- */
-export async function runCycle(
-  cfg: WorkerConfig,
-  deps: RunCycleDeps
-): Promise<RunCycleResult> {
-  const fetchKlinesImpl = deps.fetchKlinesFn ?? fetchKlines;
-  const sendTelegramImpl = deps.sendTelegramFn ?? sendTelegramMessage;
-  const engine = deps.generateSignalFn ?? generateFuturesSignal;
-  const now = deps.now ?? Date.now;
+/** CLI-facing alias kept for scripts/worker/start.ts. */
+export async function runCycle(cfg: WorkerConfig, deps: RunCycleDeps = {}): Promise<CycleOutcome> {
+  return runWorkerCycle(cfg, deps);
+}
 
-  await deps.store.init();
-  const persisted = await deps.store.readState();
-  const health: WorkerHealth = {
-    ...persisted.health,
-    lastRunAt: now(),
-  };
-  let dedupe = persisted.dedupe;
+async function runWorkerCycle(cfg: WorkerConfig, deps: RunCycleDeps = {}): Promise<CycleOutcome> {
+  const now = deps.now ?? Date.now;
+  const analyze = deps.analyze ?? defaultAnalyze;
+  const send = deps.send ?? sendTelegramMessage;
+  const log = deps.log ?? ((msg) => console.info(`[worker] ${msg}`));
+  const store = deps.store ?? new WorkerStore(cfg.dataDir);
+
+  await store.init();
+  const state = await store.readState();
+
+  const startedAt = now();
   const evaluations: EvaluationResult[] = [];
+  let health: WorkerHealth = {
+    ...state.health,
+    lastRunAt: startedAt,
+    lastError: null,
+  };
+  let dedupe: AlertDedupeState = { ...state.dedupe };
 
   for (const symbol of cfg.symbols) {
-    health.lastEvaluatedSymbol = symbol;
-
-    let candles: { setup: Candle[]; macro: Candle[]; trigger: Candle[] };
     try {
-      candles = await fetchAllTimeframes(symbol, cfg, fetchKlinesImpl);
-    } catch (err) {
-      health.consecutiveErrors += 1;
-      health.lastErrorAt = now();
-      health.lastError = truncateError(err);
-      // Health alert on persistent failure — rate-limited per-kind per-hour.
-      const kind = err instanceof KlineFetchError
-        ? `binance_http_${err.status ?? 'network'}`
-        : 'binance_unknown';
-      const decision = decideHealthAlert(kind, cfg, health.healthAlertsThisHour, now());
-      health.healthAlertsThisHour = decision.next;
-      if (decision.allow && health.consecutiveErrors >= 2) {
-        const message = formatHealthAlert({
-          symbol,
-          reason: health.lastError ?? 'data fetch failed',
-          consecutiveErrors: health.consecutiveErrors,
-          lastSuccessAt: health.lastSuccessAt,
-        });
-        const result = await sendTelegramImpl(message, cfg);
-        health.lastDeliveryStatus = result.ok ? 'sent' : result.reason === 'disabled' ? 'disabled' : 'failed';
-      } else {
-        health.lastDeliveryStatus = 'skipped';
-      }
-      continue;
-    }
+      const signal = await analyze(symbol);
+      const decision = decide(symbol, signal, cfg, dedupe, now());
 
-    // Build engine input pinned to the last setup-candle's close so the
-    // data-health gate evaluates freshness deterministically.
-    const lastSetup = candles.setup[candles.setup.length - 1];
-    const nowMs = lastSetup ? lastSetup.closeTime : now();
-    const engineInput: FuturesSignalInput = {
-      symbol,
-      timeframe: cfg.setupTimeframe,
-      candles: candles.setup,
-      macroCandles: candles.macro,
-      triggerCandles: candles.trigger,
-      nowMs,
-    };
+      const logEntry = buildLogEntry(symbol, cfg, signal, decision.emit, decision.reason, now());
+      await store.appendSignal(logEntry);
 
-    const signal = engine(engineInput);
-    health.lastSignalAction = signal.action;
+      let deliveryStatus: WorkerHealth['lastDeliveryStatus'] = 'skipped';
 
-    // Successful evaluation resets the consecutive-error counter.
-    health.consecutiveErrors = 0;
-    health.lastSuccessAt = now();
-    health.lastError = null;
-
-    const alertDecision = decide(symbol, signal, cfg, dedupe, now());
-    let alerted = false;
-    let alertReason: string | undefined;
-    let deliveryStatus: WorkerHealth['lastDeliveryStatus'] = 'skipped';
-
-    if (alertDecision.emit) {
-      const message = formatTradeAlert({
-        symbol,
-        setupTimeframe: cfg.setupTimeframe,
-        macroTimeframe: cfg.macroTimeframe,
-        signal,
-      });
-      const result = await sendTelegramImpl(message, cfg);
-      if (result.ok) {
-        alerted = true;
-        deliveryStatus = 'sent';
-        alertReason = alertDecision.reason;
-        dedupe = recordAlert(dedupe, makeRecord(symbol, signal, now()));
-      } else if (result.reason === 'disabled') {
-        deliveryStatus = 'disabled';
-        alertReason = `delivery_disabled (${alertDecision.reason})`;
-      } else {
-        deliveryStatus = 'failed';
-        alertReason = `delivery_failed (${alertDecision.reason})`;
-        if (!cfg.continueOnTelegramFailure) {
-          health.lastDeliveryStatus = deliveryStatus;
-          await persistAndFlush(deps.store, { health, dedupe }, evaluations);
-          throw new Error(`Telegram delivery failed: ${result.reason}`);
+      if (decision.emit) {
+        if (!hasTelegramCredentials(cfg)) {
+          deliveryStatus = 'disabled';
+          log(`alert skipped (telegram disabled)`, { symbol, action: signal.action });
+        } else {
+          const text = formatTradeAlert({
+            symbol,
+            setupTimeframe: cfg.setupTimeframe,
+            macroTimeframe: cfg.macroTimeframe,
+            signal,
+          });
+          const delivery = await send(text, cfg);
+          if (delivery.ok) {
+            deliveryStatus = 'sent';
+            const record = makeRecord(symbol, signal, now());
+            dedupe = recordAlert(dedupe, record);
+            log(`alert sent`, {
+              symbol,
+              action: signal.action,
+              grade: signal.signalGrade,
+            });
+          } else {
+            deliveryStatus = delivery.reason === 'disabled' ? 'disabled' : 'failed';
+            health = {
+              ...health,
+              lastErrorAt: now(),
+              lastError: delivery.reason ?? 'telegram delivery failed',
+              consecutiveErrors: health.consecutiveErrors + 1,
+            };
+            log(`telegram delivery failed`, { symbol, reason: delivery.reason });
+            if (!cfg.continueOnTelegramFailure && deliveryStatus === 'failed') {
+              throw new Error(`Telegram delivery failed: ${delivery.reason}`);
+            }
+          }
         }
       }
-    } else {
-      alertReason = alertDecision.reason;
+
+      health = {
+        ...health,
+        lastSuccessAt: now(),
+        consecutiveErrors: deliveryStatus === 'failed' ? health.consecutiveErrors : 0,
+        lastEvaluatedSymbol: symbol,
+        lastSignalAction: signal.action,
+        lastDeliveryStatus: deliveryStatus,
+      };
+
+      evaluations.push({
+        symbol,
+        signal,
+        alert: decision,
+        log: logEntry,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      health = {
+        ...health,
+        lastErrorAt: now(),
+        lastError: message.slice(0, 500),
+        consecutiveErrors: health.consecutiveErrors + 1,
+        lastEvaluatedSymbol: symbol,
+        lastDeliveryStatus: 'failed',
+      };
+      log(`symbol evaluation failed`, { symbol, error: message });
+
+      if (cfg.sendHealthAlerts && hasTelegramCredentials(cfg)) {
+        const healthDecision = decideHealthAlert(
+          `python_error_${symbol}`,
+          cfg,
+          health.healthAlertsThisHour,
+          now()
+        );
+        health = { ...health, healthAlertsThisHour: healthDecision.next };
+        if (healthDecision.emit) {
+          const text = formatHealthAlert({
+            symbol,
+            reason: message,
+            consecutiveErrors: health.consecutiveErrors,
+            lastSuccessAt: health.lastSuccessAt,
+          });
+          await send(text, cfg).catch(() => undefined);
+        }
+      }
     }
-
-    health.lastDeliveryStatus = deliveryStatus;
-
-    const log = makeLogEntry(symbol, cfg, signal, alerted, alertReason, now());
-    await deps.store.appendSignal(log);
-
-    evaluations.push({
-      symbol,
-      signal,
-      alert: alertDecision satisfies AlertDecision,
-      log,
-    });
   }
 
-  await deps.store.writeState({ health, dedupe });
-  return { evaluations, health };
+  await store.writeState({ health, dedupe });
+  return { evaluations, health, dedupe };
 }
 
-async function persistAndFlush(
-  store: WorkerStore,
-  state: { health: WorkerHealth; dedupe: import('./types').AlertDedupeState },
-  pending: EvaluationResult[]
-): Promise<void> {
-  for (const ev of pending) {
-    await store.appendSignal(ev.log);
-  }
-  await store.writeState(state);
+async function defaultAnalyze(symbol: string): Promise<ActionCallView> {
+  const payload = await fetchPythonActionCall(symbol);
+  if (payload.signal) return payload.signal;
+  throw new Error(payload.error ?? `Python agent returned no signal for ${symbol}`);
 }
 
-async function fetchAllTimeframes(
-  binanceSymbol: string,
-  cfg: WorkerConfig,
-  fetcher: typeof fetchKlines
-): Promise<{ setup: Candle[]; macro: Candle[]; trigger: Candle[] }> {
-  const [setup, macro, trigger] = await Promise.all([
-    fetcher({ binanceSymbol, interval: cfg.setupTimeframe, limit: 300 }),
-    fetcher({ binanceSymbol, interval: cfg.macroTimeframe, limit: 300 }),
-    fetcher({ binanceSymbol, interval: cfg.triggerTimeframe, limit: 300 }),
-  ]);
-  return { setup, macro, trigger };
-}
-
-function makeLogEntry(
+function buildLogEntry(
   symbol: string,
   cfg: WorkerConfig,
-  signal: FuturesSignal,
+  signal: ActionCallView,
   alerted: boolean,
-  alertReason: string | undefined,
+  alertReason: string,
   ts: number
 ): WorkerSignalLogEntry {
   return {
     ts,
     symbol,
-    timeframe: cfg.setupTimeframe,
+    timeframe: signal.timeframe || cfg.setupTimeframe,
     action: signal.action,
     marketRegime: signal.marketRegime,
     tradePermission: signal.tradePermission,
     setupType: signal.entryTrigger,
-    confidence: signal.confidence ?? signal.confidenceScore ?? 0,
-    grade: signal.grade ?? 'D',
+    confidence: signal.confidenceScore,
+    grade: signal.grade,
     signalGrade: signal.signalGrade,
-    entry: signal.entryZone?.min ?? null,
+    entry: signal.entryZone.min,
     stopLoss: signal.stopLoss,
-    tp1: signal.takeProfits?.tp1 ?? null,
-    tp2: signal.takeProfits?.tp2 ?? null,
-    tp3: signal.takeProfits?.tp3 ?? null,
+    tp1: signal.takeProfits.tp1,
+    tp2: signal.takeProfits.tp2,
+    tp3: signal.takeProfits.tp3,
     riskRewardRatio: signal.riskRewardRatio,
-    invalidation: signal.invalidation ?? null,
-    reasons: signal.reasons ?? [],
-    warnings: signal.warnings ?? [],
-    dataHealthOk: signal.dataHealth?.ok ?? false,
+    invalidation: signal.invalidationReason,
+    reasons: signal.reasons,
+    warnings: signal.warnings,
+    dataHealthOk: signal.dataHealth?.ok ?? true,
     alerted,
-    ...(alertReason ? { alertReason } : {}),
+    alertReason,
+    sourceEngine: signal.sourceEngine ?? 'python_action_call',
+    pythonStatus: signal.pythonStatus ?? signal.status,
   };
 }

@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Bot, RefreshCw, ShieldAlert } from 'lucide-react';
-import type { AgentRunResult } from '@/lib/application/agent/agent-types';
+import type { AgentRunResult } from '@/lib/application/signal-agent/agent-types';
 import { formatDateTime } from '@/lib/shared/formatting';
-import { ActionBadge } from '@/components/shared/badges';
+import { ActionBadge } from '@/components/ui/badges';
 
 type AgentApiResponse = {
   ok: boolean;
@@ -18,7 +18,7 @@ type AgentApiResponse = {
   result?: AgentRunResult;
 };
 
-export function AgentClient() {
+export function SignalAgentClient() {
   const [data, setData] = useState<AgentApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +58,8 @@ export function AgentClient() {
             AI Agent Watchlist
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-text-secondary">
-            Summary of decisions from the latest screener snapshot. The agent does not execute trades and does not override engine decisions.
+            Summary of decisions from the latest screener snapshot. The agent does not execute
+            trades and does not override engine decisions.
           </p>
         </div>
         <button
@@ -73,9 +74,18 @@ export function AgentClient() {
       </header>
 
       <section className="grid gap-4 md:grid-cols-3">
-        <InfoCard label="AI enrichment" value={data?.source?.aiEnabled ? 'Enabled' : 'Deterministic only'} />
-        <InfoCard label="Universe" value={data?.source ? `${data.source.universeSize} symbols` : '-'} />
-        <InfoCard label="Last screener run" value={data?.source ? formatDateTime(data.source.screenerCompletedAt) : '-'} />
+        <InfoCard
+          label="AI enrichment"
+          value={data?.source?.aiEnabled ? 'Enabled' : 'Deterministic only'}
+        />
+        <InfoCard
+          label="Universe"
+          value={data?.source ? `${data.source.universeSize} symbols` : '-'}
+        />
+        <InfoCard
+          label="Last screener run"
+          value={data?.source ? formatDateTime(data.source.screenerCompletedAt) : '-'}
+        />
       </section>
 
       {error && (
@@ -96,7 +106,9 @@ export function AgentClient() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-text-primary">{decision.symbol}</h2>
-                    <p className="text-xs text-text-muted">{decision.timeframe} · Engine {decision.engineAction}</p>
+                    <p className="text-xs text-text-muted">
+                      {decision.timeframe} · Engine {decision.engineAction}
+                    </p>
                   </div>
                   <ActionBadge action={decision.decision} showIcon variant="default" />
                 </div>
@@ -106,7 +118,10 @@ export function AgentClient() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <MiniStat label="Confidence" value={`${decision.confidence}%`} />
                   <MiniStat label="Risk" value={decision.riskLevel} />
-                  <MiniStat label="Generated" value={new Date(decision.generatedAt).toLocaleTimeString()} />
+                  <MiniStat
+                    label="Generated"
+                    value={new Date(decision.generatedAt).toLocaleTimeString()}
+                  />
                 </div>
 
                 <div className="mt-4 space-y-3 text-sm">
@@ -115,9 +130,15 @@ export function AgentClient() {
                 </div>
 
                 <div className="mt-4 rounded-xl border border-border-subtle bg-bg-surface-soft p-3 text-xs text-text-secondary">
-                  <div><span className="text-text-primary">Entry:</span> {decision.plan.entryTrigger}</div>
-                  <div><span className="text-text-primary">Stop:</span> {decision.plan.stopLoss}</div>
-                  <div><span className="text-text-primary">TP:</span> {decision.plan.takeProfit}</div>
+                  <div>
+                    <span className="text-text-primary">Entry:</span> {decision.plan.entryTrigger}
+                  </div>
+                  <div>
+                    <span className="text-text-primary">Stop:</span> {decision.plan.stopLoss}
+                  </div>
+                  <div>
+                    <span className="text-text-primary">TP:</span> {decision.plan.takeProfit}
+                  </div>
                 </div>
               </article>
             ))}
@@ -126,7 +147,8 @@ export function AgentClient() {
       <footer className="flex items-start gap-3 rounded-lg border border-border-subtle bg-bg-surface-soft p-4 text-xs text-text-muted">
         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
         <p>
-          Educational and decision-support only. Not financial advice, not a guaranteed signal, and not a profit guarantee. WAIT is a valid decision.
+          Educational and decision-support only. Not financial advice, not a guaranteed signal, and
+          not a profit guarantee. WAIT is a valid decision.
         </p>
       </footer>
     </div>
@@ -156,7 +178,9 @@ function ListBlock({ title, items }: { title: string; items: string[] }) {
     <div>
       <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
       <ul className="mt-1 list-disc space-y-1 pl-4 text-text-secondary">
-        {items.slice(0, 4).map((item) => <li key={item}>{item}</li>)}
+        {items.slice(0, 4).map((item) => (
+          <li key={item}>{item}</li>
+        ))}
       </ul>
     </div>
   );

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sendChatCompletion } from '@/lib/adapters/ai/ai-client';
-import { readAiConfigFromEnv } from '@/lib/application/agent/ai-config';
+import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
 import { rateLimit, getClientIp } from '@/lib/shared/security/rate-limit';
 import type { AiConfig, AiMessageRole } from '@/types/ai';
 

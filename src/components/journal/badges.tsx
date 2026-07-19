@@ -5,7 +5,7 @@ import { formatCurrency } from '@/lib/shared/formatting';
 import type { SignalJournalSource, SignalJournalStatus } from '@/types/signal-journal';
 import { formatDuration } from './filter-and-sort';
 import { useEffect, useState } from 'react';
-import { ActionBadge } from '@/components/shared/badges';
+import { ActionBadge } from '@/components/ui/badges';
 
 export { ActionBadge };
 

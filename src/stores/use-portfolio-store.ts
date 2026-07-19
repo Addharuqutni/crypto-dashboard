@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { PortfolioHolding } from '@/types/portfolio';
-import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/adapters/storage';
+import { safeGetItem, safeSetItem, STORAGE_KEYS } from '@/lib/shared/browser-storage';
 
 interface PortfolioState {
   holdings: PortfolioHolding[];
@@ -8,7 +8,10 @@ interface PortfolioState {
 
   hydrate: () => void;
   addHolding: (holding: Omit<PortfolioHolding, 'id' | 'createdAt' | 'updatedAt'>) => void;
-  updateHolding: (id: string, updates: Partial<Pick<PortfolioHolding, 'quantity' | 'averageBuyPrice'>>) => void;
+  updateHolding: (
+    id: string,
+    updates: Partial<Pick<PortfolioHolding, 'quantity' | 'averageBuyPrice'>>
+  ) => void;
   removeHolding: (id: string) => void;
 }
 
@@ -62,7 +65,9 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
     // Prevent duplicate holdings for the same coin
     const existing = state.holdings.find((h) => h.symbol === normalizedSymbol);
     if (existing) {
-      console.warn(`[Portfolio] Holding for ${normalizedSymbol} already exists. Use updateHolding instead.`);
+      console.warn(
+        `[Portfolio] Holding for ${normalizedSymbol} already exists. Use updateHolding instead.`
+      );
       return;
     }
 
@@ -100,9 +105,7 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
     const state = get();
     const updated = state.holdings.map((h) =>
-      h.id === id
-        ? { ...h, ...updates, updatedAt: new Date().toISOString() }
-        : h
+      h.id === id ? { ...h, ...updates, updatedAt: new Date().toISOString() } : h
     );
     safeSetItem(STORAGE_KEYS.portfolio, updated);
     set({ holdings: updated });

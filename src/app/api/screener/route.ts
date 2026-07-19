@@ -1,153 +1,72 @@
 import { NextResponse } from 'next/server';
-import {
-  DEFAULT_SCREENER_CONFIG,
-  DEFAULT_SCREENER_ALERT_SETTINGS,
-} from '@/lib/application/screener/config';
-import { runScreenerCycle } from '@/lib/application/screener/runner';
-import { rankScreenerResults } from '@/lib/application/screener/ranker';
-import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
-import { getScreenerUniverseFromEnv } from '@/lib/application/screener/universe';
+import { fetchPythonScreenerLatest, runPythonScreener } from '@/lib/adapters/python-agent/client';
+import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
-import { isServerlessRuntime } from '@/lib/shared/runtime/is-serverless';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-/**
- * GET /api/screener — serves screener data to the UI.
- *
- * Vercel/serverless compatibility:
- * - Production defaults to file mode so the API serves persisted worker output.
- * - Development defaults to on-demand mode for easier local setup.
- * - Explicit SCREENER_STORAGE_MODE=file|on-demand always wins.
- */
 export async function GET(request: Request) {
-  const mode = resolveScreenerStorageMode();
-
   if (!allowScreenerRequest(request)) return rateLimitResponse();
 
-  if (mode === 'file') {
-    return readFromFileStore();
+  if (resolveScreenerStorageMode() === 'on-demand') {
+    return runOnDemandScreener();
   }
 
-  return runOnDemandScreener();
+  return readPythonSnapshot();
 }
 
 async function runOnDemandScreener() {
   try {
-    const startedAt = Date.now();
-    const settings = { ...DEFAULT_SCREENER_ALERT_SETTINGS };
-    const config = {
-      ...DEFAULT_SCREENER_CONFIG,
-      symbols: getVercelUniverse(),
-      maxConcurrentSymbols: getEnvInt('SCREENER_MAX_CONCURRENT_SYMBOLS', 1, 1, 3),
-      candleLimit: getEnvInt('SCREENER_CANDLE_LIMIT', 120, 60, 200),
-      alertSettings: settings,
-    };
-
-    const run = await runScreenerCycle(config);
-    const ranked = rankScreenerResults(run.results, settings);
-    const completedAt = Date.now();
-
+    const response = await runPythonScreener();
+    return screenerResponse('on-demand', response.latest);
+  } catch (error) {
+    console.error('[api/screener] Python on-demand run failed:', error);
     return NextResponse.json(
-      {
-        ok: true,
-        mode: 'on-demand',
-        latest: {
-          completedAt,
-          health: run.health,
-          results: ranked,
-          timeframes: {
-            setup: config.setupTimeframe,
-            trigger: config.triggerTimeframe,
-            macro: config.macroTimeframe,
-          },
-          universeSize: config.symbols.length,
-        },
-        settings,
-        recentAlerts: [],
-        recentActionCalls: [],
-        recentJournalEntries: [],
-        meta: {
-          durationMs: completedAt - startedAt,
-          storage: 'memory',
-        },
-      },
-      {
-        headers: {
-          'Cache-Control': 's-maxage=60, stale-while-revalidate=240',
-        },
-      }
+      { ok: false, error: 'Failed to run Python screener' },
+      { status: 502 }
     );
-  } catch (err: unknown) {
-    console.error('[api/screener] on-demand run failed:', err);
-    return NextResponse.json({ ok: false, error: 'Failed to run screener' }, { status: 500 });
   }
 }
 
-async function readFromFileStore() {
+async function readPythonSnapshot() {
   try {
-    const store = getScreenerStorage();
-    const [latest, settings, recentAlerts, recentActionCalls] = await Promise.all([
-      store.readLatest(),
-      store.readSettings(),
-      store.readRecentAlerts(50),
-      store.readRecentActionCalls(200),
-    ]);
-    const recentJournalEntries = readRecentJournalEntries(100);
-
-    if (!latest && shouldFallbackToOnDemand()) {
-      return runOnDemandScreener();
-    }
-
-    return NextResponse.json({
-      ok: true,
-      mode: 'file',
-      latest,
-      settings,
-      recentAlerts,
-      recentActionCalls,
-      recentJournalEntries,
-    });
-  } catch (err: unknown) {
-    console.error('[api/screener] failed to read screener data:', err);
-    if (shouldFallbackToOnDemand()) {
-      return runOnDemandScreener();
-    }
-    return NextResponse.json({ ok: false, error: 'Failed to read screener data' }, { status: 500 });
+    const response = await fetchPythonScreenerLatest();
+    if (response.latest) return screenerResponse('python', response.latest);
+    if (shouldFallbackToOnDemand()) return runOnDemandScreener();
+    return screenerResponse('python', null);
+  } catch (error) {
+    console.error('[api/screener] Python snapshot read failed:', error);
+    if (shouldFallbackToOnDemand()) return runOnDemandScreener();
+    return NextResponse.json(
+      { ok: false, error: 'Failed to read Python screener data' },
+      { status: 502 }
+    );
   }
 }
 
-function getVercelUniverse() {
-  return getScreenerUniverseFromEnv(100);
-}
-
-function getEnvInt(name: string, fallback: number, min: number, max: number): number {
-  const raw = process.env[name];
-  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
+function screenerResponse(mode: 'python' | 'on-demand', latest: Record<string, unknown> | null) {
+  return NextResponse.json({
+    ok: true,
+    mode,
+    latest,
+    settings: DEFAULT_SCREENER_ALERT_SETTINGS,
+    recentAlerts: [],
+    recentActionCalls: [],
+    recentJournalEntries: readRecentJournalEntries(100),
+  });
 }
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export function resolveScreenerStorageMode(): 'file' | 'on-demand' {
-  const raw = process.env.SCREENER_STORAGE_MODE?.trim();
-  if (raw === 'file' || raw === 'on-demand') return raw;
-  // ponytail: always default to file mode so "Last run" reflects the worker's
-  // actual persisted cycle, not a fresh on-demand run per poll. Dev without a
-  // worker still falls back to on-demand via readFromFileStore() when no file
-  // exists. Opt into on-demand explicitly with SCREENER_STORAGE_MODE=on-demand.
-  return 'file';
+  return process.env.SCREENER_STORAGE_MODE?.trim() === 'on-demand' ? 'on-demand' : 'file';
 }
 
 function shouldFallbackToOnDemand(): boolean {
-  if (process.env.SCREENER_FILE_MODE_STRICT === '1') return false;
-  if (process.env.SCREENER_REQUIRE_DATABASE === '1') return false;
-  if (isServerlessRuntime()) return false;
-  return true;
+  return process.env.SCREENER_FILE_MODE_STRICT !== '1';
 }
 
 export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
@@ -157,15 +76,20 @@ export function allowScreenerRequest(request: Request, now = Date.now()): boolea
   const bucket = rateLimitBuckets.get(key);
 
   pruneExpiredRateLimitBuckets(now);
-
   if (!bucket || bucket.resetAt <= now) {
     rateLimitBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     return true;
   }
-
   if (bucket.count >= limit) return false;
   bucket.count += 1;
   return true;
+}
+
+function getEnvInt(name: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[name];
+  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
 }
 
 function rateLimitResponse() {

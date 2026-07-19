@@ -1,23 +1,7 @@
-import type { fetchKlines } from '@/lib/adapters/binance';
-import type { fetchFundingRate } from '@/lib/adapters/api/binance-funding-rate';
-import type { fetchOpenInterestSnapshot } from '@/lib/adapters/api/binance-open-interest';
-import type { generateFuturesSignal } from '@/lib/domain/analysis/futures-signal-engine';
+import type { ActionCallView } from '@/types/action-call';
 
-/**
- * Screener ports — the explicit boundary between the screener use case
- * and the outside world.
- *
- * These types are derived from the concrete adapter signatures rather than
- * hand-rolled interfaces so the use case stays a drop-in replacement for
- * the previous procedural runner. The hexagonal-architecture intent is
- * still preserved: the use case depends on these types, not the modules
- * that implement them.
- */
-
-type FuturesKlinesPort = typeof fetchKlines;
-type FundingRatePort = typeof fetchFundingRate;
-type OpenInterestPort = typeof fetchOpenInterestSnapshot;
-type SignalEnginePort = typeof generateFuturesSignal;
+/** Analyze one symbol via the Python Action Call service. */
+export type AnalyzeSymbolPort = (symbol: string) => Promise<ActionCallView>;
 
 /** Trivial clock port. Kept narrow on purpose so tests can pin time. */
 type ClockPort = () => number;
@@ -29,9 +13,6 @@ type ClockPort = () => number;
  * and let the default adapters be used. Tests can mock any subset.
  */
 export interface ScreenerCyclePorts {
-  fetchKlines?: FuturesKlinesPort;
-  fetchFundingRate?: FundingRatePort;
-  fetchOpenInterest?: OpenInterestPort;
-  signalEngine?: SignalEnginePort;
+  analyzeSymbol?: AnalyzeSymbolPort;
   now?: ClockPort;
 }

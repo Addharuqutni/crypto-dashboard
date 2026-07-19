@@ -2,30 +2,28 @@ import type {
   FuturesEntryTrigger,
   FuturesGrade,
   FuturesMarketRegimeId,
-  FuturesSignal,
   FuturesSignalAction,
   FuturesSignalGrade,
   FuturesTradePermission,
-} from '@/types/futures-signal';
+} from '@/types/signal-core';
+import type { ActionCallView } from '@/types/action-call';
 import type { BinanceInterval } from '@/lib/adapters/binance/intervals';
 
 /**
  * Worker public types.
  *
- * The worker is a long-running Node process (or a single-shot run from a cron
- * trigger) that fetches Binance Futures candles, runs the deterministic signal
- * engine, dedupes alerts, persists outcomes, and notifies Telegram. Every
- * data structure here is JSON-serialisable so the JSONL/state store works
- * without custom encoders.
+ * The worker is a long-running Node process that evaluates symbols via the
+ * Python Action Call agent, dedupes alerts, persists outcomes, and notifies
+ * Telegram. Every data structure here is JSON-serialisable.
  */
 
 /** Per-symbol cycle configuration. The worker runs every `intervalMinutes`. */
 export interface WorkerConfig {
   /** Symbols to monitor. Defaults to ['BTCUSDT']. */
   symbols: string[];
-  /** Setup timeframe used to drive the engine. */
+  /** Setup timeframe label used in logs/alerts. */
   setupTimeframe: BinanceInterval;
-  /** Macro / trigger TFs used to populate the engine inputs. */
+  /** Macro / trigger TFs kept for log compatibility. */
   macroTimeframe: BinanceInterval;
   triggerTimeframe: BinanceInterval;
   /** Cycle interval in minutes. Default 15. */
@@ -113,22 +111,25 @@ export interface WorkerSignalLogEntry {
   /** True iff Telegram was actually invoked for this entry. */
   alerted: boolean;
   alertReason?: string;
+  sourceEngine?: string;
+  pythonStatus?: string | null;
 }
 
 /** Output of one evaluator cycle for a single symbol. */
 export interface EvaluationResult {
   symbol: string;
-  signal: FuturesSignal;
+  signal: ActionCallView;
   /** Decision produced by the dedupe layer. */
   alert: AlertDecision;
   /** Raw log entry that should be appended to the JSONL store. */
   log: WorkerSignalLogEntry;
 }
 
-type AlertDecisionReason =
+export type AlertDecisionReason =
   | 'cooldown'
   | 'no_change'
   | 'wait_disabled'
+  | 'wait_confirmation'
   | 'below_min_confidence'
   | 'health_warning_rate_limited'
   | 'data_health_ok'

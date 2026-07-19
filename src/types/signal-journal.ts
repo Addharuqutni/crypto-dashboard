@@ -4,7 +4,7 @@ import type {
   FuturesSignalAction,
   FuturesSignalGrade,
   FuturesTradePermission,
-} from './futures-signal';
+} from './signal-core';
 
 /**
  * Outcome status for a saved journal entry.
@@ -16,13 +16,7 @@ import type {
  *   CANCELLED — user cancelled before any outcome
  */
 export type SignalJournalStatus =
-  | 'PENDING'
-  | 'TP1'
-  | 'TP2'
-  | 'TP3'
-  | 'SL'
-  | 'EXPIRED'
-  | 'CANCELLED';
+  'PENDING' | 'TP1' | 'TP2' | 'TP3' | 'SL' | 'EXPIRED' | 'CANCELLED';
 
 /**
  * Where a journal entry came from. Used to filter paper-traded

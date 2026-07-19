@@ -10,10 +10,13 @@
  * can stop promptly between cycles. In-flight cycles are allowed to complete.
  */
 
-import { loadWorkerConfig, validateWorkerConfig } from '@/lib/application/worker/config';
+import {
+  hasTelegramCredentials,
+  loadWorkerConfig,
+  validateWorkerConfig,
+} from '@/lib/application/worker/config';
 import { runCycle } from '@/lib/application/worker/runner';
 import { WorkerStore } from '@/lib/application/worker/store';
-import { hasTelegramCredentials } from '@/lib/application/worker/config';
 import type { WorkerConfig } from '@/lib/application/worker/types';
 
 interface CliArgs {
@@ -116,10 +119,9 @@ async function executeOne(cfg: WorkerConfig, store: WorkerStore): Promise<boolea
     for (const ev of result.evaluations) {
       const meta =
         `action=${ev.signal.action}` +
-        ` conf=${Math.round(ev.signal.confidence ?? ev.signal.confidenceScore ?? 0)}` +
-        ` grade=${ev.signal.grade ?? 'D'}` +
-        ` regime=${ev.signal.marketRegime}` +
-        ` permission=${ev.signal.tradePermission}` +
+        ` conf=${Math.round(ev.signal.confidenceScore)}` +
+        ` grade=${ev.signal.signalGrade}` +
+        ` status=${ev.signal.status}` +
         ` alerted=${ev.log.alerted}` +
         ` reason=${ev.alert.reason}`;
       // eslint-disable-next-line no-console
@@ -127,7 +129,7 @@ async function executeOne(cfg: WorkerConfig, store: WorkerStore): Promise<boolea
     }
     if (result.evaluations.length === 0) {
       // eslint-disable-next-line no-console
-      console.log('[worker] cycle produced no evaluations (data fetch failed for all symbols)');
+      console.log('[worker] cycle produced no evaluations (python agent failed for all symbols)');
     }
     return true;
   } catch (err) {

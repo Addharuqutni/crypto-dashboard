@@ -1,5 +1,5 @@
 import type { RankedScreenerResult } from '@/lib/application/screener/types';
-import type { FuturesGrade, FuturesSignalAction } from '@/types/futures-signal';
+import type { FuturesGrade, FuturesSignalAction } from '@/types/signal-core';
 import type { RiskProfile } from '@/types/intelligence';
 
 export type ActionFilter = 'ALL' | FuturesSignalAction;
@@ -7,13 +7,7 @@ export type GradeFilter = 'ALL' | FuturesGrade;
 export type DataFilter = 'all' | 'healthy' | 'degraded';
 
 export type SortField =
-  | 'rank'
-  | 'confidence'
-  | 'grade'
-  | 'riskReward'
-  | 'freshness'
-  | 'marketCapRank'
-  | 'rankingScore';
+  'rank' | 'confidence' | 'grade' | 'riskReward' | 'freshness' | 'marketCapRank' | 'rankingScore';
 
 export type SortDirection = 'asc' | 'desc';
 

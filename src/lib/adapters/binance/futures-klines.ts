@@ -3,7 +3,7 @@ import type { Candle } from '@/types/chart';
 /**
  * Server-side Binance Futures klines fetcher (Node-only).
  *
- * Mirrors the contract of `src/lib/adapters/api/binance-kline.ts` but is browser-free:
+ * Mirrors the contract of `src/lib/adapters/binance/binance-kline.ts` but is browser-free:
  *   - Uses Node's global `fetch` (Node ≥18).
  *   - Accepts an explicit `binanceSymbol` so it doesn't depend on the UI
  *     coin registry — server consumers are symbol-driven, not coin-driven.

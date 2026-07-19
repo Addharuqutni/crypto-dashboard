@@ -116,13 +116,6 @@ function defaultHealth(): WorkerHealth {
   };
 }
 
-/** Truncate a record's `lastError` to a safe length for JSON storage. */
-export function truncateError(err: unknown, max = 500): string {
-  const message = err instanceof Error ? err.message : String(err);
-  if (message.length <= max) return message;
-  return `${message.slice(0, max)}...`;
-}
-
 /**
  * Update an existing dedupe record with the latest emit info. Pure helper
  * exposed alongside the store so tests can verify the cooldown bookkeeping
