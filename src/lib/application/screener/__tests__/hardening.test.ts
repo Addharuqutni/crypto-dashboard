@@ -54,6 +54,7 @@ describe('screener hardening', () => {
   });
 
   it('rate limits repeated screener API requests per client', () => {
+    vi.stubEnv('TRUST_PROXY', '1');
     vi.stubEnv('SCREENER_API_RATE_LIMIT_PER_MINUTE', '2');
     const request = new Request('http://localhost/api/screener', {
       headers: { 'x-forwarded-for': '203.0.113.10' },
@@ -66,6 +67,7 @@ describe('screener hardening', () => {
   });
 
   it('returns 429 from the screener API after the per-client limit', async () => {
+    vi.stubEnv('TRUST_PROXY', '1');
     vi.stubEnv('SCREENER_API_RATE_LIMIT_PER_MINUTE', '1');
     vi.stubEnv('SCREENER_STORAGE_MODE', 'file');
     vi.stubEnv('SCREENER_FILE_MODE_STRICT', '1');

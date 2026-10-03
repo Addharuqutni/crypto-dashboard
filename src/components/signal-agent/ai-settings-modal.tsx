@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAiStore } from '@/stores/use-ai-store';
+import { useModalFocus } from '@/hooks/use-modal-focus';
 import type { AiConfig } from '@/types/ai';
 import { cn } from '@/lib/shared/utils';
 import { X, Loader2, CheckCircle2, XCircle, Settings2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
@@ -78,15 +79,8 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
     }
   }, [isOpen, config.baseUrl, config.apiKey, config.model, rememberKey]);
 
-  // Close on Escape key
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [isOpen, onClose]);
+  // Close on Escape + trap focus while the modal is open.
+  const panelRef = useModalFocus<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -127,10 +121,12 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
 
       {/* Modal */}
       <div
+        ref={panelRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ai-settings-title"
-        className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface"
+        className="relative w-full max-w-md animate-spring-in rounded-xl border border-border-subtle bg-bg-surface outline-none"
         style={{ boxShadow: 'var(--shadow-overlay)' }}
       >
         {/* Header */}
@@ -294,7 +290,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
                 'pressable rounded-lg px-4 py-2 text-xs font-semibold transition-all',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                 canSave
-                  ? 'bg-accent-secondary text-white shadow-[0_8px_24px_-8px_rgba(139,92,246,0.6)] hover:bg-accent-secondary/90 hover:shadow-[0_10px_28px_-6px_rgba(139,92,246,0.7)]'
+                  ? 'bg-accent-secondary text-white shadow-glow-accent hover:bg-accent-secondary/90 hover:shadow-glow-accent-lg'
                   : 'cursor-not-allowed bg-accent-secondary/30 text-white/50'
               )}
             >

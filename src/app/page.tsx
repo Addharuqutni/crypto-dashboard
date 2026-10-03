@@ -1,5 +1,12 @@
+import type { Metadata } from 'next';
 import { AppShell } from '@/components/layout/app-shell';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
+
+export const metadata: Metadata = {
+  title: 'Markets · CryptoHawk',
+  description:
+    'Real-time futures market overview: top coins, price action, and market pulse.',
+};
 
 /**
  * Dashboard Home — Server Component route.

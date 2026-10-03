@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/components/providers/query-provider';
@@ -35,6 +35,18 @@ export const metadata: Metadata = {
     'Monitor crypto prices in real-time, track your portfolio, manage watchlists, and analyze market trends with technical indicators.',
 };
 
+/**
+ * The app is dark-first; declaring the scheme and theme color here paints the
+ * browser chrome (address bar / status bar) to match instead of defaulting to
+ * white, which reads as a flash on load and clashes with the OLED palette.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  colorScheme: 'dark',
+  themeColor: '#05070d',
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${spaceGrotesk.variable}`}>
@@ -42,6 +54,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
         className="min-h-screen bg-bg-app text-text-primary antialiased"
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-overlay focus:rounded-lg focus:bg-accent-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-bg-app focus:outline-none focus:ring-2 focus:ring-focus-ring"
+        >
+          Skip to main content
+        </a>
         <QueryProvider>
           <DataProvider>
             <ToastProvider>

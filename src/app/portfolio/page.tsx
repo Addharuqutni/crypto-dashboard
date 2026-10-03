@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { usePortfolioStore } from '@/stores/use-portfolio-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
@@ -26,6 +29,7 @@ export default function PortfolioPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<CalculatedHolding | null>(null);
 
   useEffect(() => {
     hydrate();
@@ -72,9 +76,9 @@ export default function PortfolioPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="h1">
               Portfolio
@@ -83,13 +87,10 @@ export default function PortfolioPage() {
               Track your crypto holdings and profit/loss.
             </p>
           </div>
-          <button
-            onClick={() => { setShowForm(true); setEditingId(null); }}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-          >
+          <Button variant="soft" onClick={() => { setShowForm(true); setEditingId(null); }}>
             <Plus className="h-4 w-4" />
             Add Holding
-          </button>
+          </Button>
         </div>
 
         {/* Summary Cards */}
@@ -108,20 +109,16 @@ export default function PortfolioPage() {
 
         {/* Empty State */}
         {holdings.length === 0 && !showForm && (
-          <div className="card flex flex-col items-center px-6 py-12 text-center">
-            <Wallet className="h-12 w-12 text-text-muted/30" />
-            <h2 className="mt-4 text-lg font-semibold text-text-primary">No holdings yet</h2>
-            <p className="mt-2 max-w-sm text-sm text-text-secondary">
-              Add your crypto holdings to track portfolio value and profit/loss.
-            </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
+          <EmptyState
+            icon={Wallet}
+            title="No holdings yet"
+            description="Add your crypto holdings to track portfolio value and profit/loss."
+          >
+            <Button variant="soft" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4" />
               Add First Holding
-            </button>
-          </div>
+            </Button>
+          </EmptyState>
         )}
 
         {/* Add/Edit Form */}
@@ -175,30 +172,39 @@ export default function PortfolioPage() {
                       {h.averageBuyPrice ? formatCurrency(h.averageBuyPrice) : '—'}
                     </td>
                     <td className="numeric px-4 py-3 text-text-primary">
-                      {h.currentPrice ? formatCurrency(h.currentPrice) : '—'}
+                      {h.currentPrice ? (
+                        formatCurrency(h.currentPrice)
+                      ) : (
+                        <span className="text-xs text-text-muted" title="Waiting for live price">
+                          awaiting price
+                        </span>
+                      )}
                     </td>
                     <td className="numeric px-4 py-3 font-medium text-text-primary">
-                      {h.currentValue > 0 ? formatCurrency(h.currentValue) : '—'}
+                      {h.currentPrice ? formatCurrency(h.currentValue) : '—'}
                     </td>
                     <td className="px-4 py-3">
                       <PnlDisplay pnl={h.pnl} pnlPercent={h.pnlPercent} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-1">
-                        <button
+                        <Button
+                          variant="ghost"
+                          icon
+                          className="bg-transparent hover:bg-bg-surface-soft hover:text-text-primary"
                           onClick={() => { setEditingId(h.id); setShowForm(true); }}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded text-text-muted hover:bg-bg-surface-soft hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                           aria-label={`Edit ${h.symbol} holding`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => removeHolding(h.id)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded text-text-muted hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                        </Button>
+                        <Button
+                          variant="danger-ghost"
+                          icon
+                          onClick={() => setPendingDelete(h)}
                           aria-label={`Delete ${h.symbol} holding`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -217,7 +223,11 @@ export default function PortfolioPage() {
                     <div className="flex items-center justify-between">
                       <p className="font-medium text-text-primary">{h.symbol}</p>
                       <p className="numeric font-medium text-text-primary">
-                        {h.currentValue > 0 ? formatCurrency(h.currentValue) : '—'}
+                        {h.currentPrice ? (
+                          formatCurrency(h.currentValue)
+                        ) : (
+                          <span className="text-xs font-normal text-text-muted">awaiting price</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center justify-between">
@@ -225,19 +235,36 @@ export default function PortfolioPage() {
                       <PnlDisplay pnl={h.pnl} pnlPercent={h.pnlPercent} compact />
                     </div>
                   </div>
-                  <button
-                    onClick={() => removeHolding(h.id)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-text-muted hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  <Button
+                    variant="danger-ghost"
+                    icon
+                    className="shrink-0"
+                    onClick={() => setPendingDelete(h)}
                     aria-label={`Delete ${h.symbol}`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Delete ${pendingDelete?.symbol ?? ''} holding?`}
+        description={
+          pendingDelete
+            ? `${pendingDelete.quantity} ${pendingDelete.symbol} will be removed from your portfolio. This cannot be undone.`
+            : ''
+        }
+        onConfirm={() => {
+          if (pendingDelete) removeHolding(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </AppShell>
   );
 }
@@ -361,12 +388,12 @@ function HoldingForm({
       {error && <p id="holding-error" className="text-sm text-danger">{error}</p>}
 
       <div className="flex gap-2">
-        <button type="submit" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-bg-app transition-colors hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+        <Button type="submit" variant="primary">
           {editingHolding ? 'Update' : 'Add Holding'}
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg bg-bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

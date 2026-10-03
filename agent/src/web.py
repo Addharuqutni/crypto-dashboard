@@ -86,7 +86,7 @@ def dashboard() -> str:
     return _render_dashboard(rows, stats)
 
 
-@app.get("/api/action-calls")
+@app.get("/api/action-calls", dependencies=[Depends(require_internal_token)])
 def api_action_calls(limit: int = 200) -> dict[str, Any]:
     limit = max(1, min(limit, 1000))
     rows = _load_action_call_rows(limit=limit)
@@ -103,7 +103,7 @@ def api_v1_health() -> dict[str, Any]:
     }
 
 
-@app.get("/api/v1/analyze")
+@app.get("/api/v1/analyze", dependencies=[Depends(require_internal_token)])
 def api_v1_analyze(
     symbol: str = Query(..., min_length=2, max_length=32),
     multi_timeframe: bool = Query(True),
@@ -137,7 +137,7 @@ def api_v1_scan(body: dict[str, Any] | None = None) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail=f"Scan failed: {error}") from error
 
 
-@app.get("/api/stats")
+@app.get("/api/stats", dependencies=[Depends(require_internal_token)])
 def api_stats() -> dict[str, Any]:
     rows = _load_action_call_rows(limit=10000)
     return build_stats(rows)
@@ -186,24 +186,32 @@ def _calculate_realtime_pnl_percent(row: dict[str, Any], realtime_price: float) 
         return None
 
 
-@app.get("/api/jobs")
+@app.get("/api/jobs", dependencies=[Depends(require_internal_token)])
 def api_jobs() -> dict[str, Any]:
     return _job_state
 
 
-@app.get("/api/export/training.jsonl", response_class=PlainTextResponse)
+@app.get(
+    "/api/export/training.jsonl",
+    response_class=PlainTextResponse,
+    dependencies=[Depends(require_internal_token)],
+)
 def api_export_training_jsonl(limit: int = 10000, labelled_only: bool = True) -> str:
     rows = _load_rows_for_export(limit=limit, labelled_only=labelled_only)
     return rows_to_jsonl(build_training_rows(rows, labelled_only=labelled_only))
 
 
-@app.get("/api/export/training.csv", response_class=PlainTextResponse)
+@app.get(
+    "/api/export/training.csv",
+    response_class=PlainTextResponse,
+    dependencies=[Depends(require_internal_token)],
+)
 def api_export_training_csv(limit: int = 10000, labelled_only: bool = True) -> str:
     rows = _load_rows_for_export(limit=limit, labelled_only=labelled_only)
     return rows_to_csv(build_training_rows(rows, labelled_only=labelled_only))
 
 
-@app.post("/api/evaluate")
+@app.post("/api/evaluate", dependencies=[Depends(require_internal_token)])
 def api_evaluate() -> dict[str, Any]:
     if _job_state["evaluate_running"]:
         return {"started": False, "message": "evaluation already running", "job_state": _job_state}
@@ -212,7 +220,7 @@ def api_evaluate() -> dict[str, Any]:
     return {"started": True, "job_state": _job_state}
 
 
-@app.post("/api/scan")
+@app.post("/api/scan", dependencies=[Depends(require_internal_token)])
 def api_scan() -> dict[str, Any]:
     if _job_state["scan_running"]:
         return {"started": False, "message": "scan already running", "job_state": _job_state}

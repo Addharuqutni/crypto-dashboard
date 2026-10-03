@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { constantTimeEqual } from '@/lib/shared/security/request-auth';
 
 /**
  * Optional Basic Auth gate for private production deployments.
@@ -64,15 +65,4 @@ function parseBasicAuth(authHeader: string | null): { username: string; password
   } catch {
     return null;
   }
-}
-
-function constantTimeEqual(a: string, b: string): boolean {
-  const maxLength = Math.max(a.length, b.length);
-  let mismatch = a.length ^ b.length;
-
-  for (let i = 0; i < maxLength; i += 1) {
-    mismatch |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
-  }
-
-  return mismatch === 0;
 }

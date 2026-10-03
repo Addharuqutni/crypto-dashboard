@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useAlertStore } from '@/stores/use-alert-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { getCoinBySymbol } from '@/lib/shared/registry/coin-registry';
@@ -20,8 +23,10 @@ export default function AlertsPage() {
   const hydrate = useAlertStore((s) => s.hydrate);
   const addAlert = useAlertStore((s) => s.addAlert);
   const removeAlert = useAlertStore((s) => s.removeAlert);
+  const connectionStatus = useMarketStore((s) => s.connectionStatus);
 
   const [showForm, setShowForm] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<PriceAlert | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default');
 
   useEffect(() => {
@@ -63,9 +68,9 @@ export default function AlertsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Page Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="h1">
               Price Alerts
@@ -74,13 +79,10 @@ export default function AlertsPage() {
               Get notified when prices hit your targets. Alerts work while browser is active.
             </p>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-          >
+          <Button variant="soft" onClick={() => setShowForm(true)}>
             <Plus className="h-4 w-4" />
             New Alert
-          </button>
+          </Button>
         </div>
 
         {/* Notification Permission Banner */}
@@ -88,6 +90,18 @@ export default function AlertsPage() {
           permission={notificationPermission}
           onRequest={requestPermission}
         />
+
+        {/* Live-data disconnect warning — alerts silently stop without the stream */}
+        {connectionStatus !== 'connected' && activeAlerts.length > 0 && (
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-lg border border-warning/20 bg-warning/5 px-4 py-2.5 text-sm text-warning"
+          >
+            <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            Live price stream is {connectionStatus === 'reconnecting' ? 'reconnecting' : 'disconnected'}.
+            Alerts will not trigger until the connection is restored.
+          </div>
+        )}
 
         {/* Create Alert Form */}
         {showForm && (
@@ -102,20 +116,16 @@ export default function AlertsPage() {
 
         {/* Empty State */}
         {alerts.length === 0 && !showForm && (
-          <div className="card flex flex-col items-center px-6 py-12 text-center">
-            <Bell className="h-12 w-12 text-text-muted/30" />
-            <h2 className="mt-4 text-lg font-semibold text-text-primary">No alerts yet</h2>
-            <p className="mt-2 max-w-sm text-sm text-text-secondary">
-              Create a price alert to get notified when a coin reaches your target price.
-            </p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-            >
+          <EmptyState
+            icon={Bell}
+            title="No alerts yet"
+            description="Create a price alert to get notified when a coin reaches your target price."
+          >
+            <Button variant="soft" onClick={() => setShowForm(true)}>
               <Plus className="h-4 w-4" />
               Create First Alert
-            </button>
-          </div>
+            </Button>
+          </EmptyState>
         )}
 
         {/* Active Alerts */}
@@ -126,7 +136,7 @@ export default function AlertsPage() {
             </h2>
             <div className="space-y-2">
               {activeAlerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} onRemove={removeAlert} />
+                <AlertCard key={alert.id} alert={alert} onRemove={setPendingDelete} />
               ))}
             </div>
           </section>
@@ -140,12 +150,27 @@ export default function AlertsPage() {
             </h2>
             <div className="space-y-2">
               {triggeredAlerts.map((alert) => (
-                <AlertCard key={alert.id} alert={alert} onRemove={removeAlert} triggered />
+                <AlertCard key={alert.id} alert={alert} onRemove={setPendingDelete} triggered />
               ))}
             </div>
           </section>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Delete ${pendingDelete?.symbol ?? ''} alert?`}
+        description={
+          pendingDelete
+            ? `Alert at ${formatCurrency(pendingDelete.targetPrice)} will be removed. This cannot be undone.`
+            : ''
+        }
+        onConfirm={() => {
+          if (pendingDelete) removeAlert(pendingDelete.id);
+          setPendingDelete(null);
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </AppShell>
   );
 }
@@ -208,7 +233,7 @@ function AlertCard({
   triggered,
 }: {
   alert: PriceAlert;
-  onRemove: (id: string) => void;
+  onRemove: (alert: PriceAlert) => void;
   triggered?: boolean;
 }) {
   const prices = useMarketStore((s) => s.prices);
@@ -239,7 +264,10 @@ function AlertCard({
         </p>
         {triggered && alert.triggeredAt && (
           <p className="text-xs font-medium text-success/80">
-            Triggered {new Date(alert.triggeredAt).toLocaleString()}
+            Triggered{' '}
+            <time dateTime={new Date(alert.triggeredAt).toISOString()}>
+              {new Date(alert.triggeredAt).toLocaleString()}
+            </time>
           </p>
         )}
       </div>
@@ -251,13 +279,15 @@ function AlertCard({
           View
         </Link>
       )}
-      <button
-        onClick={() => onRemove(alert.id)}
-        className="tap-target flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      <Button
+        variant="danger-ghost"
+        icon
+        className="shrink-0"
+        onClick={() => onRemove(alert)}
         aria-label={`Delete ${alert.symbol} alert`}
       >
         <Trash2 className="h-4 w-4" />
-      </button>
+      </Button>
     </div>
   );
 }
@@ -323,12 +353,12 @@ function AlertForm({
       {error && <p id="alert-error" className="text-sm text-danger">{error}</p>}
 
       <div className="flex gap-2">
-        <button type="submit" className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-bg-app transition-colors hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+        <Button type="submit" variant="primary">
           Create Alert
-        </button>
-        <button type="button" onClick={onCancel} className="rounded-lg bg-bg-surface-raised px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-surface-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring">
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

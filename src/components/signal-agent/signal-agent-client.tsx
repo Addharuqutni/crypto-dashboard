@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Bot, RefreshCw, ShieldAlert } from 'lucide-react';
 import type { AgentRunResult } from '@/lib/application/signal-agent/agent-types';
 import { formatDateTime } from '@/lib/shared/formatting';
 import { ActionBadge } from '@/components/ui/badges';
+import { Button } from '@/components/ui/button';
 
 type AgentApiResponse = {
   ok: boolean;
@@ -18,32 +19,23 @@ type AgentApiResponse = {
   result?: AgentRunResult;
 };
 
+async function fetchAgent(): Promise<AgentApiResponse> {
+  const response = await fetch('/api/agent?topN=8', { cache: 'no-store' });
+  const payload = (await response.json()) as AgentApiResponse;
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error ?? 'Failed to load agent output.');
+  }
+  return payload;
+}
+
 export function SignalAgentClient() {
-  const [data, setData] = useState<AgentApiResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isFetching, error, refetch } = useQuery({
+    queryKey: ['signal-agent'],
+    queryFn: fetchAgent,
+    staleTime: 60 * 1000,
+  });
 
-  const loadAgent = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/agent?topN=8', { cache: 'no-store' });
-      const payload = (await response.json()) as AgentApiResponse;
-      if (!response.ok || !payload.ok) {
-        throw new Error(payload.error ?? 'Failed to load agent output.');
-      }
-      setData(payload);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load agent output.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadAgent();
-  }, [loadAgent]);
-
+  const errorMessage = error instanceof Error ? error.message : error ? String(error) : null;
   const decisions = data?.result?.decisions ?? [];
 
   return (
@@ -54,7 +46,7 @@ export function SignalAgentClient() {
             <Bot className="h-3.5 w-3.5" />
             Read-only AI Signal Agent
           </div>
-          <h1 className="mt-3 font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-text-primary lg:text-3xl">
+          <h1 className="h1 mt-3 lg:text-3xl">
             AI Agent Watchlist
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-text-secondary">
@@ -64,11 +56,11 @@ export function SignalAgentClient() {
         </div>
         <button
           type="button"
-          onClick={() => void loadAgent()}
-          disabled={isLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="pressable inline-flex items-center justify-center gap-2 rounded-xl border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw className={isLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+          <RefreshCw className={isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
           Refresh
         </button>
       </header>
@@ -88,12 +80,16 @@ export function SignalAgentClient() {
         />
       </section>
 
-      {error && (
-        <div className="card flex items-start gap-3 p-5">
-          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+      {errorMessage && (
+        <div className="card flex items-start gap-3 p-5" role="alert">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" aria-hidden="true" />
           <div>
             <h3 className="text-sm font-semibold text-text-primary">Agent not ready</h3>
-            <p className="mt-1 text-sm text-text-secondary">{error}</p>
+            <p className="mt-1 text-sm text-text-secondary">{errorMessage}</p>
+            <Button variant="soft" className="mt-3" onClick={() => void refetch()} disabled={isFetching}>
+              <RefreshCw className={isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+              Try again
+            </Button>
           </div>
         </div>
       )}

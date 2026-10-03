@@ -28,7 +28,7 @@ describe('ai-client', () => {
         { baseUrl: 'http://api.example.com', apiKey: 'secret', model: 'gpt-test' },
         [{ role: 'user', content: 'hello' }]
       )
-    ).rejects.toThrow('Remote AI providers must use HTTPS.');
+    ).rejects.toThrow('Remote providers must use HTTPS.');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -96,5 +96,26 @@ describe('ai-client', () => {
       success: false,
       message: 'Base URL is required.',
     });
+  });
+
+  it('rejects private / metadata hosts before fetch (SSRF)', async () => {
+    const fetchMock: FetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    await expect(
+      sendChatCompletion(
+        { baseUrl: 'https://169.254.169.254/latest', apiKey: 'secret', model: 'gpt-test' },
+        [{ role: 'user', content: 'hello' }]
+      )
+    ).rejects.toThrow(/not allowed/);
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await expect(
+      sendChatCompletion(
+        { baseUrl: 'https://10.0.0.8/v1', apiKey: 'secret', model: 'gpt-test' },
+        [{ role: 'user', content: 'hello' }]
+      )
+    ).rejects.toThrow(/not allowed/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

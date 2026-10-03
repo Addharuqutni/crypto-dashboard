@@ -23,7 +23,7 @@ import type { RankedScreenerResult } from '@/lib/application/screener/types';
  * only displays what the worker persisted.
  */
 export function ScreenerClient() {
-  const { data, isLoading, error } = useScreenerData();
+  const { data, isLoading, error, refetch, isFetching } = useScreenerData();
   const riskProfile = useRiskProfileStore((s) => s.getProfile());
   const [selectedResult, setSelectedResult] = useState<RankedScreenerResult | null>(null);
 
@@ -54,13 +54,20 @@ export function ScreenerClient() {
 
   if (error) {
     return (
-      <div className="card flex items-start gap-3 p-5">
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" />
+      <div className="card flex items-start gap-3 p-5" role="alert">
+        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-danger" aria-hidden="true" />
         <div>
           <h3 className="text-sm font-semibold text-text-primary">Failed to load screener data</h3>
           <p className="mt-1 text-sm text-text-secondary">
             {error instanceof Error ? error.message : 'Unknown error fetching /api/screener.'}
           </p>
+          <button
+            onClick={() => void refetch()}
+            disabled={isFetching}
+            className="pressable mt-3 inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50"
+          >
+            Try again
+          </button>
         </div>
       </div>
     );
@@ -71,7 +78,7 @@ export function ScreenerClient() {
       {/* Page header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-text-primary lg:text-3xl">
+          <h1 className="h1 lg:text-3xl">
             Futures Screener
           </h1>
           <p className="mt-1 text-sm text-text-secondary">

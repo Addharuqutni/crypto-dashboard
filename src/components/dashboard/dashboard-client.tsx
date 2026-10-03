@@ -103,16 +103,17 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Hero — market context with prominent top coins */}
       <div className="card p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-text-primary">Markets</h1>
+              <h1 className="h1">Markets</h1>
               <span
+                role="status"
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+                  'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wider',
                   trackedSymbolCount > 0
                     ? 'border-market-up/30 bg-market-up/5 text-market-up'
                     : 'border-border-subtle bg-bg-surface-soft text-text-muted'
@@ -140,6 +141,7 @@ export function DashboardClient() {
                   <Link
                     key={coin.symbol}
                     href={`/coin/${coin.symbol}`}
+                    aria-label={`${coin.symbol}: ${coin.price != null ? formatCurrency(coin.price) : 'price unavailable'}, ${isUp ? 'up' : 'down'} ${formatPercentage(change)} in 24 hours`}
                     className="group flex items-center gap-2.5 rounded-lg border border-border-subtle bg-bg-surface-raised px-3 py-2 transition-all hover:border-border-strong hover:shadow-elev-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   >
                     <span className="text-xs font-bold text-text-secondary">{coin.symbol}</span>
@@ -147,8 +149,9 @@ export function DashboardClient() {
                       {coin.price != null ? formatCurrency(coin.price) : '—'}
                     </span>
                     <span
+                      aria-hidden="true"
                       className={cn(
-                        'numeric inline-flex items-center gap-0.5 text-[10px] font-semibold',
+                        'numeric inline-flex items-center gap-0.5 text-xs font-semibold',
                         isUp ? 'text-market-up' : 'text-market-down'
                       )}
                     >
@@ -184,7 +187,7 @@ export function DashboardClient() {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-medium text-text-secondary">Futures Market</h2>
           </div>
-          {isLoading && trackedSymbolCount === 0 ? (
+          {trackedSymbolCount === 0 && (isLoading || marketData.length === 0) ? (
             <TableSkeleton />
           ) : (
             <MarketTable data={marketData} />

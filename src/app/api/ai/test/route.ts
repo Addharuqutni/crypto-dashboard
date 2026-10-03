@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { testConnection } from '@/lib/adapters/ai/ai-client';
+import { resolveAiConfig } from '@/lib/application/signal-agent/ai-config';
+import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 import type { AiConfig } from '@/types/ai';
 
 export const runtime = 'nodejs';
@@ -8,21 +10,23 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/ai/test
  *
- * Server-side connection test for OpenAI-compatible providers.
- * Browser-side direct fetch often fails because providers do not expose CORS
- * headers. Testing through a same-origin API route avoids CORS while keeping
- * provider validation and error handling in one place.
+ * Connection test for OpenAI-compatible providers.
+ * - Full client config: validates that provider only (BYOK test) after SSRF checks.
+ * - Partial client config: rejected — never falls back to server AI_* keys.
+ * - Empty client config: uses server AI_* env.
+ * Rate-limited; never a free open proxy for arbitrary traffic.
  */
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Partial<AiConfig>;
-    const config: AiConfig = {
-      baseUrl: String(body.baseUrl ?? '').trim(),
-      apiKey: String(body.apiKey ?? '').trim(),
-      model: String(body.model ?? '').trim(),
-    };
+    const ip = getClientIp(request);
+    if (!rateLimit(`ai-test:${ip}`, 60_000, 10)) {
+      return rateLimitedResponse({ success: false, message: 'Too many requests. Please wait a moment.' });
+    }
 
-    if (!config.baseUrl || !config.apiKey || !config.model) {
+    const body = (await request.json().catch(() => ({}))) as Partial<AiConfig>;
+    const config = resolveAiConfig(body);
+
+    if (!config?.baseUrl || !config.apiKey || !config.model) {
       return NextResponse.json(
         { success: false, message: 'Base URL, API key, and model are required.' },
         { status: 400 }

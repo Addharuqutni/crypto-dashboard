@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchPythonScreenerLatest, runPythonScreener } from '@/lib/adapters/python-agent/client';
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
+import { getClientIp } from '@/lib/shared/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -71,8 +72,7 @@ function shouldFallbackToOnDemand(): boolean {
 
 export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
   const limit = getEnvInt('SCREENER_API_RATE_LIMIT_PER_MINUTE', 30, 1, 300);
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const key = forwarded || request.headers.get('x-real-ip') || 'local';
+  const key = getClientIp(request);
   const bucket = rateLimitBuckets.get(key);
 
   pruneExpiredRateLimitBuckets(now);

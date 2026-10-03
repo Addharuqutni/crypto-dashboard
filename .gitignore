@@ -39,6 +39,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 .dev-log.txt
+.dev-*.log
 
 # OS / editor
 .DS_Store

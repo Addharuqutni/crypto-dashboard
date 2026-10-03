@@ -14,7 +14,7 @@ import { SignalJournalPanel } from '@/components/journal';
 export default function JournalPage() {
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
           <h1 className="h1">Signal Journal</h1>
           <p className="mt-1 text-sm text-text-secondary">

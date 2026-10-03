@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/lib/shared/utils';
+import { Zap } from 'lucide-react';
 import { formatCurrency } from '@/lib/shared/formatting';
 import type { Candle, AnalysisResult } from '@/types/chart';
 import type { RsiResult } from '@/lib/domain/indicators/rsi';
@@ -376,7 +377,10 @@ function OrderBlockDisplay({ blocks }: { blocks: OrderBlock[] }) {
               </span>
             </div>
             {block.tested && (
-              <p className="mt-1 text-[10px] font-medium text-accent-warm">⚡ Tested</p>
+              <p className="mt-1 flex items-center gap-1 text-[10px] font-medium text-accent-warm">
+                <Zap className="h-3 w-3" aria-hidden="true" />
+                Tested
+              </p>
             )}
           </div>
         );

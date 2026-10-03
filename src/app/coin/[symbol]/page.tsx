@@ -131,7 +131,7 @@ export default function CoinDetailPage() {
 
   return (
     <AppShell>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <CoinHeader
           coinName={coinName}
           coinSymbol={coinSymbol}
