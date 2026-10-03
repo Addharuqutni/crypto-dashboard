@@ -137,4 +137,6 @@ If AI env is missing, the agent still returns deterministic decisions without LL
 ## Auth Notes
 
 - Optional site-wide Basic Auth is enforced in [`src/proxy.ts`](../src/proxy.ts) when `BASIC_AUTH_ENABLED=1`. API routes are included in the matcher.
-- Cron auth is independent and uses `CRON_SECRET` only on `/api/cron/screener`.
+- Cron auth uses `CRON_SECRET` on `/api/cron/screener` and `POST /api/action-call` (scan trigger).
+- AI chat/test: SSRF-blocked private hosts; partial client config never falls back to server `AI_*` keys.
+- Rate limits on `/api/ai/*`, `/api/agent`, `/api/action-call`, `/api/screener`. Set `TRUST_PROXY=1` behind nginx.

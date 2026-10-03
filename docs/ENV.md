@@ -47,7 +47,8 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `SCREENER_MAX_CONCURRENT_SYMBOLS` | No | Parallel symbol evaluation concurrency | `3` |
 | `SCREENER_CANDLE_LIMIT` | No | Candles fetched per timeframe per symbol | `120` |
 | `SCREENER_INTERVAL_MINUTES` | No | Cycle interval for the long-running screener process (`1`–`1440`) | `15` |
-| `CRON_SECRET` | Yes for cron | Bearer token required by `GET /api/cron/screener` | long random secret |
+| `CRON_SECRET` | Yes for cron/scan | Bearer token for `GET /api/cron/screener` and `POST /api/action-call` | long random secret |
+| `TRUST_PROXY` | No | When `1`, rate limits trust `X-Real-IP` / last `X-Forwarded-For` hop (set only behind nginx) | unset |
 
 ## Python Action Call agent
 
@@ -81,6 +82,8 @@ Leave both empty when using VPS file mode.
 | `BASIC_AUTH_ENABLED` | No | Enable HTTP Basic Auth when `1` | `0` |
 | `BASIC_AUTH_USER` | If auth enabled | Username | `admin` |
 | `BASIC_AUTH_PASSWORD` | If auth enabled | Strong password | — |
+
+Private VPS: set `BASIC_AUTH_ENABLED=1`, `TRUST_PROXY=1` (behind nginx), and a long `PYTHON_AGENT_INTERNAL_TOKEN` (required for Python API write/analyze routes).
 
 ## Server-side AI (optional, shared)
 
