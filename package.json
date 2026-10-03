@@ -17,6 +17,7 @@
     "worker": "tsx scripts/worker/start.ts",
     "agent": "tsx scripts/agent/start.ts",
     "python-agent": "bash scripts/python-agent/start.sh",
+    "python-agent:win": "pwsh scripts/python-agent/start.ps1",
     "check": "npm run typecheck && npm run lint && npm run test",
     "clean": "node -e \"const fs=require('fs');const rm=(p)=>{try{fs.rmSync(p,{recursive:true,force:true});console.log('removed',p)}catch{}};['.next','coverage','tsconfig.tsbuildinfo','.dev-log.txt'].forEach(rm);\"",
     "audit:prod": "npm audit --omit=dev",
@@ -49,7 +50,7 @@
     "eslint": "^10.4.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "postcss": "^8.5.14",
+    "postcss": "^8.5.22",
     "tailwindcss": "^4.3.0",
     "tsx": "^4.22.4",
     "vitest": "^4.1.9"
@@ -57,5 +58,9 @@
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.0.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.22",
+    "sharp": "^0.35.3"
   }
 }
