@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "dev:webpack": "next dev --webpack",
+    "dev:all": "node scripts/dev-all.mjs",
     "build": "next build --turbopack",
     "build:webpack": "next build --webpack",
     "start": "next start",

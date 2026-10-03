@@ -24,6 +24,7 @@ Open `http://localhost:3000`.
 |---------|-------------|
 | `npm run dev` | Start Next.js development server with Turbopack |
 | `npm run dev:webpack` | Start development server with Webpack |
+| `npm run dev:all` | Run Next.js + Python Action Call + screener worker together |
 | `npm run build` | Production build with Turbopack |
 | `npm run build:webpack` | Production build with Webpack |
 | `npm start` | Start standard Next.js production server |

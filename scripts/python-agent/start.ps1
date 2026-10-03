@@ -9,7 +9,16 @@ $VENV_PIP = Join-Path $AGENT_DIR '.venv\Scripts\pip.exe'
 
 Set-Location $AGENT_DIR
 
-if (-not (Test-Path $VENV_PY)) {
+# A venv built on another OS/arch has a present-but-dead interpreter, so verify
+# it actually runs before trusting it.
+$venvWorks = $false
+if (Test-Path $VENV_PY) {
+  & $VENV_PY -c "import sys" 2>$null
+  $venvWorks = ($LASTEXITCODE -eq 0)
+}
+
+if (-not $venvWorks) {
+  if (Test-Path .venv) { Remove-Item -Recurse -Force .venv }
   $sysPy = (Get-Command python).Source
   & $sysPy -m venv .venv
   & $VENV_PIP install --upgrade pip

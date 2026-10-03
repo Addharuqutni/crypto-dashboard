@@ -13,31 +13,23 @@ Fitur: market overview, candlestick chart, technical analysis, screener, AI comm
 
 ## Quick Start
 
-Cara tercepat menjalankan di lokal:
+Cara tercepat menjalankan seluruh stack (Next.js + Python Action Call + screener worker):
 
 ```bash
 # 1. Install dependency
 npm install
 
-# 2. Siapkan environment (Windows CMD: copy .env.example .env.local)
-cp .env.example .env.local
-
-# 3. Jalankan dashboard
-npm run dev
+# 2. Jalankan semuanya
+npm run dev:all
 ```
 
-Buka <http://localhost:3000>. Data harga, chart, dan market overview langsung jalan tanpa setup tambahan.
+Perintah ini membuat `.env.local` dari template bila belum ada, menyiapkan venv Python bila perlu, lalu menyalakan tiga proses dengan output berlabel `[web]`, `[api]`, dan `[screener]`. `Ctrl+C` menghentikan semuanya.
 
-**Untuk screener dan sinyal**, service Python harus hidup — jalankan di terminal terpisah:
+Buka <http://localhost:3000>.
 
-```bash
-npm run python-agent        # Linux/macOS
-npm run python-agent:win    # Windows (PowerShell)
-```
+Butuh **Python 3** — venv di `agent/.venv/` dibuat dan diisi dependency secara otomatis saat pertama dijalankan.
 
-Saat pertama dijalankan, script ini otomatis membuat venv di `agent/.venv/` dan menginstall `agent/requirements.txt`. Butuh **Python 3**.
-
-> Ringkasnya: tanpa Python → dashboard tetap jalan, tapi `/api/screener` dan `/api/action-call` tidak punya data.
+> Hanya mau dashboard tanpa Python? Jalankan `npm run dev`. Harga, chart, dan market overview tetap jalan, tapi `/api/screener` dan `/api/action-call` tidak punya data.
 
 ## Cara Kerja
 
@@ -232,18 +224,23 @@ Next.js dan Python agent sama-sama membaca root `.env.local`. Referensi lengkap 
 
 ## Development
 
+Satu perintah untuk seluruh stack:
+
 ```bash
-npm run dev          # Turbopack
-npm run dev:webpack  # Webpack (jika ada masalah dengan Turbopack)
+npm run dev:all
+```
+
+Menyalakan Next.js (port 3000), Python Action Call (port 8000), dan Python screener worker sekaligus. Output tiap proses diberi prefix `[web]` / `[api]` / `[screener]`. Lihat `scripts/dev-all.mjs`.
+
+Menjalankan sebagian saja bila perlu:
+
+```bash
+npm run dev          # hanya Next.js (Turbopack)
+npm run dev:webpack  # hanya Next.js (Webpack)
+npm run python-agent # hanya Python Action Call
 ```
 
 Buka <http://localhost:3000>.
-
-Untuk pengalaman penuh (screener + sinyal), jalankan service Python di terminal terpisah:
-
-```bash
-npm run python-agent
-```
 
 ## Scripts
 
@@ -251,6 +248,7 @@ npm run python-agent
 |---|---|
 | `npm run dev` | Development server dengan Turbopack |
 | `npm run dev:webpack` | Development server dengan Webpack |
+| `npm run dev:all` | Jalankan Next.js + Python Action Call + screener worker sekaligus |
 | `npm run build` | Build production dengan Turbopack |
 | `npm run build:webpack` | Build production dengan Webpack |
 | `npm start` | Server production Next.js standar |

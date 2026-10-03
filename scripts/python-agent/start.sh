@@ -5,7 +5,10 @@ AGENT_DIR="${ROOT_DIR}/agent"
 VENV_PY="${AGENT_DIR}/.venv/bin/python"
 VENV_PIP="${AGENT_DIR}/.venv/bin/pip"
 cd "${AGENT_DIR}"
-if [ ! -x "${VENV_PY}" ]; then
+# A venv built on another OS/arch has a present-but-dead interpreter, so verify
+# it actually runs before trusting it.
+if ! "${VENV_PY}" -c "import sys" >/dev/null 2>&1; then
+  rm -rf .venv
   python3 -m venv .venv
   "${VENV_PIP}" install --upgrade pip
   "${VENV_PIP}" install -r requirements.txt
