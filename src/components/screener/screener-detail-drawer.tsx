@@ -6,6 +6,7 @@ import { X, TrendingUp, TrendingDown, Pause, ShieldCheck, AlertTriangle, Databas
 import type { RankedScreenerResult, ScreenerAiAuditSummary } from '@/lib/application/screener/types';
 import { mapScreenerToJournal, describeJournalBlock } from '@/lib/application/screener/to-journal';
 import { useSignalJournalStore } from '@/stores/use-signal-journal-store';
+import { useModalFocus } from '@/hooks/use-modal-focus';
 import { PositionSizeCard } from '@/components/risk/position-size-card';
 import { cn } from '@/lib/shared/utils';
 
@@ -24,6 +25,7 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
   const [saveState, setSaveState] = useState<'idle' | 'saved' | 'blocked'>('idle');
   const [blockReasons, setBlockReasons] = useState<string[]>([]);
   const addToJournal = useSignalJournalStore((s) => s.add);
+  const panelRef = useModalFocus<HTMLElement>(!!result, onClose);
 
   if (!result) return null;
 
@@ -55,7 +57,7 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
   return (
     <div className="fixed inset-0 z-overlay flex justify-end bg-black/45 backdrop-blur-sm animate-fade-in" role="dialog" aria-modal="true" aria-labelledby="screener-detail-title">
       <button className="absolute inset-0 cursor-default focus-visible:outline-none" onClick={onClose} aria-label="Close details" />
-      <aside className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-border-subtle bg-bg-surface animate-slide-up sm:rounded-l-2xl" style={{ boxShadow: 'var(--shadow-overlay)' }}>
+      <aside ref={panelRef} tabIndex={-1} className="relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-border-subtle bg-bg-surface animate-slide-up sm:rounded-l-2xl outline-none" style={{ boxShadow: 'var(--shadow-overlay)' }}>
         {/* Header */}
         <div className="border-b border-border-subtle bg-bg-surface-soft/70 px-5 py-4">
           <div className="flex items-start justify-between gap-3">
