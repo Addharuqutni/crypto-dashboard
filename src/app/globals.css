@@ -169,6 +169,13 @@
 
 html {
   color-scheme: dark;
+  /*
+   * Reserve room for the sticky header (h-16 = 4rem) so anchors and
+   * scroll-into-view (including Tab focus, WCAG 2.4.11 "focus not obscured")
+   * never land underneath it. The extra 0.5rem keeps the target visually
+   * clear of the header's border instead of flush against it.
+   */
+  scroll-padding-top: 4.5rem;
 }
 
 body {
