@@ -102,7 +102,10 @@ function SortableHeader({
 }) {
   const active = sort.field === field;
   return (
-    <th className="px-4 py-3 font-medium">
+    <th
+      className="px-4 py-3 font-medium"
+      aria-sort={active ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
       <button
         onClick={() => onSort(field)}
         className={cn(
@@ -115,12 +118,12 @@ function SortableHeader({
         {label}
         {active ? (
           sort.direction === 'asc' ? (
-            <ChevronUp className="h-3 w-3" />
+            <ChevronUp className="h-3 w-3" aria-hidden="true" />
           ) : (
-            <ChevronDown className="h-3 w-3" />
+            <ChevronDown className="h-3 w-3" aria-hidden="true" />
           )
         ) : (
-          <ChevronsUpDown className="h-3 w-3 opacity-40" />
+          <ChevronsUpDown className="h-3 w-3 opacity-40" aria-hidden="true" />
         )}
       </button>
     </th>

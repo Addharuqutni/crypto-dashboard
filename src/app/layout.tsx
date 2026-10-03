@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { QueryProvider } from '@/components/providers/query-provider';
@@ -33,6 +33,18 @@ export const metadata: Metadata = {
   title: 'CryptoHawk',
   description:
     'Monitor crypto prices in real-time, track your portfolio, manage watchlists, and analyze market trends with technical indicators.',
+};
+
+/**
+ * The app is dark-first; declaring the scheme and theme color here paints the
+ * browser chrome (address bar / status bar) to match instead of defaulting to
+ * white, which reads as a flash on load and clashes with the OLED palette.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  colorScheme: 'dark',
+  themeColor: '#05070d',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
