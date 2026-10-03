@@ -10,9 +10,9 @@ import type {
   AiChatCompletionResponse,
   AiMessageRole,
 } from '@/types/ai';
+import { assertSafeOutboundUrl } from '@/lib/shared/security/safe-url';
 
 const OPENAI_COMPATIBLE_PATH = '/chat/completions';
-const LOCAL_AI_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const DEFAULT_TEMPERATURE = 0.7;
 const DEFAULT_MAX_TOKENS = 2048;
 
@@ -141,15 +141,17 @@ export async function testConnection(
 
 /**
  * Builds a provider URL for any OpenAI-compatible endpoint.
- * Local endpoints may use HTTP. Remote endpoints must use HTTPS so browser-held
- * API keys are not sent over plaintext transport.
+ * Local endpoints may use HTTP. Remote endpoints must use HTTPS.
+ * Private / link-local / metadata hosts are rejected (SSRF guard).
  */
 function buildSafeProviderUrl(baseUrl: string, path: string): string {
-  const parsed = parseProviderBaseUrl(baseUrl);
-  const isLocal = LOCAL_AI_HOSTS.has(parsed.hostname);
-
-  if (!isLocal && parsed.protocol !== 'https:') {
-    throw new AiClientError('Remote AI providers must use HTTPS.');
+  let parsed: URL;
+  try {
+    parsed = assertSafeOutboundUrl(validateRequiredText(baseUrl, 'Base URL'), {
+      allowLocalhost: true,
+    });
+  } catch (error) {
+    throw new AiClientError(error instanceof Error ? error.message : 'Invalid AI Base URL.');
   }
 
   const pathname = parsed.pathname.replace(/\/+$/, '');
@@ -157,25 +159,6 @@ function buildSafeProviderUrl(baseUrl: string, path: string): string {
   parsed.search = '';
   parsed.hash = '';
   return parsed.toString();
-}
-
-/** Parse and validate the provider base URL before any request is sent. */
-function parseProviderBaseUrl(baseUrl: string): URL {
-  const value = validateRequiredText(baseUrl, 'Base URL');
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new AiClientError('AI Base URL must be a valid URL.');
-  }
-
-  if (parsed.username || parsed.password) {
-    throw new AiClientError('AI Base URL must not include credentials.');
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    throw new AiClientError('AI Base URL must use HTTP or HTTPS.');
-  }
-  return parsed;
 }
 
 /** Validate required text inputs so empty config fails before fetch. */

@@ -1,15 +1,13 @@
 import { NextResponse } from 'next/server';
 import { triggerActionCallScan, PythonAgentError } from '@/lib/adapters/python-agent/client';
+import { requireCronBearer } from '@/lib/shared/security/request-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (!secret) return NextResponse.json({ error: 'Cron secret is not configured' }, { status: 500 });
-  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const denied = requireCronBearer(request);
+  if (denied) return denied;
 
   try {
     const result = await triggerActionCallScan();
