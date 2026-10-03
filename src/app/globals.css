@@ -103,6 +103,14 @@
   --shadow-overlay: 0 30px 80px rgba(0, 0, 0, 0.55);
 
   /*
+   * Accent glow — replaces hardcoded rgba(139,92,246,…) shadows scattered
+   * across AI surfaces. Derived from --color-accent-secondary via color-mix
+   * so a palette change propagates automatically.
+   */
+  --shadow-glow-accent: 0 8px 24px -8px color-mix(in oklab, var(--color-accent-secondary) 60%, transparent);
+  --shadow-glow-accent-lg: 0 10px 28px -6px color-mix(in oklab, var(--color-accent-secondary) 70%, transparent);
+
+  /*
    * Type scale — semantic sizes generate `text-eyebrow`, `text-h1`, etc.
    * Pair each size with a tuned `--text-X--line-height` for vertical rhythm.
    * Use the heading recipe utilities (.h1 / .eyebrow / .display-md) below

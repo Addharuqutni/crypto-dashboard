@@ -130,24 +130,26 @@ function SortableHeader({
 function ScreenerRow({ row, onClick }: { row: RankedScreenerResult; onClick: () => void }) {
   return (
     <tr
-      className="cursor-pointer border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50 focus-within:bg-bg-surface-soft/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
+      // Row-wide click is a mouse convenience; keyboard/SR users get the
+      // real button in the first cell. role="button" on <tr> is invalid
+      // ARIA (destroys row semantics), so we keep native row semantics.
+      className="cursor-pointer border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50 focus-within:bg-bg-surface-soft/30"
       onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      aria-label={`View details for ${row.symbol}`}
     >
       {/* Symbol */}
       <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          className="flex items-center gap-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          aria-label={`View details for ${row.symbol}`}
+        >
           <span className="font-semibold text-text-primary">{row.baseAsset}</span>
           <span className="text-xs text-text-muted">#{row.marketCapRank ?? '—'}</span>
-        </div>
+        </button>
       </td>
 
       {/* Rank */}

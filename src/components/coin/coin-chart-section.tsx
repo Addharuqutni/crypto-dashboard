@@ -76,8 +76,8 @@ export function CoinChartSection({
     <div className="card overflow-hidden">
       {/* Chart Controls */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-3 py-2">
-        {/* Timeframe segmented group */}
-        <div className="flex items-center gap-0.5 rounded-lg border border-border-subtle p-0.5">
+        {/* Timeframe segmented group — scrolls horizontally on narrow screens */}
+        <div className="scroll-x-hint flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-border-subtle p-0.5">
           {timeframes.map((tf) => (
             <button
               key={tf}

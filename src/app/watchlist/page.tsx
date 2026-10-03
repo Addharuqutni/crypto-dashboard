@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useWatchlistStore } from '@/stores/use-watchlist-store';
 import { useMarketStore } from '@/stores/use-market-store';
 import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
@@ -22,6 +25,7 @@ export default function WatchlistPage() {
   const removeCoin = useWatchlistStore((s) => s.removeCoin);
   const prices = useMarketStore((s) => s.prices);
   const now = useFreshnessClock();
+  const [pendingRemove, setPendingRemove] = useState<string | null>(null);
 
   useEffect(() => {
     hydrate();
@@ -45,7 +49,7 @@ export default function WatchlistPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Page Header */}
         <div>
           <h1 className="h1">
@@ -58,22 +62,19 @@ export default function WatchlistPage() {
 
         {/* Empty State */}
         {items.length === 0 && (
-          <div className="card flex flex-col items-center px-6 py-12 text-center">
-            <Star className="h-12 w-12 text-text-muted/30" />
-            <h2 className="mt-4 text-lg font-semibold text-text-primary">
-              No coins in your watchlist yet
-            </h2>
-            <p className="mt-2 max-w-sm text-sm text-text-secondary">
-              Search for a coin and add it to your watchlist to monitor it here.
-            </p>
+          <EmptyState
+            icon={Star}
+            title="No coins in your watchlist yet"
+            description="Search for a coin and add it to your watchlist to monitor it here."
+          >
             <Link
               href="/"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+              className="pressable inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-colors hover:bg-accent-primary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             >
               <Search className="h-4 w-4" />
               Explore Market
             </Link>
-          </div>
+          </EmptyState>
         )}
 
         {/* Watchlist Table (Desktop) */}
@@ -82,6 +83,9 @@ export default function WatchlistPage() {
             <div className="hidden md:block">
               <div className="card overflow-hidden">
                 <table className="w-full text-sm">
+                  <caption className="sr-only">
+                    Watchlist coins with live price and 24 hour change
+                  </caption>
                   <thead>
                     <tr className="border-b border-border-subtle text-left text-xs font-medium uppercase tracking-wider text-text-muted">
                       <th className="px-4 py-3">Coin</th>
@@ -146,13 +150,14 @@ export default function WatchlistPage() {
                             {new Date(item.addedAt).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={() => removeCoin(item.symbol)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                            <Button
+                              variant="danger-ghost"
+                              icon
+                              onClick={() => setPendingRemove(item.symbol)}
                               aria-label={`Remove ${item.symbol} from watchlist`}
                             >
                               <Trash2 className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       );
@@ -211,13 +216,15 @@ export default function WatchlistPage() {
                         </div>
                       </div>
                     </Link>
-                    <button
-                      onClick={() => removeCoin(item.symbol)}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    <Button
+                      variant="danger-ghost"
+                      icon
+                      className="shrink-0"
+                      onClick={() => setPendingRemove(item.symbol)}
                       aria-label={`Remove ${item.symbol} from watchlist`}
                     >
                       <Trash2 className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </div>
                 );
               })}
@@ -225,6 +232,18 @@ export default function WatchlistPage() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingRemove !== null}
+        title={`Remove ${pendingRemove ?? ''} from watchlist?`}
+        description="You can add it back anytime from the market table."
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (pendingRemove) removeCoin(pendingRemove);
+          setPendingRemove(null);
+        }}
+        onCancel={() => setPendingRemove(null)}
+      />
     </AppShell>
   );
 }

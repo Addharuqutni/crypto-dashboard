@@ -189,7 +189,7 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
                 </div>
                 <button
                   onClick={() => setSettingsOpen(true)}
-                  className="pressable inline-flex items-center gap-1.5 rounded-lg bg-accent-secondary px-4 py-2 text-xs font-semibold text-white shadow-[0_8px_24px_-8px_rgba(139,92,246,0.6)] transition-all hover:bg-accent-secondary/90 hover:shadow-[0_10px_28px_-6px_rgba(139,92,246,0.7)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                  className="pressable inline-flex items-center gap-1.5 rounded-lg bg-accent-secondary px-4 py-2 text-xs font-semibold text-white shadow-glow-accent transition-all hover:bg-accent-secondary/90 hover:shadow-glow-accent-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 >
                   <Settings2 className="h-3.5 w-3.5" />
                   Setup Now
@@ -313,7 +313,7 @@ export function AiChatPanel({ symbol, timeframe, currentPrice, analysis }: AiCha
                           'pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
                           input.trim()
-                            ? 'bg-accent-secondary text-white shadow-[0_6px_20px_-6px_rgba(139,92,246,0.6)] hover:bg-accent-secondary/90 hover:shadow-[0_8px_24px_-4px_rgba(139,92,246,0.7)]'
+                            ? 'bg-accent-secondary text-white shadow-glow-accent hover:bg-accent-secondary/90 hover:shadow-glow-accent-lg'
                             : 'cursor-not-allowed bg-bg-surface-raised text-text-muted/50'
                         )}
                         aria-label="Send message"

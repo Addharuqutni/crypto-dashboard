@@ -235,7 +235,7 @@ export function CoinAnalysisSection({
           </div>
           <button
             onClick={onSwitchToTechnical}
-            className="pressable inline-flex items-center gap-1.5 rounded-lg bg-accent-secondary/10 px-3 py-1.5 text-xs font-medium text-accent-secondary transition-all hover:bg-accent-secondary/20 hover:shadow-[0_8px_24px_-8px_rgba(139,92,246,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="pressable inline-flex items-center gap-1.5 rounded-lg bg-accent-secondary/10 px-3 py-1.5 text-xs font-medium text-accent-secondary transition-all hover:bg-accent-secondary/20 hover:shadow-glow-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             <BarChart3 className="h-3.5 w-3.5" />
             Enable
