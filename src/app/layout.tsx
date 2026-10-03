@@ -42,6 +42,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
         className="min-h-screen bg-bg-app text-text-primary antialiased"
       >
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-overlay focus:rounded-lg focus:bg-accent-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-bg-app focus:outline-none focus:ring-2 focus:ring-focus-ring"
+        >
+          Skip to main content
+        </a>
         <QueryProvider>
           <DataProvider>
             <ToastProvider>

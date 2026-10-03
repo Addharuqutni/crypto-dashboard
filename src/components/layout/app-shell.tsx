@@ -11,7 +11,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <AppHeader />
       <MarketPulseStrip />
-      <main className="container-app flex-1 py-8">
+      <main id="main-content" className="container-app flex-1 py-8">
         {children}
       </main>
     </>
