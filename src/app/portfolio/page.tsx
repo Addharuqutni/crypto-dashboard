@@ -142,6 +142,9 @@ export default function PortfolioPage() {
         {holdings.length > 0 && (
           <div className="card overflow-hidden">
             <table className="hidden w-full text-sm md:table">
+              <caption className="sr-only">
+                Portfolio holdings with live value, cost basis, and profit or loss
+              </caption>
               <thead>
                 <tr className="border-b border-border-subtle text-left text-xs font-medium uppercase tracking-wider text-text-muted">
                   <th className="px-4 py-3">Coin</th>

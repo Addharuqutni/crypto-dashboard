@@ -33,7 +33,10 @@ export const usePortfolioStore = create<PortfolioState>((set, get) => ({
 
   hydrate: () => {
     const stored = safeGetItem<PortfolioHolding[]>(STORAGE_KEYS.portfolio, []);
-    set({ holdings: stored, hydrated: true });
+    // Guard against a hand-edited or legacy payload: `safeGetItem` only
+    // validates that the JSON parses, so a valid non-array (an object, say)
+    // would flow straight into `.filter()`/`.map()` and throw on first use.
+    set({ holdings: Array.isArray(stored) ? stored : [], hydrated: true });
   },
 
   /**

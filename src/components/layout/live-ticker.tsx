@@ -75,7 +75,12 @@ export function LiveConnectionSummary() {
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-1.5">
+      {/* role="status" announces Live/Reconnecting/Offline transitions to
+          assistive tech. Only this low-frequency region is a live region —
+          the per-tick prices below are deliberately NOT aria-live, since
+          announcing 4 updates/second would be unusable. The StatusDot is
+          aria-hidden because the text label already carries the state. */}
+      <div role="status" className="flex shrink-0 items-center gap-1.5">
         <StatusDot status={connectionStatus} />
         <ConnectionStatusLabel status={connectionStatus} />
       </div>

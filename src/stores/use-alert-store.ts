@@ -34,7 +34,10 @@ export const useAlertStore = create<AlertState>((set, get) => ({
 
   hydrate: () => {
     const stored = safeGetItem<PriceAlert[]>(STORAGE_KEYS.alerts, []);
-    set({ alerts: stored, hydrated: true });
+    // Guard against a hand-edited or legacy payload: `safeGetItem` only
+    // validates that the JSON parses, so a valid non-array (an object, say)
+    // would flow straight into `.some()`/`.map()` and throw on first use.
+    set({ alerts: Array.isArray(stored) ? stored : [], hydrated: true });
   },
 
   /**

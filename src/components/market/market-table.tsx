@@ -91,6 +91,15 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
                 type="button"
                 onClick={() => toggleSort(key)}
                 aria-pressed={isActive}
+                // The direction arrow is aria-hidden, so "pressed" alone tells
+                // a screen-reader user only that the column is active, not
+                // whether it's ascending or descending. Fold the direction into
+                // the accessible name.
+                aria-label={
+                  isActive
+                    ? `${getSortLabel(key)}, sorted ${sortDir === 'desc' ? 'descending' : 'ascending'}`
+                    : `Sort by ${getSortLabel(key)}`
+                }
                 className={cn(
                   'inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
@@ -146,6 +155,9 @@ export function MarketTable({ data }: { data: MarketRow[] }) {
         <div className="hidden md:block">
           <div className="card overflow-hidden">
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                Futures market coins with live price, 24 hour change, volume, and market cap
+              </caption>
               <thead>
                 <tr className="border-b border-border-subtle text-left text-xs font-medium uppercase tracking-wider text-text-muted">
                   <th className="px-4 py-2.5">Coin</th>

@@ -52,12 +52,22 @@ export function ConfidenceMeter({ score }: { score: number }) {
           ? 'bg-accent-warm'
           : 'bg-market-down';
   return (
-    <div className="flex items-center gap-2" aria-label={`Confidence score ${clamped} of 100`}>
+    <div className="flex items-center gap-2">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">
         Confidence
       </span>
-      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-bg-surface-raised">
+      {/* aria-label on a plain <div> is ignored; role="meter" is what carries
+          it to assistive tech. The adjacent number already shows the value. */}
+      <div
+        role="meter"
+        aria-label="Confidence score"
+        aria-valuenow={clamped}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="h-1.5 w-24 overflow-hidden rounded-full bg-bg-surface-raised"
+      >
         <div
+          aria-hidden="true"
           className={cn('h-full rounded-full transition-all', tone)}
           style={{ width: `${clamped}%` }}
         />

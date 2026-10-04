@@ -169,9 +169,19 @@ function RsiDisplay({ rsi }: { rsi: RsiResult }) {
       <p className={cn('mt-1 text-xs font-medium capitalize', statusColor[rsi.status])}>
         {rsi.status.replace('_', ' ')}
       </p>
-      {/* RSI gauge */}
-      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-bg-surface-raised">
+      {/* RSI gauge — the colour is the only load-bearing signal on the bar
+          itself, so it needs a programmatic value and text equivalent. */}
+      <div
+        role="progressbar"
+        aria-label="RSI gauge"
+        aria-valuenow={Math.round(rsi.value)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuetext={`${rsi.value.toFixed(1)} — ${rsi.status.replace('_', ' ')}`}
+        className="mt-2 h-1 w-full overflow-hidden rounded-full bg-bg-surface-raised"
+      >
         <div
+          aria-hidden="true"
           className={cn(
             'h-full rounded-full transition-all',
             rsi.value > 70

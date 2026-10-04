@@ -49,6 +49,9 @@ export function ScreenerTable({
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-sm">
+            <caption className="sr-only">
+              Screener results ranked by setup quality, with signal, grade, and key levels
+            </caption>
             <thead>
               <tr className="border-b border-border-subtle text-left text-xs uppercase tracking-wider text-text-muted">
                 <SortableHeader label="Symbol" field="marketCapRank" sort={sort} onSort={onSort} />
@@ -331,8 +334,18 @@ function ConfidenceBar({ value }: { value: number }) {
   const color = value >= 75 ? 'bg-success' : value >= 60 ? 'bg-warning' : 'bg-text-muted';
   return (
     <div className="flex items-center gap-2">
-      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-bg-surface-raised">
+      {/* The bar's colour thresholds carry meaning, so expose the value
+          programmatically rather than leaving the fill colour-only. */}
+      <div
+        role="meter"
+        aria-label="Confidence score"
+        aria-valuenow={width}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="h-1.5 w-12 overflow-hidden rounded-full bg-bg-surface-raised"
+      >
         <div
+          aria-hidden="true"
           className={cn('h-full rounded-full transition-all', color)}
           style={{ width: `${width}%` }}
         />
