@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { cn } from '@/lib/shared/utils';
 import {
   formatPriceAge,
@@ -12,19 +12,56 @@ import {
 const FRESHNESS_CLOCK_INTERVAL_MS = 1_000;
 
 /**
+ * One timer shared by every consumer, rather than one per caller.
+ *
+ * The market table renders 48 rows in two live variants (table + cards are
+ * mutually exclusive, mobile cards always render), so a per-instance
+ * `setInterval` meant 96 concurrent 1 Hz timers on the dashboard alone. They
+ * all tick in lockstep on the same boundary anyway, so the schedule is
+ * identical — only the cost of owning 96 of them disappears.
+ *
+ * The timer starts on the first subscriber and stops when the last one leaves,
+ * so a page with no freshness labels schedules nothing.
+ *
+ * Note this does not cut re-renders: rows genuinely read `now` to derive
+ * `isLive`/`isStale`, so they still re-render each tick. Cutting those would
+ * mean moving the age label out of the price row, which would lose the
+ * per-second "Updated N seconds ago" tooltip.
+ */
+type ClockListener = () => void;
+
+const listeners = new Set<ClockListener>();
+let timer: ReturnType<typeof setInterval> | null = null;
+let currentTime = Date.now();
+
+function subscribe(listener: ClockListener): () => void {
+  listeners.add(listener);
+  if (timer === null && typeof window !== 'undefined') {
+    currentTime = Date.now();
+    timer = setInterval(() => {
+      currentTime = Date.now();
+      for (const notify of listeners) notify();
+    }, FRESHNESS_CLOCK_INTERVAL_MS);
+  }
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
+}
+
+const getSnapshot = () => currentTime;
+
+/**
  * Provides a shared low-frequency clock for visible realtime freshness labels.
  * Prices can become stale without receiving new WebSocket data, so UI badges
  * need time-based updates independent of market-store writes.
  */
-export function useFreshnessClock(intervalMs = FRESHNESS_CLOCK_INTERVAL_MS): number {
-  const [now, setNow] = useState(() => Date.now());
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), intervalMs);
-    return () => window.clearInterval(timer);
-  }, [intervalMs]);
-
-  return now;
+export function useFreshnessClock(): number {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 /** Renders an accessible realtime freshness badge for market prices. */

@@ -78,6 +78,12 @@ export function AiTechnicalSummary({ context }: AiTechnicalSummaryProps) {
     } catch (err) {
       if (controller.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Failed to generate summary');
+      // Record the signature on failure too. This effect also depends on
+      // `context`, whose identity changes on every live price tick (the memo
+      // upstream lists `price`), so without this a failing request — a wrong
+      // API key, say — re-fires once per tick, forever. The retry button calls
+      // `fetchSummary()` directly and is unaffected by this flag.
+      lastSignature.current = signature;
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
