@@ -83,10 +83,17 @@ export function toAlertRecord(raw: unknown): ScreenerAlertRecord | null {
 }
 
 /**
- * Map a whole `alertDecisions` array, preserving engine order.
+ * Map a whole `alertDecisions` array.
  *
- * The engine emits decisions in ranked-result order, and the panel reverses
- * what it receives, so the newest cycle's top-ranked setup ends up first.
+ * Ordering matters more than it looks. The engine emits decisions in
+ * ranked-result order (best setup first), and every row in a cycle shares one
+ * `createdAt`, but the panel treats what it receives as a chronological log:
+ * it reverses the array and then takes the head, so it can show the newest
+ * entries first. Passing engine order straight through therefore surfaced the
+ * *worst* ranked setups - measured on live data, the head was `1000BONK` at
+ * score 62 instead of `BTC` at the top of the ranking. Reversing here gives
+ * the panel the oldest-first sequence it expects, so its own reversal lands
+ * back on rank order.
  */
 export function toAlertRecords(value: unknown): ScreenerAlertRecord[] {
   if (!Array.isArray(value)) return [];
@@ -95,5 +102,5 @@ export function toAlertRecords(value: unknown): ScreenerAlertRecord[] {
     const record = toAlertRecord(row);
     if (record) records.push(record);
   }
-  return records;
+  return records.reverse();
 }

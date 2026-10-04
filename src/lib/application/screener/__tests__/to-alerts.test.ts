@@ -105,23 +105,36 @@ describe('toAlertRecord', () => {
 });
 
 describe('toAlertRecords', () => {
-  it('maps every valid row and preserves engine order', () => {
+  it('reverses engine order so the panel reversal lands on rank order', () => {
+    // The engine emits best-ranked first; the panel reverses what it receives
+    // before slicing, so it must be handed the opposite sequence.
     const records = toAlertRecords([
       decision({ symbol: 'BTC/USDT:USDT' }),
       decision({ symbol: 'ETH/USDT:USDT' }),
+      decision({ symbol: 'SOL/USDT:USDT' }),
     ]);
 
-    expect(records.map((r) => r.symbol)).toEqual(['BTC/USDT', 'ETH/USDT']);
+    expect(records.map((r) => r.symbol)).toEqual(['SOL/USDT', 'ETH/USDT', 'BTC/USDT']);
+  });
+
+  it('puts the best-ranked decision last so the panel shows it first', () => {
+    const records = toAlertRecords([
+      decision({ symbol: 'BTC/USDT:USDT', rankingScore: 99 }),
+      decision({ symbol: '1000BONK/USDT:USDT', rankingScore: 12 }),
+    ]);
+
+    const asPanelRenders = [...records].reverse();
+    expect(asPanelRenders[0]?.symbol).toBe('BTC/USDT');
   });
 
   it('drops unrenderable rows without discarding the rest', () => {
     const records = toAlertRecords([
-      decision(),
+      decision({ symbol: 'BTC/USDT:USDT' }),
       decision({ status: 'bogus' }),
       decision({ symbol: 'SOL/USDT:USDT' }),
     ]);
 
-    expect(records.map((r) => r.symbol)).toEqual(['BTC/USDT', 'SOL/USDT']);
+    expect(records.map((r) => r.symbol)).toEqual(['SOL/USDT', 'BTC/USDT']);
   });
 
   it('returns an empty array for a missing or malformed field', () => {
