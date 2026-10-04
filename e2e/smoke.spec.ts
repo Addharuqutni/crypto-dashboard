@@ -127,7 +127,10 @@ test('coin detail renders known symbol', async ({ page }) => {
   await page.goto('/coin/btc');
 
   await expect(page.getByRole('heading', { name: 'Bitcoin' })).toBeVisible();
-  await expect(page.getByText('BTC')).toBeVisible();
+  // Exact match on the standalone symbol badge. A bare getByText('BTC') also
+  // hits the bias line ("BTC — bullish Bias") and the 24H stat once live data
+  // arrives, which trips Playwright's strict-mode check.
+  await expect(page.getByText('BTC', { exact: true })).toBeVisible();
 });
 
 test('search navigates to coin detail', async ({ page }) => {
