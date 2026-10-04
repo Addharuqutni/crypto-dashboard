@@ -245,7 +245,13 @@ def _to_candidate(
     trigger_tf = str(signal.get("triggerTimeframe") or DEFAULT_TRIGGER_TIMEFRAME)
     macro_tf = str(signal.get("macroTimeframe") or DEFAULT_MACRO_TIMEFRAME)
 
-    ranking_score = round(confidence, 2)
+    ranking_score, ranking_breakdown = _ranking_score(
+        confidence=confidence,
+        risk_reward=risk_reward,
+        market_regime=market_regime,
+        adx=_as_optional_float(analysis.get("adx"), signal.get("adx")),
+        mtf_alignment=mtf_alignment,
+    )
     alert_eligible, alert_block_reasons = _alert_eligibility(
         action=action,
         confidence=confidence,
@@ -259,6 +265,11 @@ def _to_candidate(
         if alert_eligible
         else ["Ineligible", *alert_block_reasons]
     )
+    if ranking_breakdown:
+        rank_reason.append(
+            "Factors: "
+            + ", ".join(f"{key} {value:.1f}" for key, value in ranking_breakdown.items())
+        )
 
     return {
         "symbol": symbol_raw,
@@ -290,10 +301,71 @@ def _to_candidate(
         "freshness": freshness,
         "rank": rank if alert_eligible else 0,
         "rankingScore": ranking_score,
+        "rankingBreakdown": ranking_breakdown,
         "rankReason": rank_reason,
         "alertEligible": alert_eligible,
         "alertBlockReasons": alert_block_reasons,
     }
+
+
+# Ranking weights, tuned as a trade-quality blend rather than a confidence echo.
+# Confidence alone ranked every equally-confident setup identically, so the
+# secondary sort keys were dead code. Each input is normalised to 0..1 first, so
+# the weights are directly comparable and the total stays on the 0..100 scale the
+# UI already renders. Confidence leads (it is the engine's own conviction), R:R is
+# next (payoff quality), then trend strength, regime, and MTF agreement as
+# supporting evidence. Weights sum to 1.0 so the score never exceeds 100.
+RANKING_WEIGHTS = {
+    "confidence": 0.35,
+    "riskReward": 0.25,
+    "trendStrength": 0.15,
+    "regime": 0.15,
+    "alignment": 0.10,
+}
+
+# Normalisation ceilings: what counts as "full marks" for each factor.
+_RR_FULL_MARKS = 3.0        # R:R of 3+ is an excellent plan
+_ADX_FULL_MARKS = 40.0      # ADX 40+ is a strong trend
+_REGIME_SCORE = {
+    "bullish_trend": 1.0,
+    "bearish_trend": 1.0,
+    "range": 0.5,
+    "choppy": 0.3,
+    "volatile": 0.4,
+    "unknown": 0.3,
+}
+# No alignment data at all is unknown, not good: score it neutral-low.
+_DEFAULT_ALIGNMENT = 0.4
+
+
+def _clamp01(value: float | None, *, default: float = 0.0, full_marks: float = 1.0) -> float:
+    # The UI renders rankingScore.toFixed(1), so NaN/inf must never escape here.
+    if value is None or not math.isfinite(value):
+        return default
+    if full_marks <= 0:
+        return 0.0
+    return max(0.0, min(1.0, value / full_marks))
+
+
+def _ranking_score(
+    *,
+    confidence: float,
+    risk_reward: float | None,
+    market_regime: str,
+    adx: float | None,
+    mtf_alignment: float | None,
+) -> tuple[float, dict[str, float]]:
+    """Blend setup-quality factors into a 0..100 score plus its breakdown."""
+    parts = {
+        "confidence": _clamp01(confidence, full_marks=100.0),
+        # A missing R:R means no defined plan, so it scores zero, not neutral.
+        "riskReward": _clamp01(risk_reward, full_marks=_RR_FULL_MARKS),
+        "trendStrength": _clamp01(adx, full_marks=_ADX_FULL_MARKS),
+        "regime": _REGIME_SCORE.get(market_regime, 0.3),
+        "alignment": _clamp01(mtf_alignment, default=_DEFAULT_ALIGNMENT, full_marks=100.0),
+    }
+    weighted = {key: round(parts[key] * RANKING_WEIGHTS[key] * 100.0, 4) for key in parts}
+    return round(sum(weighted.values()), 2), weighted
 
 
 def _extract_take_profits(signal: dict[str, Any], analysis: dict[str, Any]) -> list[float | None]:
@@ -316,11 +388,15 @@ def _extract_take_profits(signal: dict[str, Any], analysis: dict[str, Any]) -> l
 def _assign_ranks(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     eligible = [r for r in results if r.get("alertEligible")]
     ineligible = [r for r in results if not r.get("alertEligible")]
+    # Symbol is the final tie-break so identical setups always come back in the
+    # same order regardless of which exchange response landed first.
     eligible.sort(
         key=lambda r: (
             -float(r.get("rankingScore") or 0),
+            -float(r.get("riskReward") or 0),
             -float(r.get("confidence") or 0),
             int(r.get("marketCapRank") or 999),
+            str(r.get("symbol") or ""),
         )
     )
     for index, row in enumerate(eligible, start=1):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from time import time
 from typing import Any
 
 from src.action_call import build_action_call
@@ -499,29 +500,120 @@ def _risk_level_from_rr(rr: float | None) -> str:
     return "HIGH"
 
 
-def _healthy_data(result: AnalysisResult) -> dict[str, Any]:
-    tf = {
-        "available": True,
-        "candleCount": 250,
-        "minRequired": 50,
-        "newestCloseTimeMs": None,
-        "ageSec": 0,
-        "maxAgeSec": 3600,
-        "fresh": True,
-        "sorted": True,
-        "reason": None,
-    }
+# Freshness budget per timeframe: how many bars may pass before the newest candle
+# counts as stale. 3 bars tolerates a slow poll without hiding a dead feed.
+DEFAULT_MIN_CANDLES = 50
+FRESHNESS_BARS = 3
+
+_TIMEFRAME_BARS_MS = {
+    "1m": 60_000,
+    "3m": 180_000,
+    "5m": 300_000,
+    "15m": 900_000,
+    "30m": 1_800_000,
+    "1h": 3_600_000,
+    "2h": 7_200_000,
+    "4h": 14_400_000,
+    "1d": 86_400_000,
+}
+
+
+def _freshness_budget_sec(timeframe: str) -> int:
+    bar_ms = _TIMEFRAME_BARS_MS.get(str(timeframe).lower())
+    if bar_ms is None:
+        return 3600
+    return max(60, (bar_ms * FRESHNESS_BARS) // 1000)
+
+
+def _timeframe_health(
+    *,
+    label: str,
+    candle_count: int,
+    last_close_ms: int | None,
+    now_ms: int,
+    min_candles: int,
+    max_age_sec: int,
+) -> dict[str, Any]:
+    age_sec: int | None = None
+    if last_close_ms is not None:
+        age_sec = max(0, int((now_ms - last_close_ms) / 1000))
+
+    reason: str | None = None
+    if last_close_ms is None:
+        fresh = False
+        reason = "No candle timestamp available."
+    elif candle_count < min_candles:
+        fresh = False
+        reason = f"Only {candle_count} candles (need {min_candles})."
+    elif age_sec > max_age_sec:
+        fresh = False
+        reason = f"Stale candle: {age_sec}s old (max {max_age_sec}s)."
+    else:
+        fresh = True
+
     return {
-        "ok": True,
-        "reasons": [],
+        "available": candle_count > 0,
+        "candleCount": candle_count,
+        "minRequired": min_candles,
+        "newestCloseTimeMs": last_close_ms,
+        "ageSec": age_sec,
+        "maxAgeSec": max_age_sec,
+        "fresh": fresh,
+        "ok": fresh,
+        "sorted": True,
+        "reason": reason,
+        "label": label,
+    }
+
+
+def _healthy_data(
+    result: AnalysisResult,
+    *,
+    now_ms: int | None = None,
+    min_candles: int = DEFAULT_MIN_CANDLES,
+    max_age_sec: int | None = None,
+) -> dict[str, Any]:
+    """Build the FuturesDataHealth block from the candles that were actually used.
+
+    The Python engine analyses one series per symbol, so setup/macro/trigger all
+    report that same measured series - a stale feed fails all three rather than
+    passing on hardcoded placeholders.
+    """
+    now_ms = int(time() * 1000) if now_ms is None else int(now_ms)
+    setup_tf = result.timeframe or "5m"
+    budget = max_age_sec if max_age_sec is not None else _freshness_budget_sec(setup_tf)
+
+    def block(label: str) -> dict[str, Any]:
+        return _timeframe_health(
+            label=label,
+            candle_count=result.candle_count,
+            last_close_ms=result.last_candle_close_ms,
+            now_ms=now_ms,
+            min_candles=min_candles,
+            max_age_sec=budget,
+        )
+
+    setup = block(setup_tf)
+    macro = block("4h")
+    trigger = block("15m")
+
+    symbol_valid = bool(result.symbol)
+    ok = symbol_valid and setup["ok"] and macro["ok"] and trigger["ok"]
+    reasons = [block_reason for block_reason in (setup["reason"], macro["reason"], trigger["reason"]) if block_reason]
+    if not symbol_valid:
+        reasons.append("Symbol missing or invalid.")
+
+    return {
+        "ok": ok,
+        "reasons": reasons,
         "symbol": {
-            "provided": True,
-            "valid": True,
-            "reason": None,
+            "provided": symbol_valid,
+            "valid": symbol_valid,
+            "reason": None if symbol_valid else "Symbol missing or invalid.",
         },
-        "setup": {**tf, "label": result.timeframe or "5m"},
-        "macro": {**tf, "label": "4h"},
-        "trigger": {**tf, "label": "15m"},
+        "setup": setup,
+        "macro": macro,
+        "trigger": trigger,
         "funding": {
             "available": False,
             "fresh": False,
@@ -536,5 +628,5 @@ def _healthy_data(result: AnalysisResult) -> dict[str, Any]:
             "maxAgeSec": None,
             "reason": "Open interest not used by Python action-call engine.",
         },
-        "confidenceCap": 100,
+        "confidenceCap": 100 if ok else 60,
     }

@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 from collections import Counter
 from html import escape
+from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -37,7 +38,6 @@ def require_internal_token(x_internal_token: str | None = Header(default=None)) 
 
 @app.get("/api/v1/screener/latest", dependencies=[Depends(require_internal_token)])
 def api_screener_latest() -> dict[str, Any]:
-    from pathlib import Path
     from src.screener.storage import AtomicJsonStore
     latest = AtomicJsonStore(Path(load_settings().screener_storage_dir)).read_latest()
     return {"ok": True, "latest": latest}
@@ -46,7 +46,6 @@ def api_screener_latest() -> dict[str, Any]:
 @app.post("/api/v1/screener/run", dependencies=[Depends(require_internal_token)])
 def api_screener_run(body: dict[str, Any] | None = None) -> dict[str, Any]:
     settings = load_settings()
-    from pathlib import Path
     lock = RunLock(Path(settings.screener_storage_dir) / "screener.lock")
     try:
         with lock:
@@ -129,8 +128,13 @@ def api_v1_scan(body: dict[str, Any] | None = None) -> dict[str, Any]:
     symbols = payload.get("symbols")
     if symbols is not None and (not isinstance(symbols, list) or not all(isinstance(item, str) for item in symbols)):
         raise HTTPException(status_code=400, detail="symbols must be a list of strings")
+    # Same lock as /api/v1/screener/run: both read-modify-write the JSON store,
+    # so two parallel cycles would lose an update.
+    settings = load_settings()
+    lock = RunLock(Path(settings.screener_storage_dir) / "screener.lock")
     try:
-        return {"ok": True, "latest": run_screener([str(item) for item in symbols] if symbols else None)}
+        with lock:
+            return {"ok": True, "latest": run_screener([str(item) for item in symbols] if symbols else None)}
     except RunAlreadyActive as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     except Exception as error:

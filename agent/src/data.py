@@ -1,12 +1,60 @@
 from __future__ import annotations
 
 import threading
+import time
 
 import ccxt
 import pandas as pd
 
 _CLIENT_CACHE: dict[str, "MarketDataClient"] = {}
 _CLIENT_LOCK = threading.Lock()
+
+# One dropped request used to silently drop a symbol from the screener cycle.
+# Transient faults retry with exponential backoff; deterministic client errors
+# (BadSymbol, AuthenticationError) raise immediately - retrying cannot help.
+RETRY_MAX_ATTEMPTS = 3
+RETRY_BASE_DELAY_SEC = 0.5
+RETRY_MAX_DELAY_SEC = 30.0
+RETRY_MAX_HONORED_AFTER_SEC = 60.0
+
+# NetworkError covers DNS/reset/timeout; RateLimitExceeded is its subclass and
+# carries Binance's Retry-After hint.
+_RETRYABLE_ERRORS = (ccxt.NetworkError, ccxt.RateLimitExceeded)
+
+
+def _retry_after_seconds(error: BaseException) -> float | None:
+    """Read a server-provided Retry-After hint, if the transport exposed one."""
+    for attribute in ("retry_after", "retryAfter"):
+        raw = getattr(error, attribute, None)
+        if raw is None:
+            continue
+        try:
+            value = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if value >= 0:
+            return min(value, RETRY_MAX_HONORED_AFTER_SEC)
+    return None
+
+
+def _fetch_with_retry(fetch, *, sleep=time.sleep):
+    """Call `fetch`, retrying transient exchange errors with exponential backoff.
+
+    Stops after RETRY_MAX_ATTEMPTS and re-raises the last error unchanged, so
+    callers see the original ccxt exception type.
+    """
+    delay = RETRY_BASE_DELAY_SEC
+    for attempt in range(1, RETRY_MAX_ATTEMPTS + 1):
+        try:
+            return fetch()
+        except _RETRYABLE_ERRORS as error:
+            if attempt >= RETRY_MAX_ATTEMPTS:
+                raise
+            wait = _retry_after_seconds(error)
+            if wait is None:
+                wait = delay
+                delay = min(delay * 2, RETRY_MAX_DELAY_SEC)
+            sleep(wait)
 
 
 def get_market_data_client(exchange_name: str = "binance") -> "MarketDataClient":
@@ -63,7 +111,7 @@ class MarketDataClient:
                 continue
         return prices
 
-    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 250) -> pd.DataFrame:
+    def fetch_ohlcv(self, symbol: str, timeframe: str, limit: int = 250, *, sleep=time.sleep) -> pd.DataFrame:
         if symbol not in self.exchange.markets:
             raise ValueError(f"Symbol tidak tersedia di {self.exchange.id}: {symbol}")
 
@@ -71,7 +119,10 @@ class MarketDataClient:
             valid_timeframes = ", ".join(self.exchange.timeframes.keys())
             raise ValueError(f"Timeframe tidak tersedia di {self.exchange.id}: {timeframe}. Pilihan: {valid_timeframes}")
 
-        rows = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+        rows = _fetch_with_retry(
+            lambda: self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit),
+            sleep=sleep,
+        )
         if not rows:
             raise ValueError(f"Data OHLCV kosong untuk {symbol} {timeframe}")
 
