@@ -47,7 +47,20 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|robots.txt).*)'],
+  /**
+   * `_next/webpack-hmr` and `_next/turbopack-hmr` must stay out of the matcher.
+   * They are WebSocket *upgrade* requests, and routing an upgrade through
+   * middleware answers it with an ordinary HTTP response, so the browser fails
+   * the handshake with ERR_INVALID_HTTP_RESPONSE.
+   *
+   * Deliberately kept as a plain path exclusion rather than Next.js's
+   * `has: [{ header: 'accept', value: 'text/html' }]` recipe: that recipe also
+   * stops the matcher matching API routes (fetch sends `accept:
+   * application/json`), which would quietly exempt them from Basic Auth.
+   */
+  matcher: [
+    '/((?!_next/static|_next/image|_next/webpack-hmr|_next/turbopack-hmr|favicon.ico|robots.txt).*)',
+  ],
 };
 
 function parseBasicAuth(authHeader: string | null): { username: string; password: string } | null {
