@@ -181,6 +181,8 @@ Next.js dan Python agent sama-sama membaca root `.env.local`. Referensi lengkap 
 | `SCREENER_CANDLE_LIMIT` | Batas candle per symbol | No | `120` |
 | `SCREENER_MAX_CONCURRENT_SYMBOLS` | Concurrency per symbol | No | `3` |
 | `SCREENER_INTERVAL_MINUTES` | Interval cycle screener (`1`–`1440`) | No | `15` |
+| `SCREENER_HISTORY_MAX_ROWS` | Batas baris `history.json`; baris terlama dipangkas dulu | No | `5000` |
+| `SCREENER_ACTION_CALL_MAX_ROWS` | Batas baris `action-calls.json`; baris terlama dipangkas dulu | No | `5000` |
 | `INCLUDE_STABLECOINS` | Jika `true`, izinkan base stablecoin (USDC, FDUSD, …) di universe dinamis | No | `false` |
 | `DISABLE_SCREENER_SCHEDULER` | Jika `1`, matikan scheduler in-process Next.js | No | `0` (dev), `1` (VPS) |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase | Untuk backend Supabase | - |

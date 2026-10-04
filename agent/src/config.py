@@ -84,10 +84,14 @@ class Settings:
     screener_universe_mode: str
     screener_max_symbols: int
     screener_universe_cache_ttl_minutes: int
+    screener_history_max_rows: int
+    screener_action_call_max_rows: int
     screener_symbols: list[str]
+    screener_max_concurrent_symbols: int
+    screener_candle_limit: int | None
 
 
-def _get_int_env(name: str, default: int, minimum: int = 1) -> int:
+def _get_int_env(name: str, default: int, minimum: int = 1, maximum: int | None = None) -> int:
     raw_value = os.getenv(name, str(default)).strip()
     try:
         value = int(raw_value)
@@ -96,6 +100,8 @@ def _get_int_env(name: str, default: int, minimum: int = 1) -> int:
 
     if value < minimum:
         raise ValueError(f"{name} minimal {minimum}, nilai saat ini: {value}")
+    if maximum is not None and value > maximum:
+        raise ValueError(f"{name} maksimal {maximum}, nilai saat ini: {value}")
     return value
 
 
@@ -231,6 +237,19 @@ def load_settings() -> Settings:
             minimum=0,
         ),
         screener_symbols=_parse_optional_symbols(os.getenv("SCREENER_SYMBOLS", "")),
+        screener_history_max_rows=_get_int_env("SCREENER_HISTORY_MAX_ROWS", 5000),
+        screener_action_call_max_rows=_get_int_env("SCREENER_ACTION_CALL_MAX_ROWS", 5000),
+        # Parallel symbol evaluation inside run_screener. Capped because each
+        # worker opens its own stream of Binance requests on the shared client.
+        screener_max_concurrent_symbols=_get_int_env(
+            "SCREENER_MAX_CONCURRENT_SYMBOLS",
+            3,
+            minimum=1,
+            maximum=16,
+        ),
+        # Screener-facing candle count. None = fall back to FETCH_LIMIT so
+        # deployments that only set FETCH_LIMIT keep their current behaviour.
+        screener_candle_limit=_get_optional_int_env("SCREENER_CANDLE_LIMIT"),
     )
 
 

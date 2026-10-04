@@ -64,6 +64,8 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `SYMBOLS` | No | Default pairs for standalone scanner | `BTC/USDT,...` |
 | `USE_BINANCE_TOP_VOLUME` | No | Scanner universe from Binance volume | `true` |
 | `SAVE_ACTION_DATASET` | No | Persist action-call dataset rows | `true` |
+| `SCREENER_HISTORY_MAX_ROWS` | No | Row cap for `history.json`; oldest dropped first | `5000` |
+| `SCREENER_ACTION_CALL_MAX_ROWS` | No | Row cap for `action-calls.json`; oldest dropped first | `5000` |
 | `DATABASE_ENABLED` / `DATABASE_URL` | No | Optional Postgres dataset mirror | off |
 
 ## Supabase (optional)

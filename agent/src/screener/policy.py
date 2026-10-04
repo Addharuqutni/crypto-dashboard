@@ -57,6 +57,12 @@ def _quality_ok(candidate: dict[str, Any], settings: AlertPolicySettings) -> boo
 
 
 def _in_cooldown(candidate: dict[str, Any], recent: list[dict[str, Any]], now_ms: int, minutes: int) -> bool:
+    # WHY `recent` may be shorter than the true cooldown window: it is read from
+    # the append-only `action-calls.json`, which is capped by
+    # SCREENER_ACTION_CALL_MAX_ROWS (see src/screener/storage.py). A triggered
+    # alert that gets trimmed out of that file stops suppressing its symbol here,
+    # so the effective cooldown is min(SCREENER_ALERT_COOLDOWN_MINUTES,
+    # SCREENER_ACTION_CALL_MAX_ROWS rows). Do not treat a low cap as a no-op.
     symbol = candidate.get("symbol")
     action = candidate.get("action")
     threshold = now_ms - minutes * 60_000

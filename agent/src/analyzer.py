@@ -31,6 +31,10 @@ class AnalysisResult:
     take_profit: float | None
     risk_reward: float | None
     reasons: list[str]
+    # Real feed stats, consumed by the data-health gate. Defaults keep older
+    # callers (tests, scripts) working; production always sets them.
+    candle_count: int = 0
+    last_candle_close_ms: int | None = None
 
 
 def round_float(value: float | None, digits: int = 4) -> float | None:
@@ -131,14 +135,54 @@ def detect_liquidity_sweep(df: pd.DataFrame, lookback: int) -> str | None:
     return None
 
 
-def calculate_risk_plan(price: float, support: float, resistance: float, bias: str, atr: float) -> tuple[float | None, float | None, float | None]:
-    if bias == "BULLISH":
-        stop_loss = min(support, price - atr * 1.5)
+ACTION_SIGNALS = {
+    "BUY WATCH": "LONG",
+    "BULLISH CONTINUATION": "LONG",
+    "BULLISH TREND FOLLOW": "LONG",
+    "MTF BULLISH ACTION CALL": "LONG",
+    "SELL WATCH": "SHORT",
+    "BEARISH CONTINUATION": "SHORT",
+    "BEARISH TREND FOLLOW": "SHORT",
+    "MTF BEARISH ACTION CALL": "SHORT",
+}
+
+ATR_STOP_MULTIPLIER = 1.5
+
+
+def signal_direction(signal: str) -> str | None:
+    """Map a signal to its trade direction. `HOLD` and unknown signals -> None."""
+    return ACTION_SIGNALS.get(signal)
+
+
+def calculate_risk_plan(
+    price: float,
+    support: float,
+    resistance: float,
+    direction: str | None,
+    atr: float,
+) -> tuple[float | None, float | None, float | None]:
+    """Build SL/TP for a trade direction.
+
+    The side of the market (`bias`) is deliberately NOT an input: a BUY WATCH can
+    fire inside a bearish bias, and anchoring the levels to `bias` printed an
+    inverted plan (SL above entry, TP below it) for a LONG. Deriving the side from
+    `direction` keeps these invariants for every signal:
+
+        LONG  -> stop_loss < price < take_profit
+        SHORT -> take_profit < price < stop_loss
+
+    ponytail: structure levels leave no room when price sits on the far side of
+    support/resistance (e.g. a LONG at the window high). That returns no plan
+    rather than inventing a target; add an ATR-derived fallback if such setups
+    should still trade.
+    """
+    if direction == "LONG":
+        stop_loss = min(support, price - atr * ATR_STOP_MULTIPLIER)
         take_profit = resistance
         risk = price - stop_loss
         reward = take_profit - price
-    elif bias == "BEARISH":
-        stop_loss = max(resistance, price + atr * 1.5)
+    elif direction == "SHORT":
+        stop_loss = max(resistance, price + atr * ATR_STOP_MULTIPLIER)
         take_profit = support
         risk = stop_loss - price
         reward = price - take_profit
@@ -149,6 +193,27 @@ def calculate_risk_plan(price: float, support: float, resistance: float, bias: s
         return None, None, None
 
     return stop_loss, take_profit, round(reward / risk, 2)
+
+
+def _last_candle_close_ms(df: pd.DataFrame, timeframe: str) -> int | None:
+    """Epoch ms when the newest candle closed.
+
+    Binance stamps each kline with its OPEN time, so the close is one bar later.
+    ponytail: fixed mapping for the timeframes this engine uses; swap for
+    ccxt.Exchange.parse_timeframe() if Binance lists a bar size outside this set.
+    """
+    if "timestamp" not in df.columns or df.empty:
+        return None
+    bar_seconds = _TIMEFRAME_SECONDS.get(str(timeframe).lower())
+    if bar_seconds is None:
+        return None
+    last = df["timestamp"].iloc[-1]
+    if pd.isna(last):
+        return None
+    return int(pd.Timestamp(last).timestamp() * 1000) + bar_seconds * 1000
+
+
+_TIMEFRAME_SECONDS = {"1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400}
 
 
 def analyze(symbol: str, timeframe: str, df: pd.DataFrame, config: dict) -> AnalysisResult:
@@ -207,7 +272,13 @@ def analyze(symbol: str, timeframe: str, df: pd.DataFrame, config: dict) -> Anal
         signal = "BEARISH TREND FOLLOW"
         reasons.append("Trend-following bearish setup")
 
-    stop_loss, take_profit, risk_reward = calculate_risk_plan(price, support, resistance, bias, float(latest["atr"]))
+    stop_loss, take_profit, risk_reward = calculate_risk_plan(
+        price,
+        support,
+        resistance,
+        signal_direction(signal),
+        float(latest["atr"]),
+    )
     if risk_reward and risk_reward < rules["min_risk_reward"]:
         reasons.append(f"Risk/reward kurang ideal: {risk_reward}")
 
@@ -232,4 +303,6 @@ def analyze(symbol: str, timeframe: str, df: pd.DataFrame, config: dict) -> Anal
         take_profit=round_float(take_profit),
         risk_reward=risk_reward,
         reasons=reasons,
+        candle_count=len(df),
+        last_candle_close_ms=_last_candle_close_ms(df, timeframe),
     )

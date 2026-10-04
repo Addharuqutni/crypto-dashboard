@@ -118,7 +118,20 @@ export interface ScreenerResult {
 
 export interface RankedScreenerResult extends ScreenerResult {
   rank: number;
+  /**
+   * Weighted 0..100 setup-quality score. Blends confidence, risk/reward,
+   * trend strength (ADX), market regime, and MTF alignment - see the weights in
+   * `agent/src/screener/engine.py` (`RANKING_WEIGHTS`).
+   */
   rankingScore: number;
+  /** Per-factor contribution to `rankingScore`, in the same 0..100 scale. */
+  rankingBreakdown?: {
+    confidence: number;
+    riskReward: number;
+    trendStrength: number;
+    regime: number;
+    alignment: number;
+  };
   rankReason: string[];
   alertEligible: boolean;
   alertBlockReasons: string[];

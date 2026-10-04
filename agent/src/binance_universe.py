@@ -194,7 +194,9 @@ def resolve_screener_universe(
 
     mode = str(getattr(settings, "screener_universe_mode", None) or "top_futures_volume").strip().lower()
     max_symbols = int(getattr(settings, "screener_max_symbols", None) or 100)
-    ttl_minutes = int(getattr(settings, "screener_universe_cache_ttl_minutes", None) or 30)
+    # `or 30` would swallow a configured 0 - TTL=0 must mean "never cache".
+    raw_ttl = getattr(settings, "screener_universe_cache_ttl_minutes", None)
+    ttl_minutes = 30 if raw_ttl is None else int(raw_ttl)
     include_stablecoins = bool(getattr(settings, "include_stablecoins", False))
     fallback_symbols = list(getattr(settings, "symbols", None) or [])
     env_override = list(getattr(settings, "screener_symbols", None) or [])

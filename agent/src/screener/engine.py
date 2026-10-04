@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from time import time
 from typing import Any
@@ -42,23 +43,19 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
     never sees transient `status` / `reason` fields on ranked rows.
     """
     settings = load_settings()
-    store = AtomicJsonStore(Path(settings.screener_storage_dir))
+    store = AtomicJsonStore(
+        Path(settings.screener_storage_dir),
+        history_max_rows=settings.screener_history_max_rows,
+        action_call_max_rows=settings.screener_action_call_max_rows,
+    )
     universe = resolve_screener_universe(settings, symbols_override=symbols)
     targets = list(universe.symbols)
     started_at = int(time() * 1000)
     results: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
 
-    for index, symbol in enumerate(targets, start=1):
-        try:
-            payload = analyze_symbol_payload(symbol)
-            results.append(_to_candidate(payload, evaluated_at=started_at, rank=index))
-        except Exception as error:  # noqa: BLE001 - keep cycle resilient
-            errors.append({"symbol": str(symbol), "message": str(error)})
-
-    results = _assign_ranks(results)
-
-    completed_at = int(time() * 1000)
+    # Built before the loop so per-row alert eligibility and the final
+    # evaluate_alerts() call read the exact same thresholds.
     policy_settings = AlertPolicySettings(
         enabled=True,
         min_confidence=settings.screener_min_confidence,
@@ -67,6 +64,17 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
         cooldown_minutes=settings.screener_cooldown_minutes,
         max_alerts_per_hour=settings.screener_max_alerts_per_hour,
     )
+
+    results, errors = _evaluate_symbols(
+        targets,
+        evaluated_at=started_at,
+        max_workers=settings.screener_max_concurrent_symbols,
+        policy=policy_settings,
+    )
+
+    results = _assign_ranks(results)
+
+    completed_at = int(time() * 1000)
     decisions = evaluate_alerts(
         results,
         settings=policy_settings,
@@ -153,11 +161,58 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
     return snapshot
 
 
+def _evaluate_symbols(
+    targets: list[str],
+    *,
+    evaluated_at: int,
+    max_workers: int,
+    policy: AlertPolicySettings,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Analyze every target, in parallel when max_workers > 1.
+
+    This thread owns all shared state: each future is drained here via
+    as_completed() and filed under its original index, so the returned rows and
+    errors are in `targets` order no matter which symbol finishes first. That
+    keeps the snapshot (and therefore ranking) identical to a sequential run -
+    only the wall-clock time changes. max_workers=1 is exactly the old loop.
+
+    Workers do share the cached ccxt client from `get_market_data_client`; the
+    request gate inside MarketDataClient is what makes that safe, not the
+    absence of shared state. See src/data.py.
+    """
+    if not targets:
+        return [], []
+
+    candidates: dict[int, dict[str, Any]] = {}
+    errors: dict[int, dict[str, str]] = {}
+
+    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
+        futures = {
+            executor.submit(analyze_symbol_payload, symbol): index
+            for index, symbol in enumerate(targets)
+        }
+        for future in as_completed(futures):
+            index = futures[future]
+            try:
+                candidates[index] = _to_candidate(
+                    future.result(),
+                    evaluated_at=evaluated_at,
+                    rank=index + 1,
+                    policy=policy,
+                )
+            except Exception as error:  # noqa: BLE001 - one bad symbol must not fail the cycle
+                errors[index] = {"symbol": str(targets[index]), "message": str(error)}
+
+    order = range(len(targets))
+    return [candidates[i] for i in order if i in candidates], [errors[i] for i in order if i in errors]
+
+
 def _to_candidate(
     payload: dict[str, Any],
     *,
     evaluated_at: int,
     rank: int = 0,
+    policy: AlertPolicySettings | None = None,
 ) -> dict[str, Any]:
     """Map a python signal_service payload into a flat RankedScreenerResult."""
     signal = payload.get("signal") if isinstance(payload.get("signal"), dict) else {}
@@ -245,7 +300,13 @@ def _to_candidate(
     trigger_tf = str(signal.get("triggerTimeframe") or DEFAULT_TRIGGER_TIMEFRAME)
     macro_tf = str(signal.get("macroTimeframe") or DEFAULT_MACRO_TIMEFRAME)
 
-    ranking_score = round(confidence, 2)
+    ranking_score, ranking_breakdown = _ranking_score(
+        confidence=confidence,
+        risk_reward=risk_reward,
+        market_regime=market_regime,
+        adx=_as_optional_float(analysis.get("adx"), signal.get("adx")),
+        mtf_alignment=mtf_alignment,
+    )
     alert_eligible, alert_block_reasons = _alert_eligibility(
         action=action,
         confidence=confidence,
@@ -253,12 +314,18 @@ def _to_candidate(
         risk_reward=risk_reward,
         data_health_ok=bool(data_health.get("ok")),
         trade_permission=trade_permission,
+        policy=policy or AlertPolicySettings(),
     )
     rank_reason = (
         [f"Score: {ranking_score:.1f}"]
         if alert_eligible
         else ["Ineligible", *alert_block_reasons]
     )
+    if ranking_breakdown:
+        rank_reason.append(
+            "Factors: "
+            + ", ".join(f"{key} {value:.1f}" for key, value in ranking_breakdown.items())
+        )
 
     return {
         "symbol": symbol_raw,
@@ -290,10 +357,71 @@ def _to_candidate(
         "freshness": freshness,
         "rank": rank if alert_eligible else 0,
         "rankingScore": ranking_score,
+        "rankingBreakdown": ranking_breakdown,
         "rankReason": rank_reason,
         "alertEligible": alert_eligible,
         "alertBlockReasons": alert_block_reasons,
     }
+
+
+# Ranking weights, tuned as a trade-quality blend rather than a confidence echo.
+# Confidence alone ranked every equally-confident setup identically, so the
+# secondary sort keys were dead code. Each input is normalised to 0..1 first, so
+# the weights are directly comparable and the total stays on the 0..100 scale the
+# UI already renders. Confidence leads (it is the engine's own conviction), R:R is
+# next (payoff quality), then trend strength, regime, and MTF agreement as
+# supporting evidence. Weights sum to 1.0 so the score never exceeds 100.
+RANKING_WEIGHTS = {
+    "confidence": 0.35,
+    "riskReward": 0.25,
+    "trendStrength": 0.15,
+    "regime": 0.15,
+    "alignment": 0.10,
+}
+
+# Normalisation ceilings: what counts as "full marks" for each factor.
+_RR_FULL_MARKS = 3.0        # R:R of 3+ is an excellent plan
+_ADX_FULL_MARKS = 40.0      # ADX 40+ is a strong trend
+_REGIME_SCORE = {
+    "bullish_trend": 1.0,
+    "bearish_trend": 1.0,
+    "range": 0.5,
+    "choppy": 0.3,
+    "volatile": 0.4,
+    "unknown": 0.3,
+}
+# No alignment data at all is unknown, not good: score it neutral-low.
+_DEFAULT_ALIGNMENT = 0.4
+
+
+def _clamp01(value: float | None, *, default: float = 0.0, full_marks: float = 1.0) -> float:
+    # The UI renders rankingScore.toFixed(1), so NaN/inf must never escape here.
+    if value is None or not math.isfinite(value):
+        return default
+    if full_marks <= 0:
+        return 0.0
+    return max(0.0, min(1.0, value / full_marks))
+
+
+def _ranking_score(
+    *,
+    confidence: float,
+    risk_reward: float | None,
+    market_regime: str,
+    adx: float | None,
+    mtf_alignment: float | None,
+) -> tuple[float, dict[str, float]]:
+    """Blend setup-quality factors into a 0..100 score plus its breakdown."""
+    parts = {
+        "confidence": _clamp01(confidence, full_marks=100.0),
+        # A missing R:R means no defined plan, so it scores zero, not neutral.
+        "riskReward": _clamp01(risk_reward, full_marks=_RR_FULL_MARKS),
+        "trendStrength": _clamp01(adx, full_marks=_ADX_FULL_MARKS),
+        "regime": _REGIME_SCORE.get(market_regime, 0.3),
+        "alignment": _clamp01(mtf_alignment, default=_DEFAULT_ALIGNMENT, full_marks=100.0),
+    }
+    weighted = {key: round(parts[key] * RANKING_WEIGHTS[key] * 100.0, 4) for key in parts}
+    return round(sum(weighted.values()), 2), weighted
 
 
 def _extract_take_profits(signal: dict[str, Any], analysis: dict[str, Any]) -> list[float | None]:
@@ -316,11 +444,15 @@ def _extract_take_profits(signal: dict[str, Any], analysis: dict[str, Any]) -> l
 def _assign_ranks(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     eligible = [r for r in results if r.get("alertEligible")]
     ineligible = [r for r in results if not r.get("alertEligible")]
+    # Symbol is the final tie-break so identical setups always come back in the
+    # same order regardless of which exchange response landed first.
     eligible.sort(
         key=lambda r: (
             -float(r.get("rankingScore") or 0),
+            -float(r.get("riskReward") or 0),
             -float(r.get("confidence") or 0),
             int(r.get("marketCapRank") or 999),
+            str(r.get("symbol") or ""),
         )
     )
     for index, row in enumerate(eligible, start=1):
@@ -338,19 +470,26 @@ def _alert_eligibility(
     risk_reward: float | None,
     data_health_ok: bool,
     trade_permission: str,
+    policy: AlertPolicySettings,
 ) -> tuple[bool, list[str]]:
+    """Decide whether a ranked row may raise an alert.
+
+    Thresholds come from `policy` — the same AlertPolicySettings that
+    evaluate_alerts() uses. They were previously hardcoded here (75 / B /
+    1.5), which silently overrode SCREENER_MIN_* env changes.
+    """
     blocks: list[str] = []
     if action == "WAIT":
         blocks.append("Action is WAIT")
-    if confidence < 75:
-        blocks.append(f"Confidence {confidence} < min 75")
+    if confidence < policy.min_confidence:
+        blocks.append(f"Confidence {confidence} < min {policy.min_confidence:g}")
     grade_order = {"A": 0, "B": 1, "C": 2, "D": 3}
-    if grade_order.get(grade, 99) > grade_order["B"]:
-        blocks.append(f"Grade {grade} below min B")
+    if grade_order.get(grade, 99) > grade_order.get(policy.min_grade, grade_order["B"]):
+        blocks.append(f"Grade {grade} below min {policy.min_grade}")
     if not data_health_ok:
         blocks.append("Data health is not OK")
-    if risk_reward is not None and risk_reward < 1.5:
-        blocks.append(f"R:R {risk_reward:.2f} < min 1.5")
+    if risk_reward is not None and risk_reward < policy.min_risk_reward:
+        blocks.append(f"R:R {risk_reward:.2f} < min {policy.min_risk_reward:g}")
     if action != "WAIT":
         if trade_permission == "no_trade":
             blocks.append(f"Trade permission {trade_permission} conflicts with {action}")

@@ -1,17 +1,8 @@
 from dataclasses import dataclass
 
-from src.analyzer import AnalysisResult
+from src.analyzer import ACTION_SIGNALS, AnalysisResult, signal_direction
 
-ACTION_SIGNALS = {
-    "BUY WATCH": "LONG",
-    "BULLISH CONTINUATION": "LONG",
-    "BULLISH TREND FOLLOW": "LONG",
-    "MTF BULLISH ACTION CALL": "LONG",
-    "SELL WATCH": "SHORT",
-    "BEARISH CONTINUATION": "SHORT",
-    "BEARISH TREND FOLLOW": "SHORT",
-    "MTF BEARISH ACTION CALL": "SHORT",
-}
+__all__ = ["ACTION_SIGNALS", "ActionCall", "build_action_call", "format_action_call", "action_call_to_dict", "signal_direction"]
 
 
 @dataclass(frozen=True)
@@ -29,7 +20,7 @@ class ActionCall:
 
 
 def build_action_call(result: AnalysisResult, realtime_price: float | None = None) -> ActionCall | None:
-    action = ACTION_SIGNALS.get(result.signal)
+    action = signal_direction(result.signal)
     if not action:
         return None
 

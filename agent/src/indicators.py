@@ -64,8 +64,19 @@ def _rsi(close: pd.Series, length: int) -> pd.Series:
     loss = -delta.clip(upper=0)
     avg_gain = gain.ewm(alpha=1 / length, adjust=False, min_periods=length).mean()
     avg_loss = loss.ewm(alpha=1 / length, adjust=False, min_periods=length).mean()
+
+    # avg_loss == 0 means every bar in the window gained (a purely rising
+    # series). Dividing by it yields NaN, which dropna() would then treat as
+    # "no data" and discard the entire frame — failing on the most bullish
+    # input there is. RSI is defined as 100 in that case; symmetrically 0 when
+    # avg_gain is 0. Only a flat window (both zero) is genuinely undefined, and
+    # there a neutral 50 is the honest reading.
+    both_zero = (avg_gain == 0) & (avg_loss == 0)
     rs = avg_gain / avg_loss.replace(0, np.nan)
-    return 100 - (100 / (1 + rs))
+    rsi = 100 - (100 / (1 + rs))
+    rsi = rsi.mask((avg_loss == 0) & ~both_zero, 100.0)
+    rsi = rsi.mask((avg_gain == 0) & ~both_zero, 0.0)
+    return rsi.mask(both_zero, 50.0)
 
 
 def _atr(high: pd.Series, low: pd.Series, close: pd.Series, length: int) -> pd.Series:

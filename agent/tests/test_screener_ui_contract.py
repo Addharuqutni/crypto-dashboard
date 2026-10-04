@@ -402,6 +402,11 @@ def test_run_screener_keeps_policy_status_off_results(tmp_path, monkeypatch):
         mock_settings.return_value.screener_min_confidence = settings.min_confidence
         mock_settings.return_value.screener_min_risk_reward = settings.min_risk_reward
         mock_settings.return_value.screener_min_grade = settings.min_grade
+        # Numeric knobs must be real ints: a MagicMock would sail through every
+        # comparison and hide a broken default.
+        mock_settings.return_value.screener_max_concurrent_symbols = 1
+        mock_settings.return_value.screener_history_max_rows = 5000
+        mock_settings.return_value.screener_action_call_max_rows = 5000
 
         latest = run_screener(["BTC/USDT"])
 
