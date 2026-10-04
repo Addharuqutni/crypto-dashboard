@@ -14,6 +14,10 @@ interface WatchlistState {
   addCoin: (symbol: string, name: string) => boolean;
   /** Remove a coin from watchlist by symbol */
   removeCoin: (symbol: string) => void;
+  /** Move a coin one slot earlier. No-op at the top of the list. */
+  moveUp: (symbol: string) => void;
+  /** Move a coin one slot later. No-op at the end of the list. */
+  moveDown: (symbol: string) => void;
   /** Check if a coin is in the watchlist */
   isInWatchlist: (symbol: string) => boolean;
 }
@@ -94,9 +98,38 @@ export const useWatchlistStore = create<WatchlistState>((set, get) => ({
     set({ items: updated });
   },
 
+  /** Move a normalized symbol one slot earlier and persist. */
+  moveUp: (symbol) => shift(get(), symbol, -1),
+
+  /** Move a normalized symbol one slot later and persist. */
+  moveDown: (symbol) => shift(get(), symbol, 1),
+
   /** Check membership using normalized symbols. */
   isInWatchlist: (symbol) => {
     const normalizedSymbol = normalizeSymbol(symbol);
     return get().items.some((item) => normalizeSymbol(item.symbol) === normalizedSymbol);
   },
 }));
+
+/**
+ * Move one item by `delta` slots, preserving the relative order of the rest.
+ *
+ * Returns early (no state write, no storage write) when the symbol is unknown
+ * or already at the edge, so callers can disable the buttons at the list ends
+ * without special-casing the result.
+ */
+function shift(state: WatchlistState, symbol: string, delta: number): void {
+  const normalizedSymbol = normalizeSymbol(symbol);
+  const index = state.items.findIndex((item) => normalizeSymbol(item.symbol) === normalizedSymbol);
+  if (index < 0) return;
+
+  const target = index + delta;
+  if (target < 0 || target >= state.items.length) return;
+
+  const updated = [...state.items];
+  const [moved] = updated.splice(index, 1);
+  if (moved) updated.splice(target, 0, moved);
+
+  safeSetItem(STORAGE_KEYS.watchlist, updated);
+  useWatchlistStore.setState({ items: updated });
+}
