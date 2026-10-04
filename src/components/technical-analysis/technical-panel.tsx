@@ -170,14 +170,16 @@ function RsiDisplay({ rsi }: { rsi: RsiResult }) {
         {rsi.status.replace('_', ' ')}
       </p>
       {/* RSI gauge — the colour is the only load-bearing signal on the bar
-          itself, so it needs a programmatic value and text equivalent. */}
+          itself, so it needs a programmatic value. role="meter" because RSI is
+          a measurement in a known range, not progress toward a goal; the
+          adjacent paragraphs already carry the number and the status word, so
+          no aria-valuetext is added on top of them. */}
       <div
-        role="progressbar"
-        aria-label="RSI gauge"
+        role="meter"
+        aria-label="RSI"
         aria-valuenow={Math.round(rsi.value)}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuetext={`${rsi.value.toFixed(1)} — ${rsi.status.replace('_', ' ')}`}
         className="mt-2 h-1 w-full overflow-hidden rounded-full bg-bg-surface-raised"
       >
         <div

@@ -196,27 +196,27 @@ export function useBinanceWebSocket(enabled = true) {
   }, [setConnectionStatus]);
 
   /**
- * Close a socket, detaching its handlers first.
- *
- * A WebSocket fires `close` asynchronously, so a socket closed here still has
- * its `onclose` queued by the time the caller opens the next one. Left
- * attached, that delayed callback runs against `wsRef.current` — which by then
- * holds the *replacement* socket — nulling it and orphaning the live
- * connection: still open, still delivering `onmessage`, but unreachable and
- * never closed. Mirrors the guard in use-binance-kline-websocket.
- */
-const closeSocket = useCallback((socket: WebSocket | null) => {
-  if (!socket) return;
-  socket.onopen = null;
-  socket.onmessage = null;
-  socket.onerror = null;
-  socket.onclose = null;
-  try {
-    socket.close();
-  } catch {
-    // Already closing or closed; nothing to do.
-  }
-}, []);
+   * Close a socket, detaching its handlers first.
+   *
+   * A WebSocket fires `close` asynchronously, so a socket closed here still has
+   * its `onclose` queued by the time the caller opens the next one. Left
+   * attached, that delayed callback runs against `wsRef.current` — which by then
+   * holds the *replacement* socket — nulling it and orphaning the live
+   * connection: still open, still delivering `onmessage`, but unreachable and
+   * never closed. Mirrors the guard in use-binance-kline-websocket.
+   */
+  const closeSocket = useCallback((socket: WebSocket | null) => {
+    if (!socket) return;
+    socket.onopen = null;
+    socket.onmessage = null;
+    socket.onerror = null;
+    socket.onclose = null;
+    try {
+      socket.close();
+    } catch {
+      // Already closing or closed; nothing to do.
+    }
+  }, []);
 
 /**
    * Connect to Binance Futures all-market mini ticker stream.
