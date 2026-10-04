@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -11,9 +11,232 @@ import { useMarketStore } from '@/stores/use-market-store';
 import { formatCurrency, formatPercentage } from '@/lib/shared/formatting';
 import { buildPriceChangeAriaLabel } from '@/lib/shared/a11y/price-change-label';
 import { cn } from '@/lib/shared/utils';
-import { Star, TrendingUp, TrendingDown, Minus, Trash2, Search } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Minus, Trash2, Search, ChevronUp, ChevronDown } from 'lucide-react';
 import { PriceFreshnessBadge, useFreshnessClock } from '@/components/market/price-freshness-badge';
 import { getPriceFreshness } from '@/lib/shared/market/freshness';
+import type { LivePrice, WatchlistItem } from '@/types/market';
+
+/**
+ * Derived per-symbol live quote used by both the desktop row and the mobile
+ * card. Extracted so the two views cannot drift on price, 24h change or
+ * staleness.
+ */
+interface WatchlistQuote {
+  livePrice: LivePrice | undefined;
+  price: number | undefined;
+  change: number | undefined;
+  isStale: boolean;
+}
+
+function useWatchlistQuote(symbol: string, now: number): WatchlistQuote {
+  const livePrice = useMarketStore((s) => s.prices[symbol]);
+  const price = livePrice?.price;
+  const change = livePrice?.priceChangePercent24h;
+  const freshness = getPriceFreshness(livePrice?.receivedAt, now);
+  return { livePrice, price, change, isStale: freshness === 'stale' };
+}
+
+/**
+ * Desktop table row. Each row subscribes to a single symbol so unrelated
+ * price ticks don't re-render the rest of the watchlist.
+ */
+const WatchlistRow = memo(function WatchlistRow({
+  item,
+  now,
+  isFirst,
+  isLast,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+}: {
+  item: WatchlistItem;
+  now: number;
+  isFirst: boolean;
+  isLast: boolean;
+  onRemove: (symbol: string) => void;
+  onMoveUp: (symbol: string) => void;
+  onMoveDown: (symbol: string) => void;
+}) {
+  const { livePrice, price, change, isStale } = useWatchlistQuote(item.symbol, now);
+
+  return (
+    <tr className="border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50">
+      <td className="px-4 py-3">
+        <Link
+          href={`/coin/${item.symbol.toLowerCase()}`}
+          className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-surface text-xs font-bold text-accent-primary">
+            {item.symbol.slice(0, 2)}
+          </span>
+          <div>
+            <p className="font-medium text-text-primary">{item.name}</p>
+            <p className="text-xs text-text-muted">{item.symbol}</p>
+          </div>
+        </Link>
+      </td>
+      <td className="numeric px-4 py-3 font-medium">
+        <div className="flex items-center gap-2 text-text-primary">
+          <span className={cn(isStale && 'text-text-muted')}>{formatCurrency(price)}</span>
+          <PriceFreshnessBadge receivedAt={livePrice?.receivedAt} now={now} compact />
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        <ChangePill symbol={item.symbol} change={change} />
+      </td>
+      <td className="px-4 py-3 text-xs text-text-muted">
+        {new Date(item.addedAt).toLocaleDateString()}
+      </td>
+      <td className="px-4 py-3">
+        <RowActions
+          item={item}
+          isFirst={isFirst}
+          isLast={isLast}
+          onRemove={onRemove}
+          onMoveUp={onMoveUp}
+          onMoveDown={onMoveDown}
+        />
+      </td>
+    </tr>
+  );
+});
+
+/** Mobile card list entry — same quote hook and pill as the desktop row. */
+const WatchlistCard = memo(function WatchlistCard({
+  item,
+  now,
+  isFirst,
+  isLast,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+}: {
+  item: WatchlistItem;
+  now: number;
+  isFirst: boolean;
+  isLast: boolean;
+  onRemove: (symbol: string) => void;
+  onMoveUp: (symbol: string) => void;
+  onMoveDown: (symbol: string) => void;
+}) {
+  const { livePrice, price, change, isStale } = useWatchlistQuote(item.symbol, now);
+
+  return (
+    <div className="card flex items-center gap-3 px-4 py-3">
+      <Link
+        href={`/coin/${item.symbol.toLowerCase()}`}
+        className="flex flex-1 items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-surface text-xs font-bold text-accent-primary">
+          {item.symbol.slice(0, 2)}
+        </span>
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <p className="font-medium text-text-primary">{item.symbol}</p>
+            <div className="flex items-center gap-2">
+              <PriceFreshnessBadge receivedAt={livePrice?.receivedAt} now={now} compact />
+              <p className={cn('numeric font-medium text-text-primary', isStale && 'text-text-muted')}>
+                {formatCurrency(price)}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-text-muted">{item.name}</p>
+            <ChangePill symbol={item.symbol} change={change} compact />
+          </div>
+        </div>
+      </Link>
+      <RowActions
+        item={item}
+        isFirst={isFirst}
+        isLast={isLast}
+        onRemove={onRemove}
+        onMoveUp={onMoveUp}
+        onMoveDown={onMoveDown}
+        className="shrink-0"
+      />
+    </div>
+  );
+});
+
+/**
+ * Reorder + delete controls shared by both layouts.
+ *
+ * Real `<button>`s (no drag-only), disabled at the list edges so the first
+ * item cannot move up and the last cannot move down.
+ */
+const RowActions = memo(function RowActions({
+  item,
+  isFirst,
+  isLast,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  className,
+}: {
+  item: WatchlistItem;
+  isFirst: boolean;
+  isLast: boolean;
+  onRemove: (symbol: string) => void;
+  onMoveUp: (symbol: string) => void;
+  onMoveDown: (symbol: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex items-center justify-center gap-1', className)}>
+      <Button
+        variant="ghost"
+        icon
+        onClick={() => onMoveUp(item.symbol)}
+        disabled={isFirst}
+        aria-label={`Move ${item.symbol} up`}
+      >
+        <ChevronUp className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        variant="ghost"
+        icon
+        onClick={() => onMoveDown(item.symbol)}
+        disabled={isLast}
+        aria-label={`Move ${item.symbol} down`}
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+      </Button>
+      <Button
+        variant="danger-ghost"
+        icon
+        onClick={() => onRemove(item.symbol)}
+        aria-label={`Remove ${item.symbol} from watchlist`}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+});
+
+/** Shared 24h-change pill. `compact` matches the mobile card's smaller type. */
+function ChangePill({ symbol, change, compact }: { symbol: string; change: number | undefined; compact?: boolean }) {
+  const isUp = (change ?? 0) > 0;
+  const isDown = (change ?? 0) < 0;
+
+  return (
+    <span
+      className={cn(
+        'numeric inline-flex items-center font-medium',
+        compact ? 'gap-0.5 text-xs' : 'gap-1 text-sm',
+        isUp && 'text-market-up',
+        isDown && 'text-market-down',
+        !isUp && !isDown && 'text-market-neutral'
+      )}
+      aria-label={buildPriceChangeAriaLabel(symbol, change)}
+    >
+      {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
+      {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
+      {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
+      {formatPercentage(change)}
+    </span>
+  );
+}
 
 /**
  * Watchlist page — full view of user's saved coins with live data.
@@ -23,13 +246,17 @@ export default function WatchlistPage() {
   const hydrated = useWatchlistStore((s) => s.hydrated);
   const hydrate = useWatchlistStore((s) => s.hydrate);
   const removeCoin = useWatchlistStore((s) => s.removeCoin);
-  const prices = useMarketStore((s) => s.prices);
+  const moveUp = useWatchlistStore((s) => s.moveUp);
+  const moveDown = useWatchlistStore((s) => s.moveDown);
   const now = useFreshnessClock();
   const [pendingRemove, setPendingRemove] = useState<string | null>(null);
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Stable so memoized rows are not invalidated on every page render.
+  const handleRemove = useCallback((symbol: string) => setPendingRemove(symbol), []);
 
 
   if (!hydrated) {
@@ -96,72 +323,18 @@ export default function WatchlistPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item) => {
-                      const livePrice = prices[item.symbol];
-                      const price = livePrice?.price;
-                      const change = livePrice?.priceChangePercent24h;
-                      const isUp = (change ?? 0) > 0;
-                      const isDown = (change ?? 0) < 0;
-                      const freshness = getPriceFreshness(livePrice?.receivedAt, now);
-                      const isStale = freshness === 'stale';
-
-                      return (
-                        <tr
-                          key={item.symbol}
-                          className="border-b border-border-subtle/50 transition-colors hover:bg-bg-surface-soft/50"
-                        >
-                          <td className="px-4 py-3">
-                            <Link
-                              href={`/coin/${item.symbol.toLowerCase()}`}
-                              className="flex items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                            >
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg-surface text-xs font-bold text-accent-primary">
-                                {item.symbol.slice(0, 2)}
-                              </span>
-                              <div>
-                                <p className="font-medium text-text-primary">{item.name}</p>
-                                <p className="text-xs text-text-muted">{item.symbol}</p>
-                              </div>
-                            </Link>
-                          </td>
-                          <td className="numeric px-4 py-3 font-medium">
-                            <div className="flex items-center gap-2 text-text-primary">
-                              <span className={cn(isStale && 'text-text-muted')}>{formatCurrency(price)}</span>
-                              <PriceFreshnessBadge receivedAt={livePrice?.receivedAt} now={now} compact />
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={cn(
-                                'numeric inline-flex items-center gap-1 text-sm font-medium',
-                                isUp && 'text-market-up',
-                                isDown && 'text-market-down',
-                                !isUp && !isDown && 'text-market-neutral'
-                              )}
-                              aria-label={buildPriceChangeAriaLabel(item.symbol, change)}
-                            >
-                              {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
-                              {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
-                              {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
-                              {formatPercentage(change)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-text-muted">
-                            {new Date(item.addedAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <Button
-                              variant="danger-ghost"
-                              icon
-                              onClick={() => setPendingRemove(item.symbol)}
-                              aria-label={`Remove ${item.symbol} from watchlist`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {items.map((item, index) => (
+                      <WatchlistRow
+                        key={item.symbol}
+                        item={item}
+                        now={now}
+                        isFirst={index === 0}
+                        isLast={index === items.length - 1}
+                        onRemove={handleRemove}
+                        onMoveUp={moveUp}
+                        onMoveDown={moveDown}
+                      />
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -169,65 +342,18 @@ export default function WatchlistPage() {
 
             {/* Mobile Card List */}
             <div className="flex flex-col gap-2 md:hidden">
-              {items.map((item) => {
-                const livePrice = prices[item.symbol];
-                const price = livePrice?.price;
-                const change = livePrice?.priceChangePercent24h;
-                const isUp = (change ?? 0) > 0;
-                const isDown = (change ?? 0) < 0;
-                const freshness = getPriceFreshness(livePrice?.receivedAt, now);
-                const isStale = freshness === 'stale';
-
-                return (
-                  <div key={item.symbol} className="card flex items-center gap-3 px-4 py-3">
-                    <Link
-                      href={`/coin/${item.symbol.toLowerCase()}`}
-                      className="flex flex-1 items-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-                    >
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-surface text-xs font-bold text-accent-primary">
-                        {item.symbol.slice(0, 2)}
-                      </span>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="font-medium text-text-primary">{item.symbol}</p>
-                          <div className="flex items-center gap-2">
-                            <PriceFreshnessBadge receivedAt={livePrice?.receivedAt} now={now} compact />
-                            <p className={cn('numeric font-medium text-text-primary', isStale && 'text-text-muted')}>
-                              {formatCurrency(price)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-text-muted">{item.name}</p>
-                          <span
-                            className={cn(
-                              'numeric inline-flex items-center gap-0.5 text-xs font-medium',
-                              isUp && 'text-market-up',
-                              isDown && 'text-market-down',
-                              !isUp && !isDown && 'text-market-neutral'
-                            )}
-                            aria-label={buildPriceChangeAriaLabel(item.symbol, change)}
-                          >
-                            {isUp && <TrendingUp className="h-3 w-3" aria-hidden="true" />}
-                            {isDown && <TrendingDown className="h-3 w-3" aria-hidden="true" />}
-                            {!isUp && !isDown && <Minus className="h-3 w-3" aria-hidden="true" />}
-                            {formatPercentage(change)}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                    <Button
-                      variant="danger-ghost"
-                      icon
-                      className="shrink-0"
-                      onClick={() => setPendingRemove(item.symbol)}
-                      aria-label={`Remove ${item.symbol} from watchlist`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                );
-              })}
+              {items.map((item, index) => (
+                <WatchlistCard
+                  key={item.symbol}
+                  item={item}
+                  now={now}
+                  isFirst={index === 0}
+                  isLast={index === items.length - 1}
+                  onRemove={handleRemove}
+                  onMoveUp={moveUp}
+                  onMoveDown={moveDown}
+                />
+              ))}
             </div>
           </>
         )}

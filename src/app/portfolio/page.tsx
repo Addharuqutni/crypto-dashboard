@@ -276,7 +276,11 @@ function SummaryCard({ label, value, change, hero = false }: { label: string; va
   const isDown = (change ?? 0) < 0;
 
   return (
-    <div className={cn('card p-5', hero && 'sm:col-span-2')}>
+    // The hero occupies a single grid cell. A `col-span-2` here made the four
+    // cards total five column-units, which tiles into neither the 2-column
+    // (`sm`) nor the 4-column (`lg`) grid without leaving a dangling empty
+    // cell. Hierarchy is carried by the larger `text-3xl` value instead.
+    <div className="card p-5">
       <p className="text-xs font-medium uppercase tracking-wider text-text-muted">{label}</p>
       <p className={cn('numeric mt-1 font-bold text-text-primary', hero ? 'text-3xl' : 'text-xl')}>{value}</p>
       {change != null && (

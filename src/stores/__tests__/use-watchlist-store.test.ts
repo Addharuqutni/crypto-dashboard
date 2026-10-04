@@ -141,3 +141,95 @@ describe('useWatchlistStore membership and mutation', () => {
     expect(useWatchlistStore.getState().items).toHaveLength(0);
   });
 });
+
+describe('useWatchlistStore reordering', () => {
+  beforeEach(() => resetStore());
+
+  /** Seed three items in a known order. */
+  function seed(): void {
+    useWatchlistStore.setState({
+      items: [
+        { symbol: 'BTC', name: 'Bitcoin', addedAt: '2024-01-01' },
+        { symbol: 'ETH', name: 'Ethereum', addedAt: '2024-01-02' },
+        { symbol: 'SOL', name: 'Solana', addedAt: '2024-01-03' },
+      ],
+      hydrated: true,
+    });
+  }
+
+  const order = () => useWatchlistStore.getState().items.map((item) => item.symbol);
+
+  it('moveUp swaps with the previous item and persists the new order', () => {
+    seed();
+    useWatchlistStore.getState().moveUp('ETH');
+    expect(order()).toEqual(['ETH', 'BTC', 'SOL']);
+    expect(safeSetItem).toHaveBeenCalledTimes(1);
+    expect(safeSetItem).toHaveBeenCalledWith(
+      WATCHLIST_KEY,
+      expect.arrayContaining([expect.objectContaining({ symbol: 'ETH' })])
+    );
+  });
+
+  it('moveDown swaps with the next item and persists the new order', () => {
+    seed();
+    useWatchlistStore.getState().moveDown('ETH');
+    expect(order()).toEqual(['BTC', 'SOL', 'ETH']);
+    expect(safeSetItem).toHaveBeenCalledTimes(1);
+  });
+
+  it('moveUp is a no-op for the first item', () => {
+    seed();
+    useWatchlistStore.getState().moveUp('BTC');
+    expect(order()).toEqual(['BTC', 'ETH', 'SOL']);
+    expect(safeSetItem).not.toHaveBeenCalled();
+  });
+
+  it('moveDown is a no-op for the last item', () => {
+    seed();
+    useWatchlistStore.getState().moveDown('SOL');
+    expect(order()).toEqual(['BTC', 'ETH', 'SOL']);
+    expect(safeSetItem).not.toHaveBeenCalled();
+  });
+
+  it('moveUp and moveDown are no-ops for an unknown symbol', () => {
+    seed();
+    useWatchlistStore.getState().moveUp('DOGE');
+    useWatchlistStore.getState().moveDown('DOGE');
+    expect(order()).toEqual(['BTC', 'ETH', 'SOL']);
+    expect(safeSetItem).not.toHaveBeenCalled();
+  });
+
+  it('matches the symbol case-insensitively', () => {
+    seed();
+    useWatchlistStore.getState().moveDown('btc');
+    expect(order()).toEqual(['ETH', 'BTC', 'SOL']);
+  });
+
+  it('reorders a legacy lowercase entry in place, keeping its stored spelling', () => {
+    // Defensive: hydrate normalization may not have run yet. Reordering must
+    // still find the item without rewriting its symbol.
+    useWatchlistStore.setState({
+      items: [
+        { symbol: 'btc', name: 'Bitcoin', addedAt: '2024-01-01' },
+        { symbol: 'ETH', name: 'Ethereum', addedAt: '2024-01-02' },
+      ],
+      hydrated: true,
+    });
+    useWatchlistStore.getState().moveDown('BTC');
+    expect(order()).toEqual(['ETH', 'btc']);
+  });
+
+  it('preserves the relative order of the untouched items', () => {
+    useWatchlistStore.setState({
+      items: [
+        { symbol: 'BTC', name: 'Bitcoin', addedAt: '2024-01-01' },
+        { symbol: 'ETH', name: 'Ethereum', addedAt: '2024-01-02' },
+        { symbol: 'SOL', name: 'Solana', addedAt: '2024-01-03' },
+        { symbol: 'ADA', name: 'Cardano', addedAt: '2024-01-04' },
+      ],
+      hydrated: true,
+    });
+    useWatchlistStore.getState().moveUp('SOL');
+    expect(order()).toEqual(['BTC', 'SOL', 'ETH', 'ADA']);
+  });
+});
