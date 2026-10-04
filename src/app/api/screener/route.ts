@@ -3,6 +3,7 @@ import { fetchPythonScreenerLatest, runPythonScreener } from '@/lib/adapters/pyt
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
 import { toAlertRecords } from '@/lib/application/screener/to-alerts';
+import { toPublicApiError } from '@/lib/shared/http/api-error';
 import { getClientIp, rateLimit, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 
 export const runtime = 'nodejs';
@@ -25,10 +26,7 @@ async function runOnDemandScreener() {
     return screenerResponse('on-demand', response.latest);
   } catch (error) {
     console.error('[api/screener] Python on-demand run failed:', error);
-    return NextResponse.json(
-      { ok: false, error: 'Failed to run Python screener' },
-      { status: 502 }
-    );
+    return publicError(error, 'screener.onDemandRun', 'Failed to run Python screener');
   }
 }
 
@@ -41,11 +39,22 @@ async function readPythonSnapshot() {
   } catch (error) {
     console.error('[api/screener] Python snapshot read failed:', error);
     if (shouldFallbackToOnDemand()) return runOnDemandScreener();
-    return NextResponse.json(
-      { ok: false, error: 'Failed to read Python screener data' },
-      { status: 502 }
-    );
+    return publicError(error, 'screener.readSnapshot', 'Failed to read Python screener data');
   }
+}
+
+/**
+ * Map a thrown error to a public status and message.
+ *
+ * The common case here is 409: the on-demand fallback fires while the
+ * background worker holds the run lock, which means "a run is already in
+ * progress", not "the upstream is broken". Returning 502 for that sent the
+ * dashboard into an error state during every scheduled cycle even though a
+ * fresh snapshot was seconds away.
+ */
+function publicError(error: unknown, context: string, fallbackMessage: string) {
+  const { status, message, headers } = toPublicApiError(error, { context, fallbackMessage });
+  return NextResponse.json({ ok: false, error: message }, { status, headers });
 }
 
 function screenerResponse(mode: 'python' | 'on-demand', latest: Record<string, unknown> | null) {
