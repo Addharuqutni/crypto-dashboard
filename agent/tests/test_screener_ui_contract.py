@@ -413,3 +413,42 @@ def test_run_screener_keeps_policy_status_off_results(tmp_path, monkeypatch):
     row = latest["results"][0]
     _assert_ranked_result_contract(row)
     assert "status" not in row
+
+
+# --- ccxt unified symbol spelling --------------------------------------------
+
+
+def test_perpetual_settle_suffix_is_not_leaked_into_quote_asset():
+    """ccxt spells perps `BASE/QUOTE:SETTLE`; the UI must render `BASE/QUOTE`.
+
+    The dynamic universe is built from Binance USD-M futures, so every symbol
+    arrives as `BTC/USDT:USDT`. Splitting naively on `/` returned `USDT:USDT`
+    and the screener table rendered `BTC/USDT:USDT` in all 99 rows.
+    """
+    payload = _signal_payload()
+    payload["symbol"] = "BTC/USDT:USDT"
+    payload["baseAsset"] = "BTC"
+
+    row = _to_candidate(payload, evaluated_at=1_700_000_060_000, rank=1)
+
+    assert row["baseAsset"] == "BTC"
+    assert row["quoteAsset"] == "USDT"
+    assert ":" not in row["quoteAsset"]
+
+
+def test_quote_asset_survives_every_symbol_spelling_the_engine_accepts():
+    cases = {
+        "BTC/USDT:USDT": ("BTC", "USDT"),
+        "BTC/USDT": ("BTC", "USDT"),
+        "BTCUSDT": ("BTC", "USDT"),
+        "BTC-USD": ("BTC", "USD"),
+        "ETH/USDC:USDC": ("ETH", "USDC"),
+    }
+    for symbol, (base, quote) in cases.items():
+        payload = _signal_payload()
+        payload["symbol"] = symbol
+        payload.pop("baseAsset", None)
+
+        row = _to_candidate(payload, evaluated_at=1_700_000_060_000, rank=1)
+
+        assert (row["baseAsset"], row["quoteAsset"]) == (base, quote), symbol

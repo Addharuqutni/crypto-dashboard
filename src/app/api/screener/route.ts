@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchPythonScreenerLatest, runPythonScreener } from '@/lib/adapters/python-agent/client';
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
+import { toAlertRecords } from '@/lib/application/screener/to-alerts';
 import { getClientIp, rateLimit, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 
 export const runtime = 'nodejs';
@@ -53,7 +54,10 @@ function screenerResponse(mode: 'python' | 'on-demand', latest: Record<string, u
     mode,
     latest,
     settings: DEFAULT_SCREENER_ALERT_SETTINGS,
-    recentAlerts: [],
+    // The Python engine owns alert policy and stamps every decision into the
+    // snapshot, so the panel reads them from there instead of showing an
+    // always-empty list.
+    recentAlerts: toAlertRecords(latest?.alertDecisions),
     recentActionCalls: [],
     recentJournalEntries: readRecentJournalEntries(100),
   });

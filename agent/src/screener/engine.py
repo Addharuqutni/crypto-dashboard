@@ -140,6 +140,16 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
                 "action": d.get("action"),
                 "status": d.get("status"),
                 "reason": d.get("reason"),
+                # The Next.js Alert History panel renders these straight from the
+                # snapshot, so a decision stripped to four fields would leave the
+                # panel unable to show confidence/grade/levels. `createdAt` is the
+                # cycle time, which is what the panel's relative-age column means.
+                "confidence": d.get("confidence"),
+                "grade": d.get("grade"),
+                "rankingScore": d.get("rankingScore"),
+                "entry": d.get("entry"),
+                "stopLoss": d.get("stopLoss"),
+                "createdAt": completed_at,
             }
             for d in decisions
         ],
@@ -680,23 +690,31 @@ def _resolve_candle_close_time(
     return None
 
 
-def _base_asset(symbol: str) -> str:
+def _split_ccxt_symbol(symbol: str) -> tuple[str, str]:
+    """Split a ccxt unified symbol into (base, quote).
+
+    ccxt spells perpetuals as `BASE/QUOTE:SETTLE` - `BTC/USDT:USDT` is the
+    linear USDT perpetual, where `:USDT` is the *settle* currency, not part of
+    the quote. Naively taking everything after `/` yielded `USDT:USDT`, which
+    the screener table then rendered verbatim as `BTC/USDT:USDT`. The settle
+    suffix is dropped here so callers get the quote the user expects.
+    """
     value = (symbol or "").upper().replace("-", "/")
     if "/" in value:
-        return value.split("/", 1)[0]
+        base, _, rest = value.partition("/")
+        quote = rest.partition(":")[0]
+        return base or "UNKNOWN", quote or "USDT"
     if value.endswith("USDT") and len(value) > 4:
-        return value[:-4]
-    return value or "UNKNOWN"
+        return value[:-4], "USDT"
+    return value or "UNKNOWN", "USDT"
+
+
+def _base_asset(symbol: str) -> str:
+    return _split_ccxt_symbol(symbol)[0]
 
 
 def _quote_asset(symbol: str) -> str:
-    value = (symbol or "").upper().replace("-", "/")
-    if "/" in value:
-        parts = value.split("/", 1)
-        return parts[1] or "USDT"
-    if value.endswith("USDT"):
-        return "USDT"
-    return "USDT"
+    return _split_ccxt_symbol(symbol)[1]
 
 
 def _as_str_list(value: Any) -> list[str]:
