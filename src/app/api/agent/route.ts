@@ -3,6 +3,7 @@ import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
 import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
 import { runAgentOnLatest } from '@/lib/application/signal-agent/agent-runner';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
+import { toPublicApiError } from '@/lib/shared/http/api-error';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,8 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url);
     const topN = clampInt(url.searchParams.get('topN'), 5, 1, 10);
-    const result = await runAgentOnLatest(latest, readAiConfigFromEnv(), { topN });
+    const aiConfig = readAiConfigFromEnv();
+    const result = await runAgentOnLatest(latest, aiConfig, { topN });
 
     return NextResponse.json(
       {
@@ -41,17 +43,21 @@ export async function GET(request: Request) {
           screenerCompletedAt: latest.completedAt,
           universeSize: latest.universeSize,
           timeframes: latest.timeframes,
-          aiEnabled: Boolean(readAiConfigFromEnv()),
+          aiEnabled: Boolean(aiConfig),
         },
         result,
       },
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (err) {
-    console.error('[api/agent] run failed:', err);
+    const { status, message, headers } = toPublicApiError(err, {
+      context: 'api/agent',
+      fallbackMessage: 'Failed to run agent',
+      fallbackStatus: 500,
+    });
     return NextResponse.json(
-      { ok: false, error: 'Failed to run agent' },
-      { status: 500, headers: { 'Cache-Control': 'no-store' } }
+      { ok: false, error: message },
+      { status, headers: { 'Cache-Control': 'no-store', ...headers } }
     );
   }
 }

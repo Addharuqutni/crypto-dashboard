@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { fetchPythonScreenerLatest, runPythonScreener } from '@/lib/adapters/python-agent/client';
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
-import { getClientIp } from '@/lib/shared/security/rate-limit';
+import { getClientIp, rateLimit, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,7 +60,6 @@ function screenerResponse(mode: 'python' | 'on-demand', latest: Record<string, u
 }
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
-const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export function resolveScreenerStorageMode(): 'file' | 'on-demand' {
   return process.env.SCREENER_STORAGE_MODE?.trim() === 'on-demand' ? 'on-demand' : 'file';
@@ -70,19 +69,10 @@ function shouldFallbackToOnDemand(): boolean {
   return process.env.SCREENER_FILE_MODE_STRICT !== '1';
 }
 
+/** Thin wrapper so the screener route keeps its own env-driven limit. */
 export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
   const limit = getEnvInt('SCREENER_API_RATE_LIMIT_PER_MINUTE', 30, 1, 300);
-  const key = getClientIp(request);
-  const bucket = rateLimitBuckets.get(key);
-
-  pruneExpiredRateLimitBuckets(now);
-  if (!bucket || bucket.resetAt <= now) {
-    rateLimitBuckets.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (bucket.count >= limit) return false;
-  bucket.count += 1;
-  return true;
+  return rateLimit(`screener:${getClientIp(request)}`, RATE_LIMIT_WINDOW_MS, limit, now);
 }
 
 function getEnvInt(name: string, fallback: number, min: number, max: number): number {
@@ -93,15 +83,5 @@ function getEnvInt(name: string, fallback: number, min: number, max: number): nu
 }
 
 function rateLimitResponse() {
-  return NextResponse.json(
-    { ok: false, error: 'Too many screener requests' },
-    { status: 429, headers: { 'Retry-After': '60' } }
-  );
-}
-
-function pruneExpiredRateLimitBuckets(now: number): void {
-  if (rateLimitBuckets.size < 1_000) return;
-  for (const [key, bucket] of rateLimitBuckets) {
-    if (bucket.resetAt <= now) rateLimitBuckets.delete(key);
-  }
+  return rateLimitedResponse({ ok: false, error: 'Too many screener requests' }, { 'Retry-After': '60' });
 }

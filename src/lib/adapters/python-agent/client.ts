@@ -13,12 +13,21 @@ import type {
 const DEFAULT_BASE = 'http://127.0.0.1:8000';
 const DEFAULT_TIMEOUT_MS = 20_000;
 
+/**
+ * Transport failure kind, so route handlers can map to the right public
+ * status (504 timeout vs 503 unreachable vs 502 bad response).
+ * 'http' means the agent answered with a non-2xx status.
+ */
+export type PythonAgentErrorKind = 'http' | 'timeout' | 'unreachable' | 'invalid_response';
+
 export class PythonAgentError extends Error {
   readonly status?: number;
-  constructor(message: string, status?: number) {
+  readonly kind: PythonAgentErrorKind;
+  constructor(message: string, status?: number, kind: PythonAgentErrorKind = 'http') {
     super(message);
     this.name = 'PythonAgentError';
     if (status !== undefined) this.status = status;
+    this.kind = kind;
   }
 }
 
@@ -93,10 +102,17 @@ async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (err) {
     if (err instanceof PythonAgentError) throw err;
     if ((err as Error)?.name === 'AbortError') {
-      throw new PythonAgentError(`Python agent timeout after ${agentTimeoutMs()}ms`);
+      throw new PythonAgentError(
+        `Python agent timeout after ${agentTimeoutMs()}ms`,
+        undefined,
+        'timeout'
+      );
     }
+    // Message stays server-side only; routes map it to a generic public string.
     throw new PythonAgentError(
-      `Python agent unreachable at ${agentBaseUrl()}: ${(err as Error)?.message ?? 'unknown'}`
+      `Python agent unreachable at ${agentBaseUrl()}: ${(err as Error)?.message ?? 'unknown'}`,
+      undefined,
+      'unreachable'
     );
   } finally {
     clearTimeout(timeout);
@@ -160,14 +176,22 @@ export async function runPythonScreener(symbols?: string[]): Promise<PythonScree
     body: JSON.stringify(symbols ? { symbols } : {}),
   });
   if (!response.ok || !response.latest || typeof response.latest !== 'object') {
-    throw new PythonAgentError('Python screener returned an invalid response');
+    throw new PythonAgentError(
+      'Python screener returned an invalid response',
+      undefined,
+      'invalid_response'
+    );
   }
   return response;
 }
 
-export async function triggerActionCallScan(): Promise<ActionCallScanResponse> {
+/** Scan an explicit symbol list, or the full universe when `symbols` is omitted. */
+export async function triggerActionCallScan(symbols?: string[]): Promise<ActionCallScanResponse> {
   return agentFetch<ActionCallScanResponse>('/api/v1/scan', {
     method: 'POST',
-    body: JSON.stringify({ multi_timeframe: true }),
+    body: JSON.stringify({
+      ...(symbols && symbols.length > 0 ? { symbols } : {}),
+      multi_timeframe: true,
+    }),
   });
 }
