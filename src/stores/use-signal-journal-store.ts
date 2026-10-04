@@ -83,7 +83,21 @@ export const useSignalJournalStore = create<SignalJournalState>((set, get) => ({
    */
   hydrate: () => {
     const stored = safeGetItem<SignalJournalEntry[]>(STORAGE_KEY, []);
-    set({ entries: Array.isArray(stored) ? stored : [], hydrated: true });
+    // `safeGetItem` only checks that the JSON parses, so a hand-edited payload
+    // can be an array of non-entries. Drop anything without the fields every
+    // consumer reads (`id`, `status`, `symbol`) rather than letting a single
+    // bad row throw on `.filter((e) => e.id …)`.
+    const entries = Array.isArray(stored)
+      ? stored.filter(
+          (entry): entry is SignalJournalEntry =>
+            !!entry &&
+            typeof entry === 'object' &&
+            typeof entry.id === 'string' &&
+            typeof entry.symbol === 'string' &&
+            typeof entry.status === 'string'
+        )
+      : [];
+    set({ entries, hydrated: true });
   },
 
   /**

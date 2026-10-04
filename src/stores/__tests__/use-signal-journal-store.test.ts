@@ -308,4 +308,68 @@ describe('useSignalJournalStore', () => {
     expect(m.bestR).toBeCloseTo(2, 4);
     expect(m.worstR).toBeCloseTo(2, 4);
   });
+
+  describe('hydrate guards a corrupt payload', () => {
+    // Vitest runs in the `node` environment here, so stand in a minimal
+    // `window` + `localStorage` for `safeGetItem`, which bails early when
+    // `window` is undefined.
+    function withLocalStorage(value: unknown, run: () => void) {
+      const store: Record<string, string> =
+        value === undefined ? {} : { 'crypto-dashboard.signal-journal.v1': JSON.stringify(value) };
+      const originalWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+      const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+      Object.defineProperty(globalThis, 'window', { configurable: true, value: {} });
+      Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: {
+          getItem: (k: string) => (k in store ? store[k]! : null),
+          setItem: (k: string, v: string) => {
+            store[k] = v;
+          },
+          removeItem: (k: string) => {
+            delete store[k];
+          },
+          clear: () => Object.keys(store).forEach((k) => delete store[k]),
+        },
+      });
+      try {
+        run();
+      } finally {
+        if (originalWindow) Object.defineProperty(globalThis, 'window', originalWindow);
+        else Reflect.deleteProperty(globalThis, 'window');
+        if (originalStorage) Object.defineProperty(globalThis, 'localStorage', originalStorage);
+        else Reflect.deleteProperty(globalThis, 'localStorage');
+      }
+    }
+
+    it('drops non-object rows and rows missing required fields', () => {
+      withLocalStorage([baseEntry(), null, {}, { id: 'x' }, 'garbage', 42], () => {
+        useSignalJournalStore.setState({ entries: [], hydrated: false });
+        useSignalJournalStore.getState().hydrate();
+        const entries = useSignalJournalStore.getState().entries;
+        expect(entries).toHaveLength(1);
+        expect(entries[0]!.id).toBe('TEST-1');
+        expect(useSignalJournalStore.getState().hydrated).toBe(true);
+      });
+    });
+
+    it('falls back to an empty list when the payload is not an array', () => {
+      withLocalStorage({ not: 'an array' }, () => {
+        useSignalJournalStore.setState({ entries: [], hydrated: false });
+        useSignalJournalStore.getState().hydrate();
+        expect(useSignalJournalStore.getState().entries).toEqual([]);
+        expect(useSignalJournalStore.getState().hydrated).toBe(true);
+      });
+    });
+
+    it('does not throw on a null row that metrics() would read', () => {
+      withLocalStorage([null, baseEntry()], () => {
+        useSignalJournalStore.setState({ entries: [], hydrated: false });
+        useSignalJournalStore.getState().hydrate();
+        // The point of the guard: metrics() iterates entries and reads
+        // e.status, which would throw on the null row if it survived.
+        expect(() => useSignalJournalStore.getState().metrics()).not.toThrow();
+      });
+    });
+  });
 });
