@@ -49,16 +49,8 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
 
-    for index, symbol in enumerate(targets, start=1):
-        try:
-            payload = analyze_symbol_payload(symbol)
-            results.append(_to_candidate(payload, evaluated_at=started_at, rank=index))
-        except Exception as error:  # noqa: BLE001 - keep cycle resilient
-            errors.append({"symbol": str(symbol), "message": str(error)})
-
-    results = _assign_ranks(results)
-
-    completed_at = int(time() * 1000)
+    # Built before the loop so per-row alert eligibility and the final
+    # evaluate_alerts() call read the exact same thresholds.
     policy_settings = AlertPolicySettings(
         enabled=True,
         min_confidence=settings.screener_min_confidence,
@@ -67,6 +59,19 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
         cooldown_minutes=settings.screener_cooldown_minutes,
         max_alerts_per_hour=settings.screener_max_alerts_per_hour,
     )
+
+    for index, symbol in enumerate(targets, start=1):
+        try:
+            payload = analyze_symbol_payload(symbol)
+            results.append(
+                _to_candidate(payload, evaluated_at=started_at, rank=index, policy=policy_settings)
+            )
+        except Exception as error:  # noqa: BLE001 - keep cycle resilient
+            errors.append({"symbol": str(symbol), "message": str(error)})
+
+    results = _assign_ranks(results)
+
+    completed_at = int(time() * 1000)
     decisions = evaluate_alerts(
         results,
         settings=policy_settings,
@@ -158,6 +163,7 @@ def _to_candidate(
     *,
     evaluated_at: int,
     rank: int = 0,
+    policy: AlertPolicySettings | None = None,
 ) -> dict[str, Any]:
     """Map a python signal_service payload into a flat RankedScreenerResult."""
     signal = payload.get("signal") if isinstance(payload.get("signal"), dict) else {}
@@ -259,6 +265,7 @@ def _to_candidate(
         risk_reward=risk_reward,
         data_health_ok=bool(data_health.get("ok")),
         trade_permission=trade_permission,
+        policy=policy or AlertPolicySettings(),
     )
     rank_reason = (
         [f"Score: {ranking_score:.1f}"]
@@ -414,19 +421,26 @@ def _alert_eligibility(
     risk_reward: float | None,
     data_health_ok: bool,
     trade_permission: str,
+    policy: AlertPolicySettings,
 ) -> tuple[bool, list[str]]:
+    """Decide whether a ranked row may raise an alert.
+
+    Thresholds come from `policy` — the same AlertPolicySettings that
+    evaluate_alerts() uses. They were previously hardcoded here (75 / B /
+    1.5), which silently overrode SCREENER_MIN_* env changes.
+    """
     blocks: list[str] = []
     if action == "WAIT":
         blocks.append("Action is WAIT")
-    if confidence < 75:
-        blocks.append(f"Confidence {confidence} < min 75")
+    if confidence < policy.min_confidence:
+        blocks.append(f"Confidence {confidence} < min {policy.min_confidence:g}")
     grade_order = {"A": 0, "B": 1, "C": 2, "D": 3}
-    if grade_order.get(grade, 99) > grade_order["B"]:
-        blocks.append(f"Grade {grade} below min B")
+    if grade_order.get(grade, 99) > grade_order.get(policy.min_grade, grade_order["B"]):
+        blocks.append(f"Grade {grade} below min {policy.min_grade}")
     if not data_health_ok:
         blocks.append("Data health is not OK")
-    if risk_reward is not None and risk_reward < 1.5:
-        blocks.append(f"R:R {risk_reward:.2f} < min 1.5")
+    if risk_reward is not None and risk_reward < policy.min_risk_reward:
+        blocks.append(f"R:R {risk_reward:.2f} < min {policy.min_risk_reward:g}")
     if action != "WAIT":
         if trade_permission == "no_trade":
             blocks.append(f"Trade permission {trade_permission} conflicts with {action}")
