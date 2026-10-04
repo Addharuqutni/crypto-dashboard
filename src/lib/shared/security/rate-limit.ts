@@ -5,8 +5,7 @@ import { NextResponse } from 'next/server';
 const hits = new Map<string, number[]>();
 let warnedAboutMissingTrustProxy = false;
 
-export function rateLimit(key: string, windowMs: number, max: number): boolean {
-  const now = Date.now();
+export function rateLimit(key: string, windowMs: number, max: number, now = Date.now()): boolean {
   const arr = hits.get(key) ?? [];
   const valid = arr.filter((t) => now - t < windowMs);
   if (valid.length >= max) {

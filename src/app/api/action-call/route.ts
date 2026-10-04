@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   analyzeActionCall,
   listActionCalls,
-  PythonAgentError,
   triggerActionCallScan,
 } from '@/lib/adapters/python-agent/client';
 import { requireCronBearer } from '@/lib/shared/security/request-auth';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
+import { toPublicApiError } from '@/lib/shared/http/api-error';
 
 /**
  * BFF for Python Action Call.
@@ -48,22 +48,39 @@ export async function POST(request: NextRequest) {
     return rateLimitedResponse({ ok: false, error: 'Too many requests' }, { 'Retry-After': '60' });
   }
 
+  // Empty or unparseable body → full-universe scan (unchanged behaviour).
+  const body = (await request.json().catch(() => ({}))) as { symbols?: unknown } | null;
+  const validated = validateSymbols(body && typeof body === 'object' ? body.symbols : undefined);
+  if (!validated.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'symbols must be an array of strings' },
+      { status: 400 }
+    );
+  }
+
   try {
-    await request.json().catch(() => ({}));
-    const data = await triggerActionCallScan();
+    const data = await triggerActionCallScan(validated.symbols);
     return NextResponse.json(data);
   } catch (err) {
     return agentErrorResponse(err);
   }
 }
 
+/** `undefined` (absent) means "scan the full universe", as the Python API does. */
+function validateSymbols(raw: unknown): { ok: true; symbols?: string[] } | { ok: false } {
+  if (raw === undefined || raw === null) return { ok: true };
+  if (!Array.isArray(raw) || !raw.every((s) => typeof s === 'string')) return { ok: false };
+  return { ok: true, symbols: raw as string[] };
+}
+
 function agentErrorResponse(err: unknown) {
-  if (err instanceof PythonAgentError) {
-    return NextResponse.json(
-      { ok: false, error: err.message },
-      { status: err.status && err.status >= 400 && err.status < 600 ? err.status : 502 }
-    );
-  }
-  const message = err instanceof Error ? err.message : 'Action call failed';
-  return NextResponse.json({ ok: false, error: message }, { status: 502 });
+  const { status, message, headers } = toPublicApiError(err, {
+    context: 'api/action-call',
+    fallbackMessage: 'Action call failed',
+    fallbackStatus: 502,
+  });
+  return NextResponse.json(
+    { ok: false, error: message },
+    { status, headers: { 'Cache-Control': 'no-store', ...headers } }
+  );
 }

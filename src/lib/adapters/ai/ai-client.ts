@@ -20,7 +20,9 @@ export class AiClientError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public code?: string
+    public code?: string,
+    /** Provider-supplied Retry-After seconds, forwarded on 429. */
+    public retryAfter?: string
   ) {
     super(message);
     this.name = 'AiClientError';
@@ -199,5 +201,10 @@ async function parseError(response: Response): Promise<AiClientError> {
     message = 'Model or endpoint not found. Please check your Base URL and Model name.';
   }
 
-  return new AiClientError(message, response.status, code);
+  return new AiClientError(
+    message,
+    response.status,
+    code,
+    response.headers.get('retry-after') ?? undefined
+  );
 }
