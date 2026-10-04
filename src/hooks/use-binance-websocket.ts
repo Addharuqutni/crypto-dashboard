@@ -88,6 +88,14 @@ export function useBinanceWebSocket(enabled = true) {
   const snapshotRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
   const mountedRef = useRef(true);
+  /**
+   * Bumped on every init-effect run. `mountedRef` alone is not enough to tell
+   * a live run from a stale one: the next run resets it to `true`, so an
+   * in-flight `loadValidSymbols()` from the previous run would see `true` and
+   * go on to open a second socket and install a second set of intervals.
+   * Same generation-token approach as use-binance-kline-websocket.
+   */
+  const generationRef = useRef(0);
   const lastMessageAtRef = useRef(0);
 
   // Batch buffer for incoming ticker updates
@@ -188,6 +196,29 @@ export function useBinanceWebSocket(enabled = true) {
   }, [setConnectionStatus]);
 
   /**
+ * Close a socket, detaching its handlers first.
+ *
+ * A WebSocket fires `close` asynchronously, so a socket closed here still has
+ * its `onclose` queued by the time the caller opens the next one. Left
+ * attached, that delayed callback runs against `wsRef.current` — which by then
+ * holds the *replacement* socket — nulling it and orphaning the live
+ * connection: still open, still delivering `onmessage`, but unreachable and
+ * never closed. Mirrors the guard in use-binance-kline-websocket.
+ */
+const closeSocket = useCallback((socket: WebSocket | null) => {
+  if (!socket) return;
+  socket.onopen = null;
+  socket.onmessage = null;
+  socket.onerror = null;
+  socket.onclose = null;
+  try {
+    socket.close();
+  } catch {
+    // Already closing or closed; nothing to do.
+  }
+}, []);
+
+/**
    * Connect to Binance Futures all-market mini ticker stream.
    * Uses !miniTicker@arr to receive updates for ALL perpetual USDT pairs.
    */
@@ -195,10 +226,8 @@ export function useBinanceWebSocket(enabled = true) {
     if (!mountedRef.current) return;
 
     // Clean up existing connection
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    closeSocket(wsRef.current);
+    wsRef.current = null;
 
     // All-market mini ticker stream — receives all Futures USDT pairs
     const url = `${BINANCE_WS_BASE}/!miniTicker@arr`;
@@ -280,6 +309,10 @@ export function useBinanceWebSocket(enabled = true) {
 
       ws.onclose = () => {
         if (!mountedRef.current) return;
+        // A socket we already replaced must not touch the current one. Detaching
+        // in closeSocket prevents most of this, but a socket that drops on its
+        // own can still fire after a replacement was installed.
+        if (wsRef.current !== ws) return;
         wsRef.current = null;
         setConnectionStatus('disconnected');
         scheduleReconnectRef.current();
@@ -288,19 +321,17 @@ export function useBinanceWebSocket(enabled = true) {
       setConnectionStatus('disconnected');
       scheduleReconnectRef.current();
     }
-  }, [setConnectionStatus, flushBatch, resetStaleWatchdog, logParseError, isValidSymbol]);
+  }, [setConnectionStatus, flushBatch, resetStaleWatchdog, logParseError, isValidSymbol, closeSocket]);
 
   /**
    * Force reconnect — closes existing connection and opens a new one.
    */
   const reconnect = useCallback(() => {
     flushBatch();
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
+    closeSocket(wsRef.current);
+    wsRef.current = null;
     connectRef.current();
-  }, [flushBatch]);
+  }, [flushBatch, closeSocket]);
 
   // Keep refs in sync with latest callback instances
   connectRef.current = connect;
@@ -395,9 +426,12 @@ export function useBinanceWebSocket(enabled = true) {
 
     mountedRef.current = true;
 
+    const generation = ++generationRef.current;
+    const isStale = () => generationRef.current !== generation;
+
     // Load valid symbols first, then seed prices and connect
     void loadValidSymbols().then(() => {
-      if (mountedRef.current) {
+      if (mountedRef.current && !isStale()) {
         void seedInitialPrices();
         connectRef.current();
 
@@ -452,10 +486,8 @@ export function useBinanceWebSocket(enabled = true) {
         clearInterval(snapshotRefreshIntervalRef.current);
       }
       flushBatch();
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      closeSocket(wsRef.current);
+      wsRef.current = null;
     };
   // The market socket is intentionally stable while enabled. Mutable refs keep
   // callbacks/configuration available without reconnecting on every store or
