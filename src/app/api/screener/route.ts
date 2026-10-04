@@ -67,6 +67,11 @@ function screenerResponse(mode: 'python' | 'on-demand', latest: Record<string, u
     // snapshot, so the panel reads them from there instead of showing an
     // always-empty list.
     recentAlerts: toAlertRecords(latest?.alertDecisions),
+    // Deliberately empty, and accurately so: `ScreenerActionCallRecord` is the
+    // Next.js store's richer row shape (`action-calls.jsonl`), and nothing in
+    // this deployment writes it - the Python engine persists its own, much
+    // smaller rows to `action-calls.json` and they are consumed as alerts
+    // above. Do not populate this from that file; the shapes are not the same.
     recentActionCalls: [],
     recentJournalEntries: readRecentJournalEntries(100),
   });

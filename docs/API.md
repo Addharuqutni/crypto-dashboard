@@ -36,7 +36,21 @@ Serves the latest Python screener snapshot to the UI. With `SCREENER_STORAGE_MOD
   "latest": {
     "completedAt": 1710000000000,
     "health": {},
-    "results": []
+    "results": [],
+    "alertDecisions": [
+      {
+        "symbol": "BTC/USDT",
+        "action": "LONG",
+        "status": "triggered",
+        "reason": "policy_pass",
+        "confidence": 82,
+        "grade": "A",
+        "rankingScore": 71.5,
+        "entry": 65000,
+        "stopLoss": 64000,
+        "createdAt": 1710000000000
+      }
+    ]
   },
   "settings": {},
   "recentAlerts": [],
@@ -44,6 +58,27 @@ Serves the latest Python screener snapshot to the UI. With `SCREENER_STORAGE_MOD
   "recentJournalEntries": []
 }
 ```
+
+`recentAlerts` is the mapped `latest.alertDecisions` array, not a separate
+store. The Python engine owns alert policy and stamps a decision for every
+evaluated symbol each cycle; the dashboard maps the ones it can render and
+drops the rest. Rows whose `status` or `action` is not a known value, or that
+lack `confidence`/`createdAt`, are omitted rather than shown with placeholders.
+
+`recentActionCalls` is always `[]` in this deployment. The richer
+`ScreenerActionCallRecord` shape belongs to the Next.js store
+(`action-calls.jsonl`), which nothing here writes; the Python engine's own
+`action-calls.json` rows are smaller and reach the UI through `recentAlerts`.
+
+**Error shape:**
+
+| Status | Meaning |
+|--------|---------|
+| `429` | Rate limited (`SCREENER_API_RATE_LIMIT_PER_MINUTE`) |
+| `409` | A screener run is already in progress; retry shortly |
+| `503` | Python agent unreachable |
+| `504` | Python agent timed out |
+| `502` | Upstream answered with an unexpected failure |
 
 ### `GET /api/cron/screener`
 
