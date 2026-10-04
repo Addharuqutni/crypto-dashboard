@@ -66,17 +66,33 @@ def get_market_data_client(exchange_name: str = "binance") -> "MarketDataClient"
 
 
 class MarketDataClient:
+    """Thin ccxt wrapper with retry and a request gate.
+
+    WHY the gate: `run_screener` evaluates symbols on a thread pool, and every
+    worker shares the one cached instance returned by `get_market_data_client`.
+    ccxt's own rate limiter is not thread-safe - `fetch2` calls `throttle()`
+    (which only reads `lastRestRequestTimestamp`) and assigns that timestamp
+    *after* the call, so N concurrent threads all read the same stale value and
+    sail through without waiting. Measured: 3 threads, 3 bypasses. Holding this
+    lock across each request restores the interval ccxt intends and serialises
+    the shared mutable state on the exchange object (`lastRestRequestTimestamp`,
+    `last_request_*`, the session). Concurrency still pays off because the
+    screener spends most of its wall-clock in indicator math, not in this lock.
+    """
+
     def __init__(self, exchange_name: str = "binance"):
         if not hasattr(ccxt, exchange_name):
             raise ValueError(f"Exchange tidak didukung: {exchange_name}")
         exchange_class = getattr(ccxt, exchange_name)
         self.exchange = exchange_class({"enableRateLimit": True, "timeout": 30000})
         self.exchange.load_markets()
+        self._request_lock = threading.Lock()
 
     def fetch_ticker_price(self, symbol: str) -> float:
         if symbol not in self.exchange.markets:
             raise ValueError(f"Symbol tidak tersedia di {self.exchange.id}: {symbol}")
-        ticker = self.exchange.fetch_ticker(symbol)
+        with self._request_lock:
+            ticker = self.exchange.fetch_ticker(symbol)
         price = self._extract_price(ticker)
         if price is None:
             raise ValueError(f"Realtime price tidak tersedia untuk {symbol}")
@@ -94,7 +110,8 @@ class MarketDataClient:
         prices: dict[str, float] = {}
         if self.exchange.has.get("fetchTickers"):
             try:
-                tickers = self.exchange.fetch_tickers(unique_symbols)
+                with self._request_lock:
+                    tickers = self.exchange.fetch_tickers(unique_symbols)
                 for symbol, ticker in tickers.items():
                     price = self._extract_price(ticker)
                     if price is not None:
@@ -120,7 +137,7 @@ class MarketDataClient:
             raise ValueError(f"Timeframe tidak tersedia di {self.exchange.id}: {timeframe}. Pilihan: {valid_timeframes}")
 
         rows = _fetch_with_retry(
-            lambda: self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit),
+            lambda: self._fetch_ohlcv_gated(symbol, timeframe, limit),
             sleep=sleep,
         )
         if not rows:
@@ -138,6 +155,17 @@ class MarketDataClient:
         if df.empty:
             raise ValueError(f"Data OHLCV tidak valid untuk {symbol} {timeframe}")
         return df
+
+    def _fetch_ohlcv_gated(self, symbol: str, timeframe: str, limit: int) -> list[list[float]]:
+        """One request under the gate.
+
+        Deliberately NOT held across the retry backoff in `_fetch_with_retry`:
+        a sleeping thread would otherwise block every other symbol behind a
+        backoff it has no part in. Each attempt re-acquires the gate, so
+        requests from different symbols still interleave.
+        """
+        with self._request_lock:
+            return self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
 
     @staticmethod
     def _extract_price(ticker: dict) -> float | None:

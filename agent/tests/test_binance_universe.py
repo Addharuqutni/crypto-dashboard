@@ -279,6 +279,9 @@ class TestRunScreenerUniverseIntegration:
             screener_universe_mode="top_futures_volume",
             screener_max_symbols=100,
             screener_universe_cache_ttl_minutes=30,
+            screener_history_max_rows=5000,
+            screener_action_call_max_rows=5000,
+            screener_max_concurrent_symbols=1,
             screener_symbols=None,
         )
         monkeypatch.setattr(engine_module, "load_settings", lambda: settings)
@@ -345,6 +348,9 @@ class TestRunScreenerUniverseIntegration:
             screener_universe_mode="top_futures_volume",
             screener_max_symbols=100,
             screener_universe_cache_ttl_minutes=30,
+            screener_history_max_rows=5000,
+            screener_action_call_max_rows=5000,
+            screener_max_concurrent_symbols=1,
             screener_symbols=None,
         )
         monkeypatch.setattr(engine_module, "load_settings", lambda: settings)
@@ -407,6 +413,9 @@ class TestRunScreenerUniverseIntegration:
             screener_universe_mode="top_futures_volume",
             screener_max_symbols=100,
             screener_universe_cache_ttl_minutes=30,
+            screener_history_max_rows=5000,
+            screener_action_call_max_rows=5000,
+            screener_max_concurrent_symbols=1,
             screener_symbols=None,
         )
         monkeypatch.setattr(engine_module, "load_settings", lambda: settings)

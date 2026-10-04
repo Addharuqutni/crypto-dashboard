@@ -47,7 +47,9 @@ def analyze_symbol_payload(
     config = load_strategy_config()
     client = get_market_data_client(settings.exchange)
     symbol = normalize_symbol(symbol_raw)
-    limit = fetch_limit or settings.fetch_limit
+    # SCREENER_CANDLE_LIMIT is the screener-facing knob; FETCH_LIMIT stays the
+    # shared fallback so deployments that only set FETCH_LIMIT are unaffected.
+    limit = fetch_limit or settings.screener_candle_limit or settings.fetch_limit
     mtf_enabled = is_multi_timeframe_enabled(config) if use_mtf is None else use_mtf
 
     if mtf_enabled:

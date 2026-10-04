@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from time import time
 from typing import Any
@@ -42,7 +43,11 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
     never sees transient `status` / `reason` fields on ranked rows.
     """
     settings = load_settings()
-    store = AtomicJsonStore(Path(settings.screener_storage_dir))
+    store = AtomicJsonStore(
+        Path(settings.screener_storage_dir),
+        history_max_rows=settings.screener_history_max_rows,
+        action_call_max_rows=settings.screener_action_call_max_rows,
+    )
     universe = resolve_screener_universe(settings, symbols_override=symbols)
     targets = list(universe.symbols)
     started_at = int(time() * 1000)
@@ -60,14 +65,12 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
         max_alerts_per_hour=settings.screener_max_alerts_per_hour,
     )
 
-    for index, symbol in enumerate(targets, start=1):
-        try:
-            payload = analyze_symbol_payload(symbol)
-            results.append(
-                _to_candidate(payload, evaluated_at=started_at, rank=index, policy=policy_settings)
-            )
-        except Exception as error:  # noqa: BLE001 - keep cycle resilient
-            errors.append({"symbol": str(symbol), "message": str(error)})
+    results, errors = _evaluate_symbols(
+        targets,
+        evaluated_at=started_at,
+        max_workers=settings.screener_max_concurrent_symbols,
+        policy=policy_settings,
+    )
 
     results = _assign_ranks(results)
 
@@ -156,6 +159,52 @@ def run_screener(symbols: list[str] | None = None) -> dict[str, Any]:
         }
     )
     return snapshot
+
+
+def _evaluate_symbols(
+    targets: list[str],
+    *,
+    evaluated_at: int,
+    max_workers: int,
+    policy: AlertPolicySettings,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    """Analyze every target, in parallel when max_workers > 1.
+
+    This thread owns all shared state: each future is drained here via
+    as_completed() and filed under its original index, so the returned rows and
+    errors are in `targets` order no matter which symbol finishes first. That
+    keeps the snapshot (and therefore ranking) identical to a sequential run -
+    only the wall-clock time changes. max_workers=1 is exactly the old loop.
+
+    Workers do share the cached ccxt client from `get_market_data_client`; the
+    request gate inside MarketDataClient is what makes that safe, not the
+    absence of shared state. See src/data.py.
+    """
+    if not targets:
+        return [], []
+
+    candidates: dict[int, dict[str, Any]] = {}
+    errors: dict[int, dict[str, str]] = {}
+
+    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
+        futures = {
+            executor.submit(analyze_symbol_payload, symbol): index
+            for index, symbol in enumerate(targets)
+        }
+        for future in as_completed(futures):
+            index = futures[future]
+            try:
+                candidates[index] = _to_candidate(
+                    future.result(),
+                    evaluated_at=evaluated_at,
+                    rank=index + 1,
+                    policy=policy,
+                )
+            except Exception as error:  # noqa: BLE001 - one bad symbol must not fail the cycle
+                errors[index] = {"symbol": str(targets[index]), "message": str(error)}
+
+    order = range(len(targets))
+    return [candidates[i] for i in order if i in candidates], [errors[i] for i in order if i in errors]
 
 
 def _to_candidate(

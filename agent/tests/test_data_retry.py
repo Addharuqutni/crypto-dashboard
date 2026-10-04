@@ -7,6 +7,9 @@ exponential backoff; deterministic 4xx (bad symbol, auth) fail fast.
 
 from __future__ import annotations
 
+import threading
+import time
+
 import ccxt
 import pandas as pd
 import pytest
@@ -43,6 +46,8 @@ def _client(outcomes) -> tuple[MarketDataClient, FakeExchange]:
     exchange = FakeExchange(outcomes)
     client = MarketDataClient.__new__(MarketDataClient)  # skip load_markets()
     client.exchange = exchange
+    # __new__ skips __init__, so seed the request gate by hand.
+    client._request_lock = threading.Lock()
     return client, exchange
 
 
@@ -146,3 +151,48 @@ def test_fetch_ohlcv_rejects_unknown_symbol_before_any_request():
         client.fetch_ohlcv("NOPE/USDT", "5m", 250, sleep=lambda _: None)
 
     assert exchange.call_count == 0
+
+# --- request gate ------------------------------------------------------------
+
+
+def test_concurrent_fetches_never_enter_the_exchange_at_the_same_time():
+    """The screener pool shares one client; overlapping requests corrupt ccxt state.
+
+    ccxt's rate limiter reads `lastRestRequestTimestamp` in `throttle()` and only
+    assigns it after the call, so without a gate every concurrent thread sees the
+    stale value and the configured interval is not enforced at all.
+    """
+    in_flight = 0
+    peak = 0
+    lock = threading.Lock()
+
+    class OverlapDetectingExchange(FakeExchange):
+        def fetch_ohlcv(self, symbol, timeframe=None, limit=None, **kwargs):
+            nonlocal in_flight, peak
+            self.calls.append({"symbol": symbol, "timeframe": timeframe, "limit": limit})
+            with lock:
+                in_flight += 1
+                peak = max(peak, in_flight)
+            try:
+                time.sleep(0.02)
+                return ROWS
+            finally:
+                with lock:
+                    in_flight -= 1
+
+    exchange = OverlapDetectingExchange([ROWS] * 8)
+    client = MarketDataClient.__new__(MarketDataClient)
+    client.exchange = exchange
+    client._request_lock = threading.Lock()
+
+    threads = [
+        threading.Thread(target=lambda: client.fetch_ohlcv("BTC/USDT", "5m", 250, sleep=lambda _: None))
+        for _ in range(4)
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert peak == 1, "requests must be serialised through the gate, not fired concurrently"
+    assert exchange.call_count == 4
