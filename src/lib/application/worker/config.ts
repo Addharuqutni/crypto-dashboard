@@ -1,5 +1,6 @@
 import type { WorkerConfig } from './types';
 import { BINANCE_INTERVALS, type BinanceInterval } from '@/lib/adapters/binance/intervals';
+import { readEnvInt } from '@/lib/shared/config/env-int';
 
 /**
  * Default worker configuration. Tuned for the Phase 3 spec: monitor BTCUSDT
@@ -61,24 +62,27 @@ export function loadWorkerConfig(
   cfg.triggerTimeframe = parseInterval(env.WORKER_TRIGGER_TF, cfg.triggerTimeframe);
 
   // --- numbers ---
-  cfg.intervalMinutes = clampPosInt(env.WORKER_INTERVAL_MIN, cfg.intervalMinutes, 1, 24 * 60);
-  cfg.alertCooldownMinutes = clampPosInt(
-    env.WORKER_ALERT_COOLDOWN_MIN,
+  cfg.intervalMinutes = readEnvInt('WORKER_INTERVAL_MIN', cfg.intervalMinutes, 1, 24 * 60, env);
+  cfg.alertCooldownMinutes = readEnvInt(
+    'WORKER_ALERT_COOLDOWN_MIN',
     cfg.alertCooldownMinutes,
     0,
-    24 * 60
+    24 * 60,
+    env
   );
-  cfg.minConfidenceToAlert = clampPosInt(
-    env.WORKER_MIN_CONFIDENCE,
+  cfg.minConfidenceToAlert = readEnvInt(
+    'WORKER_MIN_CONFIDENCE',
     cfg.minConfidenceToAlert,
     0,
-    100
+    100,
+    env
   );
-  cfg.healthAlertsPerHour = clampPosInt(
-    env.WORKER_HEALTH_ALERTS_PER_HOUR,
+  cfg.healthAlertsPerHour = readEnvInt(
+    'WORKER_HEALTH_ALERTS_PER_HOUR',
     cfg.healthAlertsPerHour,
     0,
-    20
+    20,
+    env
   );
 
   // --- booleans ---
@@ -146,15 +150,6 @@ function parseInterval(raw: string | undefined, fallback: BinanceInterval): Bina
   if (!raw) return fallback;
   const cleaned = raw.trim().toLowerCase() as BinanceInterval;
   return VALID_INTERVALS.includes(cleaned) ? cleaned : fallback;
-}
-
-function clampPosInt(raw: string | undefined, fallback: number, min: number, max: number): number {
-  if (!raw) return fallback;
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n)) return fallback;
-  if (n < min) return min;
-  if (n > max) return max;
-  return n;
 }
 
 function parseBool(raw: string | undefined, fallback: boolean): boolean {

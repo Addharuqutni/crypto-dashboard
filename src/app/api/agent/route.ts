@@ -4,6 +4,7 @@ import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
 import { runAgentOnLatest } from '@/lib/application/signal-agent/agent-runner';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 import { toPublicApiError } from '@/lib/shared/http/api-error';
+import { parseBoundedInt } from '@/lib/shared/config/env-int';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     }
 
     const url = new URL(request.url);
-    const topN = clampInt(url.searchParams.get('topN'), 5, 1, 10);
+    const topN = parseBoundedInt(url.searchParams.get('topN'), 5, 1, 10);
     const aiConfig = readAiConfigFromEnv();
     const result = await runAgentOnLatest(latest, aiConfig, { topN });
 
@@ -60,10 +61,4 @@ export async function GET(request: Request) {
       { status, headers: { 'Cache-Control': 'no-store', ...headers } }
     );
   }
-}
-
-function clampInt(raw: string | null, fallback: number, min: number, max: number): number {
-  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
 }

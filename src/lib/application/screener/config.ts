@@ -1,5 +1,6 @@
 import type { ScreenerAlertSettings, ScreenerConfig } from './types';
 import { getScreenerUniverseFromEnv } from './universe';
+import { readEnvInt } from '@/lib/shared/config/env-int';
 
 /**
  * Default ranking/alert thresholds for the screener.
@@ -31,20 +32,11 @@ export const DEFAULT_SCREENER_CONFIG: ScreenerConfig = {
   macroTimeframe: '4h',
   // ponytail: env override keeps the cycle cadence tunable without code edits;
   // clamp [1, 1440] min so a stray value can't starve the event loop or stall.
-  intervalMinutes: clampEnvInt('SCREENER_INTERVAL_MINUTES', 5, 1, 1440),
+  intervalMinutes: readEnvInt('SCREENER_INTERVAL_MINUTES', 5, 1, 1440),
   maxConcurrentSymbols: 3,
   candleLimit: 300,
   alertSettings: DEFAULT_SCREENER_ALERT_SETTINGS,
 };
-
-/** Read a positive integer env var with bounds; falls back when unset/invalid. */
-function clampEnvInt(name: string, fallback: number, min: number, max: number): number {
-  const raw = process.env[name]?.trim();
-  if (!raw) return fallback;
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.min(max, Math.max(min, Math.trunc(n)));
-}
 
 /** Numeric ordering for grade thresholds (lower = better). */
 const GRADE_ORDER = ['A', 'B', 'C', 'D'] as const;

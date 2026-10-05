@@ -4,6 +4,7 @@ import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/conf
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
 import { toAlertRecords } from '@/lib/application/screener/to-alerts';
 import { toPublicApiError } from '@/lib/shared/http/api-error';
+import { readEnvInt } from '@/lib/shared/config/env-int';
 import { getClientIp, rateLimit, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 
 export const runtime = 'nodejs';
@@ -89,15 +90,8 @@ function shouldFallbackToOnDemand(): boolean {
 
 /** Thin wrapper so the screener route keeps its own env-driven limit. */
 export function allowScreenerRequest(request: Request, now = Date.now()): boolean {
-  const limit = getEnvInt('SCREENER_API_RATE_LIMIT_PER_MINUTE', 30, 1, 300);
+  const limit = readEnvInt('SCREENER_API_RATE_LIMIT_PER_MINUTE', 30, 1, 300);
   return rateLimit(`screener:${getClientIp(request)}`, RATE_LIMIT_WINDOW_MS, limit, now);
-}
-
-function getEnvInt(name: string, fallback: number, min: number, max: number): number {
-  const raw = process.env[name];
-  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
 }
 
 function rateLimitResponse() {

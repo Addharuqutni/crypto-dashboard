@@ -1,4 +1,5 @@
 import type { ScreenerUniverseCoin } from './types';
+import { readEnvInt } from '@/lib/shared/config/env-int';
 
 /**
  * Static top-100 large-cap Binance USDⓈ-M futures perpetual universe.
@@ -117,7 +118,7 @@ function getDefaultUniverse(): ScreenerUniverseCoin[] {
 
 export function getScreenerUniverseFromEnv(defaultMaxSymbols = 100): ScreenerUniverseCoin[] {
   const universe = getDefaultUniverse();
-  const maxSymbols = getEnvInt('SCREENER_MAX_SYMBOLS', defaultMaxSymbols, 1, universe.length);
+  const maxSymbols = readEnvInt('SCREENER_MAX_SYMBOLS', defaultMaxSymbols, 1, universe.length);
   const raw = process.env.SCREENER_SYMBOLS;
   if (!raw?.trim()) return universe.slice(0, maxSymbols);
 
@@ -131,11 +132,4 @@ export function getScreenerUniverseFromEnv(defaultMaxSymbols = 100): ScreenerUni
     .slice(0, maxSymbols);
 
   return selected.length > 0 ? selected : universe.slice(0, maxSymbols);
-}
-
-function getEnvInt(name: string, fallback: number, min: number, max: number): number {
-  const raw = process.env[name];
-  const parsed = raw ? Number.parseInt(raw, 10) : fallback;
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, parsed));
 }
