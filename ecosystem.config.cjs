@@ -26,8 +26,6 @@ module.exports = {
         HOSTNAME: process.env.HOSTNAME || '127.0.0.1',
         DISABLE_SCREENER_SCHEDULER: '1',
         SCREENER_STORAGE_MODE: 'file',
-        SCREENER_STORAGE_BACKEND: 'file',
-        SCREENER_REQUIRE_DATABASE: '0',
         SCREENER_FILE_MODE_STRICT: '1',
       },
       max_memory_restart: '768M',

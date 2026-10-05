@@ -99,7 +99,15 @@ Produces `crypto-dashboard-deploy.zip`. Upload, extract, set Application Startup
 
 ### Serverless / Vercel
 
-- Set `SCREENER_STORAGE_BACKEND=supabase` + Supabase credentials
+Not supported. The Next.js server reads the screener snapshot from
+`data/screener/latest.json`, which the Python engine writes to the local
+filesystem; a serverless deployment has no such filesystem, and there is no
+hosted backend to fall back to. The former Supabase path was removed because
+nothing wrote to it — see `docs/ENV.md`. Deploy to a VPS or container host with
+a persistent volume.
+
+If you do put this behind a scheduled trigger, the cron endpoint still works:
+
 - Schedule `GET /api/cron/screener` with `Authorization: Bearer $CRON_SECRET`
 - Keep `CRON_SECRET` long and private
 
@@ -213,6 +221,5 @@ There is no external pager integration in-repo. Wire PM2 + host monitoring (e.g.
 
 - [ ] `.env.local` mode `600`, not world-readable
 - [ ] `CRON_SECRET` and Basic Auth password are long random values
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` never exposed to the browser
 - [ ] nginx terminates TLS; app binds to `127.0.0.1`
 - [ ] No exchange trading keys in this app — read-only market data only

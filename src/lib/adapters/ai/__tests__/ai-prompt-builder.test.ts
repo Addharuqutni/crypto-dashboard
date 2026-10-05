@@ -29,8 +29,12 @@ describe('ai-prompt-builder', () => {
     const prompt = buildSystemPrompt(context);
 
     expect(prompt).not.toContain('sk-test-secret');
-    expect(prompt).not.toContain('SUPABASE_SERVICE_ROLE_KEY');
     expect(prompt).not.toContain('API_KEY');
+    // Names of secrets this deployment actually holds. The previous third
+    // assertion named a Supabase variable that no longer exists, so it could
+    // never fail — a leak guard that guards nothing.
+    expect(prompt).not.toContain('CRON_SECRET');
+    expect(prompt).not.toContain('PYTHON_AGENT_INTERNAL_TOKEN');
   });
 
   it('summarizes compact context badges', () => {

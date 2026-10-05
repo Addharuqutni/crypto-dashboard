@@ -138,5 +138,5 @@ The worker is a Node/TypeScript process that depends on the Python Action Call s
 | **Cron** (simple) | `*/15 * * * * cd /opt/crypto && /usr/bin/node node_modules/tsx/dist/cli.mjs scripts/worker/start.ts --once` |
 
 For Vercel-style serverless, swap the JSONL/state store for a hosted KV
-(Postgres, Supabase, Vercel KV, etc). The `WorkerStore` interface is small
+(Postgres, Vercel KV, S3, etc). The `WorkerStore` interface is small
 and only needs `init`, `readState`, `writeState`, `appendSignal`.

@@ -117,7 +117,6 @@ Prinsip yang berlaku di seluruh project:
 | Bahasa | TypeScript 6 |
 | State | Zustand 5, TanStack Query 5 |
 | Charts | TradingView Lightweight Charts 5 |
-| Storage (opsional) | Supabase (`@supabase/supabase-js`) |
 | Sinyal & Screener | Python 3 (FastAPI, ccxt, pandas) |
 | Testing | Vitest 4 (unit/integration), Playwright (e2e) |
 | Tooling | ESLint 10, tsx |
@@ -169,8 +168,6 @@ Next.js dan Python agent sama-sama membaca root `.env.local`. Referensi lengkap 
 | Variable | Description | Required | Default |
 |---|---|---:|---|
 | `SCREENER_STORAGE_MODE` | Mode `/api/screener`: `file` (baca snapshot) atau `on-demand` (jalankan cycle baru per request) | No | `file` |
-| `SCREENER_STORAGE_BACKEND` | Backend storage: `supabase` atau `file` | No | `file` |
-| `SCREENER_REQUIRE_DATABASE` | Jika `1`, wajib pakai database dan melarang fallback file | No | `0` |
 | `CRON_SECRET` | Bearer token untuk `GET /api/cron/screener` dan `POST /api/action-call` | Ya untuk cron | - |
 | `SCREENER_FILE_MODE_STRICT` | Jika `1`, matikan fallback on-demand saat snapshot file tidak ada | No | `1` |
 | `SCREENER_API_RATE_LIMIT_PER_MINUTE` | Batas request per client per menit | No | `30` |
@@ -185,8 +182,6 @@ Next.js dan Python agent sama-sama membaca root `.env.local`. Referensi lengkap 
 | `SCREENER_ACTION_CALL_MAX_ROWS` | Batas baris `action-calls.json`; baris terlama dipangkas dulu | No | `5000` |
 | `INCLUDE_STABLECOINS` | Jika `true`, izinkan base stablecoin (USDC, FDUSD, …) di universe dinamis | No | `false` |
 | `DISABLE_SCREENER_SCHEDULER` | Jika `1`, matikan scheduler in-process Next.js | No | `0` (dev), `1` (VPS) |
-| `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase | Untuk backend Supabase | - |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key Supabase, server-side saja | Untuk backend Supabase | - |
 
 ### Python Action Call
 

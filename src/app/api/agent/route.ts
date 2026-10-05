@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
+import { ScreenerStore } from '@/lib/application/screener/store';
 import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
 import { runAgentOnLatest } from '@/lib/application/signal-agent/agent-runner';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
@@ -9,6 +9,13 @@ import { parseBoundedInt } from '@/lib/shared/config/env-int';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+/**
+ * One reader per process. The store holds no mutable state — it resolves the
+ * snapshot path in its constructor — so a module-level instance is safe and
+ * avoids re-deriving the path on every request.
+ */
+const screenerStore = new ScreenerStore();
 
 /**
  * GET /api/agent — read-only AI Signal Agent over latest screener snapshot.
@@ -24,7 +31,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const latest = await getScreenerStorage().readLatest();
+    const latest = await screenerStore.readLatest();
     if (!latest) {
       return NextResponse.json(
         { ok: false, error: 'No screener snapshot found. Run the screener first.' },
