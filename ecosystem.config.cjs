@@ -24,7 +24,6 @@ module.exports = {
         NODE_OPTIONS: '--max-old-space-size=512',
         PORT: process.env.PORT || '3000',
         HOSTNAME: process.env.HOSTNAME || '127.0.0.1',
-        DISABLE_SCREENER_SCHEDULER: '1',
         SCREENER_STORAGE_MODE: 'file',
         SCREENER_FILE_MODE_STRICT: '1',
       },

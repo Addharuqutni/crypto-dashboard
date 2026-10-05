@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
 process.env.NODE_ENV = 'production';
-process.env.DISABLE_SCREENER_SCHEDULER ??= '1';
 
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 const standaloneDir = join(rootDir, '.next', 'standalone');

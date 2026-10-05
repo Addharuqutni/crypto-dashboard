@@ -31,7 +31,6 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `NODE_ENV` | No | Runtime mode | `production` (VPS) |
 | `PORT` | No | HTTP port | `3000` |
 | `HOSTNAME` | No | Bind address | `127.0.0.1` |
-| `DISABLE_SCREENER_SCHEDULER` | No | Retained compatibility flag for disabling a legacy in-process scheduler; production PM2 uses the Python screener process. | `0` / `1` |
 
 ## Screener
 
@@ -45,8 +44,23 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `SCREENER_MAX_CONCURRENT_SYMBOLS` | No | Parallel symbol evaluation concurrency | `3` |
 | `SCREENER_CANDLE_LIMIT` | No | Candles fetched per timeframe per symbol | `120` |
 | `SCREENER_INTERVAL_MINUTES` | No | Cycle interval for the long-running screener process (`1`–`1440`) | `15` |
+| `SCREENER_STORAGE_DIR` | No | Directory the Python engine writes snapshots to, and the Next.js reader reads from | `data/screener` |
 | `CRON_SECRET` | Yes for cron/scan | Bearer token for `GET /api/cron/screener` and `POST /api/action-call` | long random secret |
 | `TRUST_PROXY` | No | When `1`, rate limits trust `X-Real-IP` / last `X-Forwarded-For` hop (set only behind nginx) | unset |
+
+### Screener alert policy
+
+These gate which ranked rows become alerts. The defaults are deliberately
+conservative — ranking is risk-first, so a low-confidence or low-RR setup is
+rejected outright. Set them in the same file as the rest.
+
+| Variable | Required | Description | Example / Default |
+|----------|----------|-------------|-------------------|
+| `SCREENER_MIN_CONFIDENCE` | No | Minimum confidence (`0`–`100`) for a row to alert | `75` |
+| `SCREENER_MIN_GRADE` | No | Minimum grade: `A`, `B`, `C`, or `D` | `B` |
+| `SCREENER_MIN_RISK_REWARD` | No | Minimum risk/reward ratio | `1.5` |
+| `SCREENER_MAX_ALERTS_PER_HOUR` | No | Alert rate cap per hour | `10` |
+| `SCREENER_ALERT_COOLDOWN_MINUTES` | No | Per-symbol/action cooldown. Effective cooldown is also bounded by `SCREENER_ACTION_CALL_MAX_ROWS`, since aged-out rows stop blocking | `10` |
 
 ## Python Action Call agent
 
@@ -86,6 +100,21 @@ Private VPS: set `BASIC_AUTH_ENABLED=1`, `TRUST_PROXY=1` (behind nginx), and a l
 
 Used by Next.js AI routes and the Python agent (which also accepts `AI_MODEL_*` aliases).
 
+The Python agent additionally supports an optional AI review filter, configured
+separately from the keys above: `AI_MODEL_ENABLED`, `AI_MODEL_PROVIDER`
+(`gemini` | `openai_compatible` | `custom`), `AI_MODEL_API_KEY`,
+`GEMINI_API_KEY`, `AI_MODEL_NAME`, `AI_MODEL_BASE_URL`, `AI_MODEL_TIMEOUT`, and
+`AI_MODEL_MIN_SCORE`. When enabled, an action call is only sent to Telegram if the
+review returns `APPROVE` with `score >= AI_MODEL_MIN_SCORE`. The review never
+overrides the deterministic signal; it only filters delivery and annotates the
+dataset.
+
+## AI Signal Agent CLI (optional)
+
+| Variable | Required | Description | Default |
+|----------|----------|-------------|---------|
+| `AGENT_TOP_N` | No | Setups summarized when `--topN` is omitted (`npm run agent`) | `5` |
+
 ## Telegram Worker (optional)
 
 | Variable | Required | Description | Default |
@@ -94,6 +123,9 @@ Used by Next.js AI routes and the Python agent (which also accepts `AI_MODEL_*` 
 | `TELEGRAM_CHAT_ID` | For delivery | Target chat/channel ID | — |
 | `WORKER_SYMBOLS` | No | Symbols to evaluate | `BTCUSDT` |
 | `WORKER_INTERVAL_MIN` | No | Cycle interval (minutes) | `15` |
+| `WORKER_SETUP_TF` | No | Setup timeframe | `30m` |
+| `WORKER_MACRO_TF` | No | Macro confirmation timeframe | `4h` |
+| `WORKER_TRIGGER_TF` | No | Trigger timeframe | `15m` |
 | `WORKER_ALERT_COOLDOWN_MIN` | No | Cooldown per symbol/action | `60` |
 | `WORKER_MIN_CONFIDENCE` | No | Minimum confidence for alerts | `65` |
 | `WORKER_SEND_WAIT_ALERTS` | No | Send WAIT alerts | `false` |
@@ -107,7 +139,6 @@ Used by Next.js AI routes and the Python agent (which also accepts `AI_MODEL_*` 
 ### Local development
 
 ```env
-DISABLE_SCREENER_SCHEDULER=0
 SCREENER_MAX_SYMBOLS=100
 BASIC_AUTH_ENABLED=0
 MARKET_DATA_MODE=dashboard
@@ -123,7 +154,6 @@ Same file (`.env.local`). Recommended values:
 NODE_ENV=production
 PORT=3000
 HOSTNAME=127.0.0.1
-DISABLE_SCREENER_SCHEDULER=1
 SCREENER_STORAGE_MODE=file
 SCREENER_FILE_MODE_STRICT=1
 SCREENER_MAX_SYMBOLS=100

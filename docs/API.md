@@ -2,7 +2,15 @@
 
 Source of truth: route handlers under [`src/app/api/`](../src/app/api/).
 
-All routes use the Node.js runtime and `force-dynamic` (no static caching of responses unless noted).
+All routes use the Node.js runtime. Every route except `/api/action-call` also
+declares `force-dynamic`; `/api/action-call` reads request headers and query
+params directly, which already opts it out of static rendering.
+
+Every route sets `Cache-Control: no-store` on both success and error responses.
+This matters because a success status is heuristically cacheable, so without it a
+proxy or CDN could serve a stale snapshot with no way for the UI to tell. The
+error path gets it from `apiErrorResponse`; see
+[`src/lib/shared/http/error-response.ts`](../src/lib/shared/http/error-response.ts).
 
 ## Action Call and Screener
 
@@ -101,7 +109,27 @@ Use an external scheduler such as Vercel Cron or system cron when a dedicated Py
 
 ### Python service endpoints
 
-The internal FastAPI service exposes `/api/v1/health`, `/api/v1/analyze`, `/api/v1/scan`, `/api/v1/action-calls/latest`, `/api/v1/screener/latest`, and `/api/v1/screener/run`. Keep port `8000` bound to localhost; expose only the Next.js BFF through nginx.
+The internal FastAPI service exposes these routes. All require the
+`X-Internal-Token` header matching `PYTHON_AGENT_INTERNAL_TOKEN` **except**
+`/api/v1/health`, which is deliberately unauthenticated so a process manager or
+load balancer can probe it.
+
+| Method | Path | Auth | Purpose |
+|--------|------|:----:|---------|
+| `GET` | `/api/v1/health` | — | Liveness probe |
+| `GET` | `/api/v1/analyze` | Yes | Analyze one symbol (multi-timeframe) |
+| `GET` | `/api/v1/action-calls/latest` | Yes | Recent stored action calls (`limit`, max 1000) |
+| `GET` | `/api/v1/screener/latest` | Yes | Latest persisted screener snapshot |
+| `POST` | `/api/v1/scan` | Yes | Trigger an action-call scan |
+| `POST` | `/api/v1/screener/run` | Yes | Run a screener cycle now |
+
+It also serves an operator dashboard (`/`, `/dashboard`, `/api/scan`,
+`/api/stats`, `/api/jobs`, `/api/evaluate`, `/api/action-calls`,
+`/api/export/training.jsonl`, `/api/export/training.csv`). Those are for local
+inspection and are **not** routed through the Next.js BFF; all except `/` and
+`/dashboard` require the internal token.
+
+Keep port `8000` bound to localhost; expose only the Next.js BFF through nginx.
 
 ## AI
 

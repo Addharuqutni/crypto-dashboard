@@ -56,7 +56,6 @@ nano .env.local   # or your preferred editor
 ```env
 SCREENER_STORAGE_MODE=file
 SCREENER_FILE_MODE_STRICT=1
-DISABLE_SCREENER_SCHEDULER=1
 BASIC_AUTH_ENABLED=1
 ```
 
@@ -109,7 +108,6 @@ Web/screener/worker env overrides (from `ecosystem.config.cjs`):
 NODE_ENV=production
 PORT=3000
 HOSTNAME=127.0.0.1
-DISABLE_SCREENER_SCHEDULER=1
 SCREENER_STORAGE_MODE=file
 PYTHON_AGENT_URL=http://127.0.0.1:8000
 PYTHON_AGENT_TIMEOUT_MS=20000

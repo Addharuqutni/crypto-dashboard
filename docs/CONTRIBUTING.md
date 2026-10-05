@@ -37,6 +37,7 @@ Open `http://localhost:3000`.
 | `npm run worker` | Telegram alert worker |
 | `npm run agent` | Run the optional TypeScript AI agent |
 | `npm run python-agent` | Start the Python Action Call service |
+| `npm run python-agent:win` | Start the Python Action Call service (Windows) |
 | `npm run check` | `typecheck` + `lint` + `test` |
 | `npm run clean` | Remove local build and test artifacts |
 | `npm run audit:prod` | Audit production dependencies |
@@ -112,14 +113,16 @@ src/
   stores/         # Zustand client state
   types/          # Shared types
   lib/
-    domain/       # Pure business logic (signals, indicators, intelligence)
-    application/  # Use-cases, workers, screener orchestration
-    adapters/     # External I/O (Binance, AI, storage, websocket)
-    shared/       # Cross-cutting helpers (formatting, a11y, security)
+    domain/       # Pure business logic (chart, indicators, intelligence, risk)
+    application/  # Use-cases, workers, screener + signal-agent orchestration
+    adapters/     # External I/O (Binance, market-data, AI, Python agent)
+    shared/       # Cross-cutting helpers (formatting, a11y, security, config)
 ```
 
 - Domain code must stay free of Next.js/React imports and network I/O.
 - Adapters own external APIs; application layer orchestrates them.
+- Signals are produced only by the Python service. `domain/indicators` feeds the
+  client-side chart, not the signal path.
 
 ## PR Checklist
 

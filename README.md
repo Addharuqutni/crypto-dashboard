@@ -181,7 +181,20 @@ Next.js dan Python agent sama-sama membaca root `.env.local`. Referensi lengkap 
 | `SCREENER_HISTORY_MAX_ROWS` | Batas baris `history.json`; baris terlama dipangkas dulu | No | `5000` |
 | `SCREENER_ACTION_CALL_MAX_ROWS` | Batas baris `action-calls.json`; baris terlama dipangkas dulu | No | `5000` |
 | `INCLUDE_STABLECOINS` | Jika `true`, izinkan base stablecoin (USDC, FDUSD, …) di universe dinamis | No | `false` |
-| `DISABLE_SCREENER_SCHEDULER` | Jika `1`, matikan scheduler in-process Next.js | No | `0` (dev), `1` (VPS) |
+| `SCREENER_STORAGE_DIR` | Direktori snapshot Python (tulis dan baca) | No | `data/screener` |
+
+### Kebijakan Alert Screener
+
+Gerbang yang menentukan baris ranked mana yang menjadi alert. Default-nya sengaja
+konservatif — ranking bersifat risk-first.
+
+| Variable | Description | Required | Default |
+|---|---|---:|---|
+| `SCREENER_MIN_CONFIDENCE` | Confidence minimum (`0`–`100`) agar baris boleh alert | No | `75` |
+| `SCREENER_MIN_GRADE` | Grade minimum: `A`, `B`, `C`, atau `D` | No | `B` |
+| `SCREENER_MIN_RISK_REWARD` | Risk/reward ratio minimum | No | `1.5` |
+| `SCREENER_MAX_ALERTS_PER_HOUR` | Batas jumlah alert per jam | No | `10` |
+| `SCREENER_ALERT_COOLDOWN_MINUTES` | Cooldown per symbol/action. Cooldown efektif juga dibatasi `SCREENER_ACTION_CALL_MAX_ROWS` | No | `10` |
 
 ### Python Action Call
 
@@ -340,11 +353,14 @@ crypto-dashboard/
 Layer di `src/lib/`:
 
 ```text
-domain/       Logika bisnis murni (signals, indicators, intelligence) — tanpa I/O
-application/  Use-case, worker, orkestrasi screener
-adapters/     I/O eksternal (Binance, AI, storage, websocket)
-shared/       Helper lintas-cutting (formatting, a11y, security)
+domain/       Logika bisnis murni (chart, indicators, intelligence, risk) — tanpa I/O
+application/  Use-case, worker, orkestrasi screener dan signal-agent
+adapters/     I/O eksternal (Binance, market-data, AI, Python agent)
+shared/       Helper lintas-cutting (formatting, a11y, security, config)
 ```
+
+Engine sinyal dan screener ada di Python (`agent/`). `domain/indicators` di TypeScript hanya
+dipakai untuk analisis chart di sisi klien, bukan untuk memproduksi sinyal.
 
 ## Quality Checks
 

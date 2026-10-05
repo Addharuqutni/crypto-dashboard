@@ -117,7 +117,7 @@ Config: [`ecosystem.config.cjs`](../ecosystem.config.cjs)
 
 | App name | Script | Notes |
 |----------|--------|-------|
-| `crypto-dashboard-web` | `scripts/start-prod.mjs` | `DISABLE_SCREENER_SCHEDULER=1`; `PYTHON_AGENT_URL` |
+| `crypto-dashboard-web` | `scripts/start-prod.mjs` | Needs `PYTHON_AGENT_URL`; screener cycles come from the Python processes below |
 | `crypto-dashboard-python-screener` | `scripts/python-agent/worker.sh` | Runs the Python dashboard-mode screener |
 | `crypto-dashboard-worker` | `scripts/worker/start.ts` | Telegram alerts from Python Action Call |
 | `crypto-dashboard-python-agent` | `scripts/python-agent/start.sh` | FastAPI Action Call on `:8000` |

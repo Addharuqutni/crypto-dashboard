@@ -34,7 +34,6 @@ ensure_env() {
 ensure_env "NODE_ENV" "production"
 ensure_env "PORT" "3000"
 ensure_env "HOSTNAME" "127.0.0.1"
-ensure_env "DISABLE_SCREENER_SCHEDULER" "1"
 ensure_env "SCREENER_STORAGE_MODE" "file"
 ensure_env "SCREENER_FILE_MODE_STRICT" "1"
 ensure_env "PYTHON_AGENT_URL" "http://127.0.0.1:8000"

@@ -52,11 +52,15 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-Jika `pandas-ta==0.3.14b0` gagal diinstall:
+Untuk menjalankan test:
 
 ```bash
-pip install pandas-ta
+pip install -r requirements-dev.txt
+pytest
 ```
+
+Indikator (EMA, RSI, MACD, ATR, ADX, Fibonacci) dihitung manual di
+`src/indicators.py` dengan numpy/pandas. Tidak ada dependency `pandas-ta`.
 
 ## Konfigurasi env
 
@@ -120,7 +124,9 @@ AI_MODEL_MIN_SCORE=0.6
 # rest = OHLCV REST scanner, websocket = Binance USDⓈ-M Futures mark price realtime, evaluate = label dataset outcomes, dashboard = web dashboard
 MARKET_DATA_MODE=rest
 REALTIME_PRINT_INTERVAL_SECONDS=5
-DASHBOARD_HOST=0.0.0.0
+# Bind ke loopback. Service ini tidak punya rate limit atau TLS sendiri —
+# hanya BFF Next.js yang boleh menjangkau, lewat nginx.
+DASHBOARD_HOST=127.0.0.1
 DASHBOARD_PORT=8000
 DASHBOARD_AUTO_SCAN=false
 DASHBOARD_AUTO_SCAN_INTERVAL_SECONDS=900
@@ -328,26 +334,42 @@ Catatan: order block dan liquidity sweep di versi ini memakai heuristik sederhan
 
 ```text
 agent/
-├── main.py
+├── main.py               # CLI entrypoint (MARKET_DATA_MODE=rest|websocket|evaluate|dashboard)
 ├── requirements.txt
-├── config.yaml
+├── requirements-dev.txt  # + pytest
+├── config.yaml           # Konfigurasi strategi (dibaca load_strategy_config)
 ├── README.md
+├── datasets/             # Output dataset (dibuat saat SAVE_ACTION_DATASET=true)
 └── src/
-    ├── __init__.py
-    ├── action_call.py
-    ├── alert.py
-    ├── analyzer.py
-    ├── binance_universe.py
-    ├── config.py
-    ├── data.py
-    ├── indicators.py
-    ├── signal_service.py
-    ├── web.py
+    ├── config.py             # Env + strategy settings
+    ├── data.py               # ccxt client, OHLCV fetch (dengan request gate)
+    ├── futures_ws.py         # Binance USDⓈ-M mark price WebSocket
+    ├── indicators.py         # EMA, RSI, MACD, ATR, ADX, Fibonacci (numpy/pandas)
+    ├── analyzer.py           # Analisis struktur + deteksi sinyal
+    ├── multi_timeframe.py    # Konfluensi setup/trigger/macro
+    ├── action_call.py        # Entry/SL/TP/risk-reward
+    ├── signal_service.py     # Orkestrasi analyze/scan
+    ├── binance_universe.py   # Resolusi universe dinamis + cache
+    ├── marketcap.py          # Fallback universe via CoinGecko
+    ├── ai_model.py           # Review AI opsional (gemini / openai-compatible)
+    ├── alert.py              # Notifikasi Telegram
+    ├── dataset.py            # Tulis dataset JSONL/CSV
+    ├── db.py                 # Mirror Postgres opsional (psycopg)
+    ├── evaluator.py          # Label outcome dataset (WIN/LOSS/OPEN)
+    ├── exporter.py           # Export training rows (JSONL/CSV)
+    ├── web.py                # FastAPI app + endpoint /api/v1/*
     └── screener/
-        ├── __init__.py
-        ├── storage.py
-        └── worker.py
+        ├── engine.py         # Siklus screener (intinya)
+        ├── policy.py         # Threshold alert + cooldown
+        ├── storage.py        # AtomicJsonStore (latest/history/action-calls)
+        ├── lock.py           # RunLock — cegah siklus tumpang tindih
+        ├── auth.py           # Validasi internal token
+        └── worker.py         # Loop screener terjadwal
 ```
+
+`agent/src/screener/` adalah satu-satunya penulis snapshot yang dibaca dashboard.
+Next.js hanya membaca `latest.json`; `history.json` dan `action-calls.json` dikonsumsi
+di dalam Python.
 
 ## Catatan risiko
 
