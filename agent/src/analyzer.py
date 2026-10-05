@@ -175,6 +175,38 @@ def calculate_risk_plan(
     support/resistance (e.g. a LONG at the window high). That returns no plan
     rather than inventing a target; add an ATR-derived fallback if such setups
     should still trade.
+
+    --- Why the stop looks wrong but is left alone ---
+
+    `min`/`max` here select the FARTHER of {structure level, price -/+ 1.5 ATR}:
+
+        LONG  min(support, price - 1.5*ATR)  -> picks the lower  = wider stop
+        SHORT max(resistance, price + 1.5*ATR) -> picks the higher = wider stop
+
+    That reads like a sign error, and it does guarantee risk >= 1.5 ATR: measured
+    over 216 live setups the ATR term never once bound, because a 120-bar extreme
+    is essentially always further away. Reward/risk therefore lands near 0.24 and
+    only ~4% of signals clear min_risk_reward — which is why the screener has
+    produced zero actionable rows across seven consecutive runs.
+
+    Swapping to the tighter stop is the obvious fix and it is a trap. Measured
+    walk-forward on the same data, stop vs structure target, ties resolving to the
+    stop:
+
+        current (wide stop)    9 trades   avg R +0.54
+        capped at 1.5 ATR    112 trades   avg R -0.13
+        capped at 1.0 ATR    157 trades   avg R -0.16
+        capped at 0.75 ATR   178 trades   avg R -0.13
+
+    A grid over stop x target (ATR-projected targets at 2x/3x/4x) put every
+    capped variant between -12R and -31R. The wide stop is not a bug producing
+    bad numbers; it is the only variant with positive expectancy, because it
+    keeps the stop outside the noise that a 5m entry sits in.
+
+    So: leave the levels alone. The real gap is upstream — a 5m trigger is too
+    noisy for a 1.5-ATR stop and too late for a 120-bar structure target. The
+    honest fix is a different entry timeframe or an explicit re-entry rule, not
+    a tighter stop. Do not "fix" this function without re-running the walk-forward.
     """
     if direction == "LONG":
         stop_loss = min(support, price - atr * ATR_STOP_MULTIPLIER)
@@ -280,7 +312,7 @@ def analyze(symbol: str, timeframe: str, df: pd.DataFrame, config: dict) -> Anal
         float(latest["atr"]),
     )
     if risk_reward and risk_reward < rules["min_risk_reward"]:
-        reasons.append(f"Risk/reward kurang ideal: {risk_reward}")
+        reasons.append(f"Risk/reward below minimum: {risk_reward} < {rules['min_risk_reward']}")
 
     return AnalysisResult(
         symbol=symbol,

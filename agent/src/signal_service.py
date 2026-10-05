@@ -170,8 +170,12 @@ def _analysis_to_dict(result: AnalysisResult) -> dict[str, Any]:
 def _to_dashboard_signal(result: AnalysisResult, action_call: Any) -> dict[str, Any]:
     """Map Python analysis/action-call into the dashboard ActionCallView shape."""
     if action_call is None:
-        confidence = _confidence_from_analysis(result, actionable=False)
+        confidence = _confidence_from_analysis(result)
         wait_reason = _wait_reason(result)
+        # Grade follows the same scale as the actionable path. It used to be a
+        # hardcoded "D", which contradicted the confidence sitting next to it:
+        # the UI showed "55 / D" for a row whose own scale puts 55 in the C band.
+        grade = _grade_from_confidence(confidence, result.risk_reward)
         return {
             "action": "WAIT",
             "status": "HOLD",
@@ -180,7 +184,7 @@ def _to_dashboard_signal(result: AnalysisResult, action_call: Any) -> dict[str, 
             "trend": result.trend or "SIDEWAYS",
             "timeframe": result.timeframe,
             "confidenceScore": confidence,
-            "signalGrade": "D",
+            "signalGrade": grade,
             "entryTrigger": "NO_TRIGGER",
             "regime": _map_regime(result.regime, result.bias),
             "entryZone": {"min": None, "max": None},
@@ -226,7 +230,7 @@ def _to_dashboard_signal(result: AnalysisResult, action_call: Any) -> dict[str, 
                 "finalScore": confidence,
             },
             "confidence": confidence,
-            "grade": "D",
+            "grade": grade[0] if grade.startswith("A") else grade,
             "marketRegime": _map_market_regime_id(result.regime, result.bias),
             "tradePermission": "no_trade",
             "dataHealth": _healthy_data(result),
@@ -247,7 +251,7 @@ def _to_dashboard_signal(result: AnalysisResult, action_call: Any) -> dict[str, 
             "pythonTrend": result.trend,
         }
 
-    confidence = _confidence_from_analysis(result, actionable=True)
+    confidence = _confidence_from_analysis(result)
     grade = _grade_from_confidence(confidence, action_call.risk_reward)
     entry = float(action_call.entry_price)
     return {
@@ -372,7 +376,21 @@ def _dataset_row_to_dashboard(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _confidence_from_analysis(result: AnalysisResult, *, actionable: bool) -> int:
+def _confidence_from_analysis(result: AnalysisResult) -> int:
+    """Score setup quality 0-100, then cap it by the data-health budget.
+
+    This used to take an `actionable` flag that clamped the score to 55 whenever
+    no action call formed, and the WAIT branch hardcoded `signalGrade: "D"`. On
+    the live universe that made all 99 rows read "confidence 55 / grade D",
+    whether the market was dead flat or aligned across 1h/4h/15m/30m with ADX
+    30+. The clamp protected nothing — `evaluate_alerts()` skips `action ==
+    "WAIT"` before it looks at quality, so a WAIT row cannot alert on confidence
+    alone — and it destroyed the only number a reader has for telling a live
+    setup from a dead one.
+
+    So the score is reported as computed, capped only by the data-health budget
+    (`confidenceCap`), which is what that field always claimed to do.
+    """
     score = 40
     if result.regime == "TRENDING":
         score += 20
@@ -392,9 +410,24 @@ def _confidence_from_analysis(result: AnalysisResult, *, actionable: bool) -> in
             score += 5
     if "MTF" in result.signal:
         score += 10
-    if not actionable:
-        score = min(score, 55)
-    return max(0, min(100, score))
+
+    return max(0, min(score, _data_health_confidence_cap(result)))
+
+
+def _data_health_confidence_cap(result: AnalysisResult) -> int:
+    """Highest confidence the feed quality permits.
+
+    Kept in step with the `confidenceCap` field `_healthy_data()` reports: the
+    drawer renders that value ("Confidence cap: 60%"), so if the two disagreed
+    the UI would be stating a budget the engine never applied.
+    """
+    return 100 if _data_health_ok(result) else 60
+
+
+def _data_health_ok(result: AnalysisResult) -> bool:
+    """Whether the feed behind this result is good enough to trust at full weight."""
+    health = _healthy_data(result)
+    return bool(health["ok"])
 
 
 def _grade_from_confidence(confidence: int, risk_reward: float | None) -> str:
@@ -454,10 +487,33 @@ def _sweep_side(value: str | None) -> str | None:
 
 
 def _wait_reason(result: AnalysisResult) -> str:
+    """Name the gate that actually blocked this setup.
+
+    This used to return one generic sentence for every WAIT row. On the live
+    universe that meant 99/99 rows carried "No READY multi-timeframe action
+    call.", which tells a reader nothing: it is equally true of a flat market
+    and of a fully trend-aligned setup whose 5m entry has not triggered yet.
+
+    The specific causes are already recorded in `reasons`, so report the first
+    one that names a gate. Ordered by how actionable it is to the reader: a
+    rejected risk plan is the most concrete, a missing alignment the vaguest.
+    """
+    if result.risk_reward is not None and result.risk_reward < 1.0:
+        return (
+            f"Risk/reward too low ({result.risk_reward}): target is closer than the "
+            "stop, so the setup does not pay for its risk."
+        )
+    for reason in result.reasons:
+        if reason.startswith("Risk/reward below minimum"):
+            return f"Risk plan below the configured minimum: {reason.split(': ', 1)[-1]}."
+    if any("aligned with trend: False" in reason for reason in result.reasons):
+        return "Confirmation timeframes (15m/30m) disagree with the 1h/4h trend."
+    if any("Trend aligned: False" in reason for reason in result.reasons):
+        return "1h and 4h trends disagree, so there is no directional bias to trade."
+    if any("No aligned 5m entry setup" in reason for reason in result.reasons):
+        return "Trend and confirmation agree, but no 5m entry trigger has fired yet."
     if result.signal == "HOLD":
-        return "No READY multi-timeframe action call."
-    if result.risk_reward is None:
-        return "Risk plan incomplete (missing SL/TP)."
+        return "No entry condition met on the 5m timeframe."
     return f"Signal {result.signal} did not pass action-call filters."
 
 
@@ -630,5 +686,7 @@ def _healthy_data(
             "maxAgeSec": None,
             "reason": "Open interest not used by Python action-call engine.",
         },
+        # Same budget `_confidence_from_analysis` enforces. One literal, so the
+        # number rendered here cannot drift from the number applied.
         "confidenceCap": 100 if ok else 60,
     }
