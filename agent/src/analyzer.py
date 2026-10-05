@@ -180,33 +180,71 @@ def calculate_risk_plan(
 
     `min`/`max` here select the FARTHER of {structure level, price -/+ 1.5 ATR}:
 
-        LONG  min(support, price - 1.5*ATR)  -> picks the lower  = wider stop
+        LONG  min(support, price - 1.5*ATR)    -> picks the lower  = wider stop
         SHORT max(resistance, price + 1.5*ATR) -> picks the higher = wider stop
 
-    That reads like a sign error, and it does guarantee risk >= 1.5 ATR: measured
-    over 216 live setups the ATR term never once bound, because a 120-bar extreme
-    is essentially always further away. Reward/risk therefore lands near 0.24 and
-    only ~4% of signals clear min_risk_reward — which is why the screener has
+    That reads like a sign error, and it does guarantee risk >= 1.5 ATR: over 216
+    live setups the ATR term never once bound, because a 120-bar extreme is
+    essentially always further away. Reward/risk therefore lands near 0.24 and
+    only ~4% of signals clear min_risk_reward, which is why the screener has
     produced zero actionable rows across seven consecutive runs.
 
-    Swapping to the tighter stop is the obvious fix and it is a trap. Measured
-    walk-forward on the same data, stop vs structure target, ties resolving to the
-    stop:
+    Swapping to the tighter stop is the obvious fix and it is a trap: a 5m entry
+    sits inside the noise, so the tight stop gets hit before the structure target.
+    Leave the levels alone. Do not "fix" this without re-running a walk-forward.
 
-        current (wide stop)    9 trades   avg R +0.54
-        capped at 1.5 ATR    112 trades   avg R -0.13
-        capped at 1.0 ATR    157 trades   avg R -0.16
-        capped at 0.75 ATR   178 trades   avg R -0.13
+    --- The full measurement, so nobody repeats it ---
 
-    A grid over stop x target (ATR-projected targets at 2x/3x/4x) put every
-    capped variant between -12R and -31R. The wide stop is not a bug producing
-    bad numbers; it is the only variant with positive expectancy, because it
-    keeps the stop outside the noise that a 5m entry sits in.
+    Backtested on 138 days of 5m across 20 liquid symbols, ~11,900 signal entries,
+    every analysis re-run on data up to that bar only (no lookahead), ties
+    resolving to the stop:
 
-    So: leave the levels alone. The real gap is upstream — a 5m trigger is too
-    noisy for a 1.5-ATR stop and too late for a 120-bar structure target. The
-    honest fix is a different entry timeframe or an explicit re-entry rule, not
-    a tighter stop. Do not "fix" this function without re-running the walk-forward.
+    Signal quality vs market drift. Compared against a baseline entry on the same
+    symbol, same direction, same 24h horizon. Edge is MFE - MAE in ATR units.
+
+        LONG   n=5758  signal +2.35  baseline +0.97  diff +1.38  (t=+4.8)
+        SHORT  n=6189  signal -0.05  baseline -0.97  diff +0.91  (t=+3.8)
+
+    So the signal does carry information beyond drift. But it is not stable: split
+    by month, the LONG difference runs -5.69, -3.28, +0.34, +4.16, +4.88, +1.03.
+    It flips sign, which is what makes this hard rather than impossible.
+
+    Exit schemes. Sixteen stop/target combinations on ATR multiples (stop 1-3x,
+    target 1.5-4x): the best of them returned +0.001 R per trade, and that is the
+    one that happened to be widest (stop 3x, target 4x). Everything else was
+    negative.
+
+    Costs decide it. Fees are paid on notional while R is a price distance, so the
+    drag in R terms is `round_trip_fee_pct / stop_distance_pct` — a tighter stop
+    makes every trade more expensive. At 0.10% round trip (Binance USD-M taker,
+    no BNB discount):
+
+        scheme                        n      stop%   grossR    feeR    netR
+        structure + RR>=1.2 (prod)   302    1.11%   -0.0384   0.113   -0.152
+        structure, no RR filter    11833    2.48%   +0.0127   0.052   -0.040
+        ATR 3x/4x bracket          11947    0.87%   +0.0012   0.142   -0.141
+        ATR 2x/3x bracket          11947    0.58%   -0.0278   0.213   -0.241
+
+    The best gross expectancy is +0.0127 R, and it needs 0.040 R just to cover
+    fees. Every scheme is net-negative.
+
+    Eleven entry filters were then tried, using only inputs the engine already
+    computes (ADX, RSI, regime, signal type), to see if selectivity closes the
+    gap. Every one stayed net-negative, with t between -2.1 and -7.9 — consistent
+    losses, not noise. The best gross was LONG + TRENDING at +0.021 R, still below
+    its 0.052 R fee.
+
+    Conclusion: the 5m bracket path has a real but sub-cost edge. It cannot be
+    made profitable by tuning the stop, the target, the RR filter, or the entry
+    filter, and the RR >= 1.2 filter is actively counterproductive — it takes the
+    302 setups whose target is furthest away, which are the ones that fail most
+    (36% win rate vs 79% for the unfiltered set).
+
+    What would change the arithmetic, in rough order of expected value:
+      1. Maker/post-only entries, which cut the fee to ~0.02% round trip.
+      2. A longer hold with a trailing exit, so the edge has time to exceed costs.
+      3. A fundamentally different trigger (the current one fires ~1000x/month
+         across 20 symbols, which is far more than fees can support).
     """
     if direction == "LONG":
         stop_loss = min(support, price - atr * ATR_STOP_MULTIPLIER)
