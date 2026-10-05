@@ -93,7 +93,10 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
           <div className="grid gap-4">
             <Section title="Engine levels" icon={<ShieldCheck className="h-4 w-4" />}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Level label="Entry" value={result.entry} />
+                <Level
+                  label={result.entryOrderType === 'POST_ONLY_LIMIT' ? 'Entry (post-only limit)' : 'Entry'}
+                  value={result.entry}
+                />
                 <Level label="Stop loss" value={result.stopLoss} tone="danger" />
                 {result.takeProfits.map((tp, idx) => (
                   <Level key={idx} label={`Take profit ${idx + 1}`} value={tp} tone="success" />
@@ -102,6 +105,8 @@ export function ScreenerDetailDrawer({ result, audit, onClose }: ScreenerDetailD
               </div>
               <p className="mt-3 rounded-lg bg-bg-surface-soft p-3 text-xs text-text-secondary">
                 Engine entry/SL/TP are deterministic outputs. AI-proposed levels are not currently persisted for this setup.
+                {result.entryOrderType === 'POST_ONLY_LIMIT' &&
+                  ' The entry is a resting post-only limit, not a market order — a taker fill pays a higher fee and turns this setup net-negative.'}
               </p>
             </Section>
 

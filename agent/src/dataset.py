@@ -24,6 +24,7 @@ CSV_FIELDS = [
     "signal",
     "status",
     "entry_price",
+    "entry_order_type",
     "realtime_price",
     "take_profit",
     "stop_loss",

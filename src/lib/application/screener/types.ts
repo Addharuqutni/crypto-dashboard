@@ -101,6 +101,16 @@ export interface ScreenerResult {
   confidence: number;
   grade: FuturesGrade;
   entry: number | null;
+  /**
+   * How to place the entry. `POST_ONLY_LIMIT` means rest a limit at `entry` and
+   * cancel if unfilled — the fee argument behind this signal assumes a maker
+   * fill.
+   *
+   * Optional because `ScreenerStore.readLatest` casts the parsed JSON straight
+   * to `ScreenerLatestRun` without normalising it, so a snapshot written before
+   * the field existed yields `undefined` rather than `null`.
+   */
+  entryOrderType?: string | null;
   stopLoss: number | null;
   takeProfits: Array<number | null>;
   riskReward: number | null;

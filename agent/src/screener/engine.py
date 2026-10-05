@@ -353,6 +353,7 @@ def _to_candidate(
         "confidence": confidence,
         "grade": grade,
         "entry": entry,
+        "entryOrderType": action_call.get("entry_order_type") if action_call else None,
         "stopLoss": stop_loss,
         "takeProfits": take_profits,
         "riskReward": risk_reward,

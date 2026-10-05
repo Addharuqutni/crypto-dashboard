@@ -25,6 +25,8 @@ BFF for the internal Python Action Call service.
 
 The route forwards requests to `PYTHON_AGENT_URL` and returns the Python response. Internal authentication, when configured, uses `PYTHON_AGENT_INTERNAL_TOKEN`; the token is never returned to clients.
 
+**Entry mechanics.** `signal.entryOrderType` is `POST_ONLY_LIMIT` on every actionable call, and `signal.entryZone.min` is the limit price. The entry is not a market order: it is a resting post-only limit, cancelled if unfilled after 6 bars. This is the mechanism the fee assumption depends on — a market entry pays the taker rate and the setup is then net-negative by a wider margin. It does not make the strategy profitable; see the measurement in `agent/src/analyzer.py`. Rows stored before the field existed carry `null`.
+
 ### `POST /api/action-call`
 
 Triggers a scan of the Python agent's configured universe. The request body is accepted for forward compatibility; the current Python endpoint determines the universe from configuration.

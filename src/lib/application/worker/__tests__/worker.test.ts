@@ -299,6 +299,28 @@ describe('formatters', () => {
     expect(text).toContain('Python Action Call');
   });
 
+  it('names the entry mechanic when the signal asks for a post-only limit', () => {
+    const text = formatTradeAlert({
+      symbol: 'BTCUSDT',
+      setupTimeframe: '30m',
+      macroTimeframe: '4h',
+      signal: buildSignal({ entryOrderType: 'POST_ONLY_LIMIT' }),
+    });
+
+    expect(text).toContain('- Entry: 100.0000 — post-only limit');
+  });
+
+  it('omits the entry mechanic when the signal carries no entry order type', () => {
+    const text = formatTradeAlert({
+      symbol: 'BTCUSDT',
+      setupTimeframe: '30m',
+      macroTimeframe: '4h',
+      signal: buildSignal(),
+    });
+
+    expect(text).toContain('- Entry: 100.0000\n');
+  });
+
   it('formats a health warning', () => {
     const text = formatHealthAlert({
       symbol: 'BTCUSDT',

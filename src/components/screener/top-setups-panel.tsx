@@ -108,7 +108,10 @@ function SetupCard({
         <MetricRow label="R:R" value={rr} />
         <MetricRow label="Score" value={result.rankingScore.toFixed(1)} />
         {result.entry != null && (
-          <MetricRow label="Entry" value={formatCurrency(result.entry)} />
+          <MetricRow
+            label={result.entryOrderType === 'POST_ONLY_LIMIT' ? 'Entry (limit)' : 'Entry'}
+            value={formatCurrency(result.entry)}
+          />
         )}
         {result.stopLoss != null && (
           <MetricRow label="Stop Loss" value={formatCurrency(result.stopLoss)} tone="danger" />

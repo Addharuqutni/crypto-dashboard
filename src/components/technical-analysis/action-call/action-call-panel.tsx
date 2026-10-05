@@ -167,6 +167,18 @@ export function ActionCallPanel({
         </div>
       )}
 
+      {signal.action !== 'WAIT' && signal.entryOrderType === 'POST_ONLY_LIMIT' && (
+        <p className="flex items-start gap-1.5 rounded-lg border border-border-subtle bg-bg-surface-soft px-3 py-2 text-xs leading-relaxed text-text-secondary">
+          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-primary" aria-hidden="true" />
+          <span>
+            <span className="font-semibold text-text-primary">Post-only limit entry.</span> Rest the
+            order at the entry price above instead of taking the market — a taker fill pays a higher
+            fee and turns this setup net-negative. The exchange rejects a post-only order that would
+            cross the book, and an unfilled setup is cancelled after 6 bars.
+          </span>
+        </p>
+      )}
+
       {signal.action === 'WAIT' && signal.noTradeReasons.length > 0 && (
         <div className="rounded-lg border border-border-subtle bg-bg-surface-soft px-3 py-2.5">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">

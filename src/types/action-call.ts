@@ -12,6 +12,14 @@ import type { FuturesSignal } from '@/types/signal-core';
 export type ActionCallStatus = 'READY' | 'WAIT_CONFIRMATION' | 'HOLD';
 
 /**
+ * How the entry must be placed. `POST_ONLY_LIMIT` rests at `entryZone.min` and
+ * is the mechanism the fee assumption depends on: a market entry pays the taker
+ * rate and the setup is then net-negative by a wider margin. `null` on older
+ * rows written before the field existed.
+ */
+export type ActionCallEntryOrderType = 'POST_ONLY_LIMIT';
+
+/**
  * UI + worker facing signal. Produced by Python `signal_service._to_dashboard_signal`.
  */
 export type ActionCallView = FuturesSignal & {
@@ -22,6 +30,7 @@ export type ActionCallView = FuturesSignal & {
   bias: string;
   trend: string;
   timeframe?: string;
+  entryOrderType?: ActionCallEntryOrderType | null;
   sourceEngine?: string;
   pythonSignal?: string | null;
   pythonStatus?: string | null;

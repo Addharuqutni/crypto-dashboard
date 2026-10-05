@@ -451,6 +451,7 @@ def _render_call_card(row: dict[str, Any]) -> str:
     <span class="chip">TF {escape(str(row.get('timeframe') or '-'))}</span>
     <span class="chip">RR {escape(_fmt(row.get('risk_reward')))}</span>
     <span class="chip">{escape(_short_text(row.get('created_at'), 19))}</span>
+    {f'<span class="chip">{escape(str(row.get("entry_order_type")))}</span>' if row.get('entry_order_type') else ''}
   </div>
 
   {ai_block}

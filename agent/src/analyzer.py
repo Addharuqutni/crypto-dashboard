@@ -245,6 +245,42 @@ def calculate_risk_plan(
       2. A longer hold with a trailing exit, so the edge has time to exceed costs.
       3. A fundamentally different trigger (the current one fires ~1000x/month
          across 20 symbols, which is far more than fees can support).
+
+    --- Both candidates were then measured, and only the first survived ---
+
+    An earlier version of this note claimed maker entries "cut the fee to ~0.02%
+    round trip". That is wrong, and the error was a flat round-trip rate charged
+    to every trade. Fees are per leg: a bracket exit at the target is a resting
+    limit (maker), an exit at the stop is a stop-market (taker), and the exit mix
+    is not the same across schemes. Charging one blended rate flattered the maker
+    case. Re-measured per leg over 12,435 identical 5m entries:
+
+        scheme                            n      grossR   feeR    netR      t
+        baseline: taker entry, bracket   12348   +0.0092  0.0404  -0.0312  -6.24
+        option 1: maker entry, bracket   12348   +0.0092  0.0248  -0.0156  -3.12
+        option 2: taker entry, trail     12435   +0.0253  0.0485  -0.0232  -2.83
+        option 1+2: maker entry, trail   12435   +0.0253  0.0329  -0.0077  -0.93
+
+    Option 1 is the only change that materially improves on the baseline, and it
+    still does not reach break-even: it needs fees at 37% of the current schedule.
+    Maker-entry fee is 0.0248 R against a gross edge of +0.0092 R, so the cost is
+    1-3x the edge. No execution trick closes that gap.
+
+    Option 2 is rejected. Its trailing variants only looked positive under the
+    flat-fee error; per leg the apparent edge is one month (2026-09) carrying the
+    average, and option 1+2 sits at t=-0.93, indistinguishable from zero and
+    negative in four of six months.
+
+    Two further findings worth keeping:
+      - The original 1.5-3x ATR trails were mis-specified, not merely bad. A 1.5x
+        ATR trail on 5m is ~0.45% of price while a 5m bar range is typically
+        0.2-0.5%, so the trail sat inside a single bar and stopped out every
+        trade. Respected at 5-12x, stop-out fell to 67-88% and gross went
+        positive, but still below cost.
+      - The maker assumption itself holds: price traded back through the signal
+        price within 1 bar 98.1% of the time, 6 bars 99.3%. That is an upper
+        bound on a fill (queue position at the touch is not modelled), which is
+        why the entry order is bounded by ENTRY_VALID_BARS in `action_call.py`.
     """
     if direction == "LONG":
         stop_loss = min(support, price - atr * ATR_STOP_MULTIPLIER)

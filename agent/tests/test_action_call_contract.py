@@ -7,7 +7,14 @@ rejection rules and the READY vs WAIT_CONFIRMATION status split.
 
 from __future__ import annotations
 
-from src.action_call import ACTION_SIGNALS, action_call_to_dict, build_action_call, format_action_call
+from src.action_call import (
+    ACTION_SIGNALS,
+    ENTRY_ORDER_TYPE,
+    ENTRY_VALID_BARS,
+    action_call_to_dict,
+    build_action_call,
+    format_action_call,
+)
 from src.analyzer import AnalysisResult
 
 
@@ -123,12 +130,44 @@ def test_action_call_to_dict_keeps_the_public_keys():
         "action": "LONG",
         "signal": "BUY WATCH",
         "entry_price": 100.0,
+        "entry_order_type": "POST_ONLY_LIMIT",
         "realtime_price": None,
         "take_profit": 110.0,
         "stop_loss": 95.0,
         "risk_reward": 2.0,
         "status": "WAIT_CONFIRMATION",
     }
+
+
+# --- entry mechanics ---------------------------------------------------------
+
+
+def test_every_accepted_setup_carries_the_post_only_entry_instruction():
+    """Option 1 only pays off if the entry is rested, not taken.
+
+    The whole fee argument behind this signal rests on the entry leg being a
+    maker fill. A setup that reaches an operator without that instruction will
+    be market-entered and the numbers stop applying.
+    """
+    call = build_action_call(_result())
+
+    assert call is not None
+    assert call.entry_order_type == ENTRY_ORDER_TYPE == "POST_ONLY_LIMIT"
+
+
+def test_entry_limit_price_is_the_signal_price():
+    """No second price field: the limit rests exactly at `entry_price`."""
+    call = build_action_call(_result(price=123.45))
+
+    assert call is not None
+    assert call.entry_price == 123.45
+
+
+def test_formatted_report_names_the_entry_order_and_cancel_window():
+    text = format_action_call(_result())
+
+    assert "POST_ONLY_LIMIT" in text
+    assert f"after {ENTRY_VALID_BARS} bars" in text
 
 
 def test_serialisation_helpers_return_none_for_rejected_setups():

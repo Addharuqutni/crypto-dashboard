@@ -23,7 +23,10 @@ export function formatTradeAlert(args: FormatTradeAlertArgs): string {
 
   const riskLines: string[] = [];
   if (s.entryZone?.min != null) {
-    riskLines.push(`- Entry: ${formatPrice(s.entryZone.min)}`);
+    // The entry mechanic belongs on the same line as the price: an operator who
+    // market-enters pays the taker fee, and this signal's numbers assume maker.
+    const entryMechanic = s.entryOrderType === 'POST_ONLY_LIMIT' ? ' — post-only limit' : '';
+    riskLines.push(`- Entry: ${formatPrice(s.entryZone.min)}${entryMechanic}`);
   }
   if (s.stopLoss != null) riskLines.push(`- SL: ${formatPrice(s.stopLoss)}`);
   if (s.takeProfits?.tp1 != null) {

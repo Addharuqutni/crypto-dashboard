@@ -184,6 +184,24 @@ Algoritma action call multi-timeframe aktif secara default:
 
 Action call hanya dibuat jika arah 1h dan 4h sejalan, 15m dan 30m mengonfirmasi arah tren, lalu 5m memberi entry dengan risk/reward valid.
 
+## Mekanisme entry: post-only limit
+
+Setiap action call membawa `entry_order_type = POST_ONLY_LIMIT`. Artinya entry **bukan** market order: limit di-rest tepat di harga sinyal (`entry_price`), dan order dibatalkan kalau belum terisi setelah 6 bar (5m, jadi 30 menit).
+
+Alasannya biaya. Fee dihitung per leg, dan entry taker membayar 0,05% per sisi sementara maker 0,02%. Walk-forward 12.435 entry 5m identik, 20 simbol, 138 hari:
+
+```text
+scheme                            n      grossR   feeR    netR      t
+baseline: taker entry, bracket   12348   +0.0092  0.0404  -0.0312  -6.24
+option 1: maker entry, bracket   12348   +0.0092  0.0248  -0.0156  -3.12
+```
+
+**Opsi 1 tidak membuat strategi ini profit.** Break-even butuh fee turun ke 37% dari jadwal sekarang, dan gross edge per trade (+0,0092 R) masih di bawah fee maker saja (0,0248 R). Angka di atas adalah pengurangan kerugian, bukan edge.
+
+Asumsi fill-nya terukur: harga kembali menyentuh level sinyal dalam 1 bar 98,1% dan dalam 6 bar 99,3%. Itu batas atas — posisi antrean di level itu tidak dimodelkan, jadi limit yang duduk persis di harga terakhir bisa tidak terisi. Karena itu ada batas 6 bar: setup dibatalkan, bukan dibiarkan terisi ke sinyal yang sudah basi.
+
+Catatan operasional: Binance USDⓈ-M menulis post-only sebagai `timeInForce=GTX`, ccxt sebagai `postOnly=True`. Verifikasi ke dokumentasi exchange sebelum memakai angka ini untuk keputusan uang. Repo ini tidak punya execution layer — tidak ada yang menempatkan order; ini instruksi untuk operator.
+
 ## Menjalankan agent
 
 Mode WebSocket real-time futures:
@@ -220,7 +238,7 @@ datasets/action_calls.jsonl
 datasets/action_calls.csv
 ```
 
-Dataset berisi parameter entry, TP, SL, indikator, struktur market, alasan sinyal, dan kolom outcome awal `PENDING` untuk dilabeli setelah harga menyentuh TP/SL.
+Dataset berisi parameter entry (termasuk `entry_order_type`), TP, SL, indikator, struktur market, alasan sinyal, dan kolom outcome awal `PENDING` untuk dilabeli setelah harga menyentuh TP/SL.
 
 Label dataset pending:
 
