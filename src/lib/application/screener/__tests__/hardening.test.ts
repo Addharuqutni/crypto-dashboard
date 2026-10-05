@@ -1,7 +1,5 @@
-import * as path from 'node:path';
 import { NextRequest } from 'next/server';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { makeAtomicTmpPath } from '../store';
 import {
   GET as screenerGET,
   allowScreenerRequest,
@@ -26,16 +24,6 @@ describe('screener hardening', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     process.env = { ...originalEnv };
-  });
-
-  it('creates unique atomic temp paths next to the target file', () => {
-    const target = path.join('/tmp', 'screener', 'latest.json');
-    const first = makeAtomicTmpPath(target);
-    const second = makeAtomicTmpPath(target);
-
-    expect(first).not.toBe(second);
-    expect(first.startsWith(`${target}.`)).toBe(true);
-    expect(first.endsWith('.tmp')).toBe(true);
   });
 
   it('defaults production screener API to file mode', () => {

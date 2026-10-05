@@ -1,35 +1,31 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import type {
-  RankedScreenerResult,
-  ScreenerAiAuditSummary,
-  ScreenerActionCallRecord,
-  ScreenerAlertRecord,
-  ScreenerAlertSettings,
-  ScreenerHealth,
-} from './types';
-import { DEFAULT_SCREENER_ALERT_SETTINGS } from './config';
-import type { ScreenerStorage } from './storage';
+import type { RankedScreenerResult, ScreenerAiAuditSummary, ScreenerHealth } from './types';
 
 /**
- * Screener storage layer.
+ * Screener snapshot reader.
  *
- * File layout (default `<dataDir>` = `./data/screener`):
+ * The on-disk layout is owned by the Python engine (`agent/src/screener/storage.py`),
+ * which is the only writer. `latest.json` is the one file both sides agree on,
+ * and the one this module reads. Everything else the engine persists
+ * (`history.json`, `action-calls.json`) is consumed inside Python.
  *
- *   <dataDir>/
- *     latest.json     — most recent run snapshot, atomically rewritten
- *     history.jsonl   — append-only run summaries
- *     alerts.jsonl    — append-only local alert event records
- *     action-calls.jsonl — append-only eligible action-call evaluation samples
- *     settings.json   — alert/rank settings, atomically rewritten
+ * This module used to also declare `history.jsonl`, `action-calls.jsonl`,
+ * `alerts.jsonl` and `settings.json` and offer readers and writers for them.
+ * Not one of those four files has ever existed. The Python engine persists the
+ * same two datasets under different names — `history.json` and
+ * `action-calls.json`, whole JSON arrays rather than JSONL — so the readers
+ * here asked for filenames nobody writes and returned a silent empty list on
+ * ENOENT, while the writers appended lines to files nobody reads. Nothing
+ * errors; the feature simply is not there.
  *
- * Atomic semantics for `latest.json` and `settings.json`: write to a sibling
- * tmp file then rename. This avoids torn writes if the process is killed
- * mid-flush. JSONL files are append-only so a partial last line is harmless
- * — subsequent runs simply append a fresh complete line.
+ * The damage was in the naming, not the code path: a reader of this file would
+ * reasonably conclude the screener's history lives in `history.jsonl`, and be
+ * wrong. Alerts, meanwhile, reach the UI from the engine's own `alertDecisions`
+ * (see `to-alerts.ts`), so no alerts file is involved at all.
  *
- * Missing files return safe defaults instead of throwing — the UI must always
- * be able to render an empty state, even on a fresh deployment.
+ * Missing or corrupt `latest.json` returns null instead of throwing: the UI
+ * must render an empty state on a fresh deployment.
  */
 
 export interface ScreenerLatestRun {
@@ -54,39 +50,15 @@ export interface ScreenerLatestRun {
   audits?: Record<string, ScreenerAiAuditSummary>;
 }
 
-export interface ScreenerHistoryEntry {
-  ts: number;
-  status: ScreenerHealth['status'];
-  evaluatedSymbols: number;
-  failedSymbols: number;
-  topSymbol: string | null;
-  topAction: string | null;
-  topScore: number | null;
-}
+/** Filename of the snapshot, as written by the Python engine. */
+export const LATEST_SNAPSHOT_FILE = 'latest.json';
 
-export class ScreenerStore implements ScreenerStorage {
-  private readonly dataDir: string;
+export class ScreenerStore {
   private readonly latestFile: string;
-  private readonly historyFile: string;
-  private readonly alertsFile: string;
-  private readonly actionCallsFile: string;
-  private readonly settingsFile: string;
 
   constructor(dataDir = path.join(process.cwd(), 'data', 'screener')) {
-    this.dataDir = dataDir;
-    this.latestFile = path.join(dataDir, 'latest.json');
-    this.historyFile = path.join(dataDir, 'history.jsonl');
-    this.alertsFile = path.join(dataDir, 'alerts.jsonl');
-    this.actionCallsFile = path.join(dataDir, 'action-calls.jsonl');
-    this.settingsFile = path.join(dataDir, 'settings.json');
+    this.latestFile = path.join(dataDir, LATEST_SNAPSHOT_FILE);
   }
-
-  /** Ensure the data directory exists. Safe to call repeatedly. */
-  async init(): Promise<void> {
-    await fs.mkdir(this.dataDir, { recursive: true });
-  }
-
-  // ─── Latest run ───────────────────────────────────────────────────────
 
   /** Read the most recent run, or null when no run has been persisted. */
   async readLatest(): Promise<ScreenerLatestRun | null> {
@@ -100,132 +72,4 @@ export class ScreenerStore implements ScreenerStorage {
       return null;
     }
   }
-
-  /** Atomically replace latest.json. */
-  async writeLatest(run: ScreenerLatestRun): Promise<void> {
-    await this.init();
-    await atomicWriteJson(this.latestFile, run);
-  }
-
-  // ─── History (append-only) ────────────────────────────────────────────
-
-  /** Append a compact run summary to history.jsonl. */
-  async appendHistory(entry: ScreenerHistoryEntry): Promise<void> {
-    await this.init();
-    const line = JSON.stringify(entry) + '\n';
-    await fs.appendFile(this.historyFile, line, 'utf8');
-  }
-
-  /** Read the most recent N history entries (best-effort, tolerant of bad lines). */
-  async readRecentHistory(limit = 100): Promise<ScreenerHistoryEntry[]> {
-    try {
-      const raw = await fs.readFile(this.historyFile, 'utf8');
-      return parseJsonl<ScreenerHistoryEntry>(raw).slice(-limit);
-    } catch (err: unknown) {
-      const code = (err as NodeJS.ErrnoException)?.code;
-      if (code === 'ENOENT') return [];
-      console.warn('[screener.store] Failed to read history:', err);
-      return [];
-    }
-  }
-
-  // ─── Settings ─────────────────────────────────────────────────────────
-
-  /** Read alert/rank settings, returning defaults when missing or corrupt. */
-  async readSettings(): Promise<ScreenerAlertSettings> {
-    try {
-      const raw = await fs.readFile(this.settingsFile, 'utf8');
-      const parsed = JSON.parse(raw) as Partial<ScreenerAlertSettings>;
-      return { ...DEFAULT_SCREENER_ALERT_SETTINGS, ...parsed };
-    } catch (err: unknown) {
-      const code = (err as NodeJS.ErrnoException)?.code;
-      if (code === 'ENOENT') return { ...DEFAULT_SCREENER_ALERT_SETTINGS };
-      console.warn('[screener.store] Failed to read settings:', err);
-      return { ...DEFAULT_SCREENER_ALERT_SETTINGS };
-    }
-  }
-
-  /** Atomically replace settings.json. */
-  async writeSettings(settings: ScreenerAlertSettings): Promise<void> {
-    await this.init();
-    await atomicWriteJson(this.settingsFile, settings);
-  }
-
-  // ─── Alerts (append-only) ─────────────────────────────────────────────
-
-  /** Append a single local alert event record to alerts.jsonl. */
-  async appendAlert(record: ScreenerAlertRecord): Promise<void> {
-    await this.init();
-    const line = JSON.stringify(record) + '\n';
-    await fs.appendFile(this.alertsFile, line, 'utf8');
-  }
-
-  /**
-   * Read the most recent N alert records (in chronological order).
-   * Tolerant of corrupt/truncated lines.
-   */
-  async readRecentAlerts(limit = 50): Promise<ScreenerAlertRecord[]> {
-    try {
-      const raw = await fs.readFile(this.alertsFile, 'utf8');
-      return parseJsonl<ScreenerAlertRecord>(raw).slice(-limit);
-    } catch (err: unknown) {
-      const code = (err as NodeJS.ErrnoException)?.code;
-      if (code === 'ENOENT') return [];
-      console.warn('[screener.store] Failed to read alerts:', err);
-      return [];
-    }
-  }
-
-  // ─── Action Calls (append-only evaluation samples) ─────────────────────
-
-  /** Append action-call samples that passed ranking/quality gates. */
-  async appendActionCalls(records: ScreenerActionCallRecord[]): Promise<void> {
-    if (records.length === 0) return;
-    await this.init();
-    const payload = records.map((record) => JSON.stringify(record)).join('\n') + '\n';
-    await fs.appendFile(this.actionCallsFile, payload, 'utf8');
-  }
-
-  /** Read the most recent N action-call samples in chronological order. */
-  async readRecentActionCalls(limit = 500): Promise<ScreenerActionCallRecord[]> {
-    try {
-      const raw = await fs.readFile(this.actionCallsFile, 'utf8');
-      return parseJsonl<ScreenerActionCallRecord>(raw).slice(-limit);
-    } catch (err: unknown) {
-      const code = (err as NodeJS.ErrnoException)?.code;
-      if (code === 'ENOENT') return [];
-      console.warn('[screener.store] Failed to read action calls:', err);
-      return [];
-    }
-  }
-}
-
-function parseJsonl<T>(raw: string): T[] {
-  const records: T[] = [];
-  for (const line of raw.split('\n')) {
-    if (!line) continue;
-    try {
-      records.push(JSON.parse(line) as T);
-    } catch {
-      // Tolerate corrupt/truncated append-only lines.
-    }
-  }
-  return records;
-}
-
-/** Write JSON atomically via unique sibling tmp file + rename. */
-async function atomicWriteJson(target: string, payload: unknown): Promise<void> {
-  const tmp = makeAtomicTmpPath(target);
-  try {
-    await fs.writeFile(tmp, JSON.stringify(payload, null, 2), 'utf8');
-    await fs.rename(tmp, target);
-  } catch (err) {
-    await fs.rm(tmp, { force: true }).catch(() => undefined);
-    throw err;
-  }
-}
-
-export function makeAtomicTmpPath(target: string): string {
-  const nonce = `${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
-  return `${target}.${nonce}.tmp`;
 }

@@ -38,7 +38,7 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | Variable | Required | Description | Example / Default |
 |----------|----------|-------------|-------------------|
 | `SCREENER_STORAGE_MODE` | No | `/api/screener` mode: `file` serves persisted output; `on-demand` runs a fresh cycle per request | `file` |
-| `SCREENER_STORAGE_BACKEND` | No | Persistence backend: `file` or `supabase` | `file` |
+| `SCREENER_STORAGE_BACKEND` | No | Where the Next.js server reads the snapshot from: `file` (`data/screener/latest.json`) or `supabase` (`screener_kv`) | `file` |
 | `SCREENER_REQUIRE_DATABASE` | No | When `1`, forbid file fallback and require database storage | `0` |
 | `SCREENER_FILE_MODE_STRICT` | No | When `1`, disable on-demand fallback if the file snapshot is missing | `1` (VPS) |
 | `SCREENER_API_RATE_LIMIT_PER_MINUTE` | No | Per-client request cap for `/api/screener` | `30` |
@@ -76,6 +76,13 @@ Production uses the same root `.env.local` (seed production keys from the bottom
 | `SUPABASE_SERVICE_ROLE_KEY` | For Supabase backend | Service-role key (server-side only) |
 
 Leave both empty when using VPS file mode.
+
+Note: the Next.js side only *reads* `screener_kv`. Nothing in this repo writes
+it, because the Python engine persists to `data/screener/` and has no Supabase
+client. Selecting the Supabase backend therefore serves whatever rows you load
+into `screener_kv` yourself; on a fresh project `latest.json` is never mirrored
+and the dashboard renders its empty state. Use file mode unless you have added
+that sync step.
 
 ## Basic Auth (optional)
 

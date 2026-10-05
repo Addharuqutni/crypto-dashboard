@@ -65,10 +65,11 @@ evaluated symbol each cycle; the dashboard maps the ones it can render and
 drops the rest. Rows whose `status` or `action` is not a known value, or that
 lack `confidence`/`createdAt`, are omitted rather than shown with placeholders.
 
-`recentActionCalls` is always `[]` in this deployment. The richer
-`ScreenerActionCallRecord` shape belongs to the Next.js store
-(`action-calls.jsonl`), which nothing here writes; the Python engine's own
-`action-calls.json` rows are smaller and reach the UI through `recentAlerts`.
+`recentActionCalls` is always `[]` in this deployment, and is kept as an empty
+array rather than removed so the response shape stays stable for existing
+clients. The Python engine owns action calls: it persists its own rows to
+`action-calls.json` and they reach the UI through `recentAlerts`. The richer
+`ScreenerActionCallRecord` shape has no producer anywhere.
 
 **Error shape:**
 

@@ -1,10 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { ScreenerStore } from '../store';
-import type { ScreenerLatestRun, ScreenerHistoryEntry } from '../store';
-import type { ScreenerAlertRecord, ScreenerAlertSettings } from '../types';
-import { DEFAULT_SCREENER_ALERT_SETTINGS } from '../config';
+import { ScreenerStore, LATEST_SNAPSHOT_FILE } from '../store';
+import type { ScreenerLatestRun } from '../store';
 
 const TEST_DIR = path.join(process.cwd(), 'data', 'screener-test-' + process.pid);
 
@@ -12,7 +10,7 @@ let store: ScreenerStore;
 
 beforeEach(async () => {
   store = new ScreenerStore(TEST_DIR);
-  await store.init();
+  await fs.mkdir(TEST_DIR, { recursive: true });
 });
 
 afterEach(async () => {
@@ -41,125 +39,38 @@ function makeLatest(): ScreenerLatestRun {
   };
 }
 
-function makeAlert(overrides: Partial<ScreenerAlertRecord> = {}): ScreenerAlertRecord {
-  return {
-    symbol: 'BTCUSDT',
-    action: 'LONG',
-    rankingScore: 80,
-    confidence: 85,
-    grade: 'A',
-    entry: 105000,
-    stopLoss: 103000,
-    status: 'triggered',
-    reason: 'eligible',
-    createdAt: Date.now(),
-    ...overrides,
-  };
-}
-
 describe('ScreenerStore', () => {
-  describe('latest', () => {
-    it('returns null when no latest exists', async () => {
-      expect(await store.readLatest()).toBeNull();
-    });
-
-    it('writes and reads latest', async () => {
-      const latest = makeLatest();
-      await store.writeLatest(latest);
-      const read = await store.readLatest();
-      expect(read).not.toBeNull();
-      expect(read!.completedAt).toBe(latest.completedAt);
-      expect(read!.universeSize).toBe(10);
-    });
-
-    it('overwrites latest atomically', async () => {
-      await store.writeLatest(makeLatest());
-      const updated = makeLatest();
-      updated.universeSize = 5;
-      await store.writeLatest(updated);
-      const read = await store.readLatest();
-      expect(read!.universeSize).toBe(5);
-    });
+  it('returns null when no latest exists', async () => {
+    expect(await store.readLatest()).toBeNull();
   });
 
-  describe('history', () => {
-    it('returns empty when no history exists', async () => {
-      expect(await store.readRecentHistory()).toEqual([]);
-    });
-
-    it('appends and reads history entries', async () => {
-      const entry: ScreenerHistoryEntry = {
-        ts: Date.now(),
-        status: 'completed',
-        evaluatedSymbols: 10,
-        failedSymbols: 0,
-        topSymbol: 'BTCUSDT',
-        topAction: 'LONG',
-        topScore: 80,
-      };
-      await store.appendHistory(entry);
-      await store.appendHistory({ ...entry, ts: Date.now() + 1000 });
-      const read = await store.readRecentHistory();
-      expect(read).toHaveLength(2);
-    });
-
-    it('limits returned entries', async () => {
-      for (let i = 0; i < 5; i++) {
-        await store.appendHistory({
-          ts: Date.now() + i,
-          status: 'completed',
-          evaluatedSymbols: 10,
-          failedSymbols: 0,
-          topSymbol: null,
-          topAction: null,
-          topScore: null,
-        });
-      }
-      const read = await store.readRecentHistory(3);
-      expect(read).toHaveLength(3);
-    });
+  it('returns null when the data directory does not exist at all', async () => {
+    const missing = new ScreenerStore(path.join(TEST_DIR, 'never-created'));
+    expect(await missing.readLatest()).toBeNull();
   });
 
-  describe('settings', () => {
-    it('returns defaults when no settings file exists', async () => {
-      const settings = await store.readSettings();
-      expect(settings.enabled).toBe(DEFAULT_SCREENER_ALERT_SETTINGS.enabled);
-      expect(settings.minConfidence).toBe(DEFAULT_SCREENER_ALERT_SETTINGS.minConfidence);
-    });
+  it('reads the snapshot the Python engine writes', async () => {
+    const latest = makeLatest();
+    await fs.writeFile(
+      path.join(TEST_DIR, LATEST_SNAPSHOT_FILE),
+      JSON.stringify(latest),
+      'utf8'
+    );
 
-    it('writes and reads settings', async () => {
-      const custom: ScreenerAlertSettings = {
-        ...DEFAULT_SCREENER_ALERT_SETTINGS,
-        enabled: true,
-        minConfidence: 90,
-      };
-      await store.writeSettings(custom);
-      const read = await store.readSettings();
-      expect(read.enabled).toBe(true);
-      expect(read.minConfidence).toBe(90);
-    });
+    const read = await store.readLatest();
+    expect(read).not.toBeNull();
+    expect(read!.completedAt).toBe(latest.completedAt);
+    expect(read!.universeSize).toBe(10);
   });
 
-  describe('alerts', () => {
-    it('returns empty when no alerts exist', async () => {
-      expect(await store.readRecentAlerts()).toEqual([]);
-    });
+  it('returns null on a corrupt snapshot instead of throwing', async () => {
+    await fs.writeFile(path.join(TEST_DIR, LATEST_SNAPSHOT_FILE), '{ not json', 'utf8');
+    expect(await store.readLatest()).toBeNull();
+  });
 
-    it('appends and reads alerts', async () => {
-      await store.appendAlert(makeAlert());
-      await store.appendAlert(makeAlert({ symbol: 'ETHUSDT' }));
-      const read = await store.readRecentAlerts();
-      expect(read).toHaveLength(2);
-      expect(read[0]!.symbol).toBe('BTCUSDT');
-      expect(read[1]!.symbol).toBe('ETHUSDT');
-    });
-
-    it('limits returned alerts', async () => {
-      for (let i = 0; i < 5; i++) {
-        await store.appendAlert(makeAlert({ createdAt: Date.now() + i }));
-      }
-      const read = await store.readRecentAlerts(2);
-      expect(read).toHaveLength(2);
-    });
+  // The engine owns the filename. If it is ever renamed, this fails here rather
+  // than as a silently empty dashboard in production.
+  it('reads exactly `latest.json`', () => {
+    expect(LATEST_SNAPSHOT_FILE).toBe('latest.json');
   });
 });
