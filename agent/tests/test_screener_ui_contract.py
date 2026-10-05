@@ -6,6 +6,8 @@ Missing camelCase fields (marketRegime, baseAsset, freshness, etc.) crash the UI
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
@@ -13,40 +15,35 @@ from src.screener.engine import _to_candidate, run_screener
 from src.screener.policy import AlertPolicySettings
 
 
-# Fields required by src/lib/application/screener/types.ts RankedScreenerResult
-REQUIRED_RESULT_FIELDS = (
-    "symbol",
-    "baseAsset",
-    "quoteAsset",
-    "setupTimeframe",
-    "triggerTimeframe",
-    "macroTimeframe",
-    "evaluatedAt",
-    "candleCloseTime",
-    "currentPrice",
-    "dataHealth",
-    "action",
-    "confidence",
-    "grade",
-    "entry",
-    "stopLoss",
-    "takeProfits",
-    "riskReward",
-    "marketRegime",
-    "tradePermission",
-    "reasons",
-    "noTradeReasons",
-    "fundingRate",
-    "openInterestChangePercent",
-    "mtfAlignmentScore",
-    "warnings",
-    "freshness",
-    "rank",
-    "rankingScore",
-    "rankReason",
-    "alertEligible",
-    "alertBlockReasons",
-)
+# The UI contract lives in TypeScript. Parsing it here keeps this test honest:
+# a hand-typed list drifts silently, and this one had already fallen two fields
+# behind (`marketCapRank`, `rankingBreakdown`) while both drove visible UI.
+TYPES_FILE = Path(__file__).resolve().parents[2] / "src" / "lib" / "application" / "screener" / "types.ts"
+
+
+def _fields_of(interface_name: str) -> set[str]:
+    """Field names declared directly on a TypeScript interface in types.ts.
+
+    Only top-level `name:` / `name?:` lines are collected, and the block ends at
+    the first closing brace at column 0, so nested object types do not leak in.
+    """
+    source = TYPES_FILE.read_text(encoding="utf-8")
+    match = re.search(
+        rf"export interface {interface_name}(?:\s+extends\s+\w+)?\s*\{{(.*?)^\}}",
+        source,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert match, f"{interface_name} not found in {TYPES_FILE}"
+    return set(re.findall(r"^\s{2}([A-Za-z][A-Za-z0-9]*)\??:", match.group(1), re.MULTILINE))
+
+
+def _required_result_fields() -> set[str]:
+    """Every field of the UI's RankedScreenerResult, including inherited ones."""
+    return _fields_of("ScreenerResult") | _fields_of("RankedScreenerResult")
+
+
+# Kept as a module-level name so existing tests read the same way.
+REQUIRED_RESULT_FIELDS = _required_result_fields()
 
 REQUIRED_DATA_HEALTH_FIELDS = (
     "ok",
@@ -89,7 +86,7 @@ REQUIRED_HEALTH_FIELDS = (
 
 
 def _assert_ranked_result_contract(row: dict[str, Any]) -> None:
-    missing = [field for field in REQUIRED_RESULT_FIELDS if field not in row]
+    missing = sorted(field for field in REQUIRED_RESULT_FIELDS if field not in row)
     assert not missing, f"RankedScreenerResult missing fields: {missing}"
 
     assert isinstance(row["baseAsset"], str) and row["baseAsset"]
