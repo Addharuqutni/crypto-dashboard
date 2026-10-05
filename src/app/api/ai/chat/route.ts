@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendChatCompletion } from '@/lib/adapters/ai/ai-client';
 import { resolveAiConfig } from '@/lib/application/signal-agent/ai-config';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
-import { toPublicApiError } from '@/lib/shared/http/api-error';
+import { apiErrorResponse, bareErrorEnvelope } from '@/lib/shared/http/error-response';
 import type { AiConfig, AiMessageRole } from '@/types/ai';
 
 export const runtime = 'nodejs';
@@ -49,15 +49,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ content }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    const { status, message, headers } = toPublicApiError(error, {
+    return apiErrorResponse(error, {
       context: 'api/ai/chat',
       fallbackMessage: 'AI request failed.',
       fallbackStatus: 500,
+      envelope: bareErrorEnvelope,
     });
-    return NextResponse.json(
-      { error: message },
-      { status, headers: { 'Cache-Control': 'no-store', ...headers } }
-    );
   }
 }
 

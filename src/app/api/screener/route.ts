@@ -3,7 +3,7 @@ import { fetchPythonScreenerLatest, runPythonScreener } from '@/lib/adapters/pyt
 import { DEFAULT_SCREENER_ALERT_SETTINGS } from '@/lib/application/screener/config';
 import { readRecentJournalEntries } from '@/lib/application/screener/journal-store';
 import { toAlertRecords } from '@/lib/application/screener/to-alerts';
-import { toPublicApiError } from '@/lib/shared/http/api-error';
+import { apiErrorResponse } from '@/lib/shared/http/error-response';
 import { readEnvInt } from '@/lib/shared/config/env-int';
 import { getClientIp, rateLimit, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
 
@@ -45,8 +45,6 @@ async function readPythonSnapshot() {
 }
 
 /**
- * Map a thrown error to a public status and message.
- *
  * The common case here is 409: the on-demand fallback fires while the
  * background worker holds the run lock, which means "a run is already in
  * progress", not "the upstream is broken". Returning 502 for that sent the
@@ -54,28 +52,33 @@ async function readPythonSnapshot() {
  * fresh snapshot was seconds away.
  */
 function publicError(error: unknown, context: string, fallbackMessage: string) {
-  const { status, message, headers } = toPublicApiError(error, { context, fallbackMessage });
-  return NextResponse.json({ ok: false, error: message }, { status, headers });
+  return apiErrorResponse(error, { context, fallbackMessage });
 }
 
 function screenerResponse(mode: 'python' | 'on-demand', latest: Record<string, unknown> | null) {
-  return NextResponse.json({
-    ok: true,
-    mode,
-    latest,
-    settings: DEFAULT_SCREENER_ALERT_SETTINGS,
-    // The Python engine owns alert policy and stamps every decision into the
-    // snapshot, so the panel reads them from there instead of showing an
-    // always-empty list.
-    recentAlerts: toAlertRecords(latest?.alertDecisions),
-    // Deliberately empty, and accurately so: `ScreenerActionCallRecord` is the
-    // Next.js store's richer row shape (`action-calls.jsonl`), and nothing in
-    // this deployment writes it - the Python engine persists its own, much
-    // smaller rows to `action-calls.json` and they are consumed as alerts
-    // above. Do not populate this from that file; the shapes are not the same.
-    recentActionCalls: [],
-    recentJournalEntries: readRecentJournalEntries(100),
-  });
+  return NextResponse.json(
+    {
+      ok: true,
+      mode,
+      latest,
+      settings: DEFAULT_SCREENER_ALERT_SETTINGS,
+      // The Python engine owns alert policy and stamps every decision into the
+      // snapshot, so the panel reads them from there instead of showing an
+      // always-empty list.
+      recentAlerts: toAlertRecords(latest?.alertDecisions),
+      // Deliberately empty, and accurately so: `ScreenerActionCallRecord` is the
+      // Next.js store's richer row shape (`action-calls.jsonl`), and nothing in
+      // this deployment writes it - the Python engine persists its own, much
+      // smaller rows to `action-calls.json` and they are consumed as alerts
+      // above. Do not populate this from that file; the shapes are not the same.
+      recentActionCalls: [],
+      recentJournalEntries: readRecentJournalEntries(100),
+    },
+    // The snapshot changes every cycle; a cached copy would show stale prices
+    // with no way for the UI to tell. The error path sets this too, via
+    // apiErrorResponse.
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
 }
 
 const RATE_LIMIT_WINDOW_MS = 60_000;

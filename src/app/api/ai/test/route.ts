@@ -39,12 +39,16 @@ export async function POST(request: Request) {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
+    // Deliberately NOT routed through apiErrorResponse: this endpoint's job is
+    // to tell the user why their provider config failed, so the provider's own
+    // message is the payload. Sanitising it here would make the tool useless.
+    // Only the cache directive is shared.
     return NextResponse.json(
       {
         success: false,
         message: error instanceof Error ? error.message : 'Connection failed',
       },
-      { status: 500 }
+      { status: 500, headers: { 'Cache-Control': 'no-store' } }
     );
   }
 }

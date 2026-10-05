@@ -3,7 +3,7 @@ import { getScreenerStorage } from '@/lib/application/screener/storage-factory';
 import { readAiConfigFromEnv } from '@/lib/application/signal-agent/ai-config';
 import { runAgentOnLatest } from '@/lib/application/signal-agent/agent-runner';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
-import { toPublicApiError } from '@/lib/shared/http/api-error';
+import { apiErrorResponse } from '@/lib/shared/http/error-response';
 import { parseBoundedInt } from '@/lib/shared/config/env-int';
 
 export const runtime = 'nodejs';
@@ -51,14 +51,10 @@ export async function GET(request: Request) {
       { headers: { 'Cache-Control': 'no-store' } }
     );
   } catch (err) {
-    const { status, message, headers } = toPublicApiError(err, {
+    return apiErrorResponse(err, {
       context: 'api/agent',
       fallbackMessage: 'Failed to run agent',
       fallbackStatus: 500,
     });
-    return NextResponse.json(
-      { ok: false, error: message },
-      { status, headers: { 'Cache-Control': 'no-store', ...headers } }
-    );
   }
 }

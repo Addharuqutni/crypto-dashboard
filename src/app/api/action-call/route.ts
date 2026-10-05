@@ -6,7 +6,7 @@ import {
 } from '@/lib/adapters/python-agent/client';
 import { requireCronBearer } from '@/lib/shared/security/request-auth';
 import { rateLimit, getClientIp, rateLimitedResponse } from '@/lib/shared/security/rate-limit';
-import { toPublicApiError } from '@/lib/shared/http/api-error';
+import { apiErrorResponse } from '@/lib/shared/http/error-response';
 
 /**
  * BFF for Python Action Call.
@@ -74,13 +74,9 @@ function validateSymbols(raw: unknown): { ok: true; symbols?: string[] } | { ok:
 }
 
 function agentErrorResponse(err: unknown) {
-  const { status, message, headers } = toPublicApiError(err, {
+  return apiErrorResponse(err, {
     context: 'api/action-call',
     fallbackMessage: 'Action call failed',
     fallbackStatus: 502,
   });
-  return NextResponse.json(
-    { ok: false, error: message },
-    { status, headers: { 'Cache-Control': 'no-store', ...headers } }
-  );
 }
